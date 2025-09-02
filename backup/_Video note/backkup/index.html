@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video QC Tool - Pro</title>
+    
+    <style>
+        /* All CSS content is now here */
+        :root { --bg-color: #000; --panel-bg: rgba(40, 40, 40, 0.6); --border-color: rgba(255, 255, 255, 0.2); --text-color: #f0f0f0; --highlight-color: #00aaff; }
+        body, html { margin: 0; padding: 0; font-family: Arial, sans-serif; background: var(--bg-color); color: var(--text-color); overflow: hidden; height: 100vh; width: 100vw; }
+        .hidden { display: none !important; }
+        .glass-panel { background: var(--panel-bg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid var(--border-color); box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2); transition: transform 0.4s ease, opacity 0.4s ease; }
+        #app-container { display: flex; height: 100%; width: 100%; }
+        #main-content { flex-grow: 1; position: relative; height: 100%; }
+
+        #video-grid { display: grid; grid-template-columns: 1fr; width: 100%; height: 100%; }
+        body.ref-video-loaded #video-grid { grid-template-columns: 1fr 1fr; }
+
+        .video-slot { position: relative; background-color: #000; overflow: hidden; display: flex; justify-content: center; align-items: center; }
+        .video-slot video { max-width: 100%; max-height: 100%; }
+        .video-filename { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 5px; font-size: 0.8em; z-index: 11; }
+        #canvas-main { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; cursor: default; }
+
+        #drop-zone { position: absolute; inset: 20px; border: 3px dashed var(--border-color); border-radius: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; font-size: 1.5em; color: #888; z-index: 100; transition: all 0.3s; }
+        body.ref-video-loaded #drop-zone { width: 50%; right: 10px; left: auto; }
+        #drop-zone.hidden { pointer-events: none; opacity: 0; }
+        body.dragging #drop-zone { border-color: var(--highlight-color); background-color: rgba(0, 170, 255, 0.1); }
+
+        #bottom-controls-container { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 20; }
+        #bottom-controls { display: flex; gap: 10px; align-items: flex-end; }
+
+        #ref-video-panel, #tools-panel, #timeline-panel, #help-panel { padding: 8px; border-radius: 12px; display: flex; align-items: center; }
+        #tools-panel { padding: 8px 10px; gap: 4px; }
+        #timeline-panel { gap: 10px; flex-grow: 1; width: 650px; }
+        #help-panel { padding: 0; background: none; border: none; }
+
+        .playback-controls { display: flex; align-items: center; gap: 4px; }
+
+        .tool-btn { width: 28px; height: 28px; border-radius: 50%; border: none; background: transparent; color: #bbb; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: all 0.2s; padding: 0; }
+        .tool-btn:hover { color: var(--text-color); background-color: rgba(255,255,255,0.1); }
+        .tool-btn.active { color: var(--bg-color); background-color: var(--highlight-color); transform: scale(1.1); }
+        .tool-btn svg { width: 18px; height: 18px; fill: currentColor; }
+        #load-ref-video-btn svg { width: 20px; height: 20px; }
+
+        .divider { width: 1px; height: 20px; background: var(--border-color); margin: 0 5px; }
+        #color-picker { position: relative; }
+        #active-color-btn { width: 20px; height: 20px; border-radius: 50%; cursor: pointer; border: 2px solid white; }
+        #color-palette-popup { position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; padding: 8px; border-radius: 10px; background: #333; border: 1px solid var(--border-color); }
+        .color-btn { width: 20px; height: 20px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: all 0.2s; }
+        .color-btn:hover { transform: scale(1.2); }
+        #play-pause-btn, #mute-btn, #snapshot-btn { background: none; border: none; color: var(--text-color); cursor: pointer; padding: 5px; display: flex; align-items: center; }
+        #play-pause-btn svg, #mute-btn svg, #snapshot-btn svg { width: 20px; height: 20px; fill: currentColor; }
+        #help-btn { background: rgba(40, 40, 40, 0.6); border: 1px solid var(--border-color); color: var(--text-color); cursor: pointer; display: flex; align-items: center; justify-content: center; height: 38px; padding: 0 12px; border-radius: 8px; font-weight: bold; font-size: 1.2em; }
+        #time-display { cursor: pointer; padding: 2px 5px; font-variant-numeric: tabular-nums; }
+        #time-display input { width: 50px; background: #111; border: 1px solid var(--highlight-color); color: white; font-family: inherit; text-align: center; }
+        #timeline-slider { flex-grow: 1; -webkit-appearance: none; appearance: none; width: 100%; height: 5px; background: rgba(255, 255, 255, 0.3); border-radius: 5px; outline: none; }
+        #timeline-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 15px; height: 15px; background: var(--text-color); cursor: pointer; border-radius: 50%; }
+        #speed-controls { display: flex; background: rgba(0,0,0,0.2); border-radius: 8px; }
+        .speed-btn { background: none; border: none; color: #aaa; padding: 6px 12px; cursor: pointer; }
+        .speed-btn.active { color: var(--text-color); background: var(--highlight-color); border-radius: 8px; }
+
+        #right-panel { flex: 0 0 340px; margin: 10px; margin-left: 0; display: flex; flex-direction: column; z-index: 20; border-radius: 15px; overflow: hidden; }
+        #list-header { padding: 10px; border-bottom: 1px solid var(--border-color); }
+        #search-input { width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-color); padding: 8px; box-sizing: border-box; }
+        #list-container { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
+        #annotation-list { list-style: none; padding: 10px; margin: 0; overflow-y: auto; flex-grow: 1; }
+        #save-btn { display: block; width: calc(100% - 20px); margin: 10px; padding: 12px; border: none; border-radius: 10px; background-color: var(--highlight-color); color: var(--bg-color); font-size: 1em; font-weight: bold; cursor: pointer; flex-shrink: 0; transition: background-color 0.3s ease, color 0.3s ease; }
+        #save-btn.unsaved { background-color: #ffc107; color: #000; }
+        #annotation-list li { padding: 10px 12px; border-radius: 8px; margin-bottom: 8px; position: relative; background-color: rgba(0,0,0,0.2); transition: all 0.2s; cursor: pointer; }
+        #annotation-list li.selected { background-color: rgba(0, 170, 255, 0.3); box-shadow: 0 0 0 2px var(--highlight-color) inset; }
+        #annotation-list li.completed { opacity: 0.6; }
+        #annotation-list li.completed .content, #annotation-list li.completed .annotation-image { text-decoration: line-through; }
+        #annotation-list li .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+        #annotation-list li .time { font-size: 0.7em; color: #999; }
+        #annotation-list li .content { margin: 0; font-size: 0.9em; white-space: pre-wrap; min-height: 1em; word-break: break-word; }
+        #annotation-list li .annotation-image { max-width: 100%; border-radius: 4px; margin-top: 5px; display: block; }
+
+        .header-tools { display: flex; align-items: center; gap: 8px; }
+        .copy-btn { background: #444; color: var(--text-color); border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.7em; padding: 1px 5px; cursor: pointer; opacity: 0.6; transition: opacity 0.2s; }
+        .copy-btn:hover { background: #555; opacity: 1; }
+        .complete-checkbox { transform: scale(0.85); }
+
+        #annotation-list li textarea { width: calc(100% - 6px); background: transparent; border: 1px solid var(--highlight-color); border-radius: 4px; color: var(--text-color); font-family: inherit; font-size: 1em; resize: none; overflow-y: hidden; box-sizing: border-box; }
+        .complete-checkbox { appearance: none; width: 18px; height: 18px; border: 2px solid #555; border-radius: 50%; cursor: pointer; transition: all 0.2s; }
+        .complete-checkbox:checked { background-color: #28a745; border-color: #28a745; }
+        .complete-checkbox:checked::after { content: '\2713'; display: block; text-align: center; color: var(--bg-color); font-weight: bold; font-size: 12px; line-height: 15px; }
+
+        #help-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; display: flex; justify-content: center; align-items: center; }
+        #help-modal .modal-content { position: relative; padding: 20px 30px; width: 500px; border-radius: 15px; }
+        #help-modal ul { list-style: none; padding-left: 0; }
+        #help-modal li { margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        #help-modal strong { color: var(--highlight-color); }
+        #modal-close-btn { position: absolute; top: 10px; right: 15px; background: none; border: none; color: #fff; font-size: 28px; cursor: pointer; }
+        #help-modal hr { border-color: var(--border-color); }
+    </style>
+</head>
+<body>
+    <input type="file" id="file-input" accept="video/mp4, .txt" style="display: none;">
+    <input type="file" id="image-input" accept="image/*" style="display: none;">
+
+    <div id="app-container">
+        <div id="main-content">
+            <div id="video-grid">
+                <div class="video-slot hidden" id="video-slot-ref">
+                    <video id="video-ref" playsinline></video>
+                    <div id="ref-video-filename" class="video-filename hidden"></div>
+                </div>
+                <div class="video-slot" id="video-slot-main">
+                    <video id="video-main" playsinline></video>
+                    <div id="main-video-filename" class="video-filename hidden"></div>
+                    <canvas id="canvas-main"></canvas>
+                </div>
+            </div>
+            
+            <div id="drop-zone">
+                <p id="drop-zone-text">Bấm đúp hoặc Ctrl+D để mở file<br>Hoặc kéo thả video (.mp4) / annotation (.txt) vào đây</p>
+            </div>
+
+            <div id="bottom-controls-container">
+                <div id="bottom-controls">
+                    <div id="ref-video-panel" class="glass-panel">
+                        <button id="load-ref-video-btn" class="tool-btn" title="Tải/Đóng video tham chiếu">
+                            <svg id="ref-video-add-icon" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                            <svg id="ref-video-remove-icon" class="hidden" viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>
+                        </button>
+                    </div>
+        
+                    <div id="tools-panel" class="glass-panel">
+                        <button class="tool-btn" data-tool="comment" title="Comment (Q)"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg></button>
+                        <button class="tool-btn" data-tool="rect" title="Square (W)"><svg viewBox="0 0 24 24"><path d="M3 3v18h18V3H3zm16 16H5V5h14v14z"/></svg></button>
+                        <button class="tool-btn" data-tool="circle" title="Circle (E)"><svg viewBox="0 0 24 24"><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg></button>
+                        <button class="tool-btn" data-tool="line" title="Line (R)"><svg viewBox="0 0 24 24"><path d="M21 11H3v2h18v-2z"/></svg></button>
+                        <button class="tool-btn" data-tool="arrow" title="Arrow (T)"><svg viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8-8-8z"/></svg></button>
+                        <button class="tool-btn" data-tool="image" title="Image (from file or Ctrl+V)"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg></button>
+                        <div class="divider"></div>
+                        <div id="color-picker">
+                            <button id="active-color-btn" class="color-btn"></button>
+                            <div id="color-palette-popup" class="hidden">
+                                <button class="color-btn" data-color="#FFFFFF" style="background-color: #FFFFFF;"></button>
+                                <button class="color-btn" data-color="#2D2D2D" style="background-color: #2D2D2D;"></button>
+                                <button class="color-btn" data-color="#E53935" style="background-color: #E53935;"></button>
+                                <button class="color-btn" data-color="#1E88E5" style="background-color: #1E88E5;"></button>
+                                <button class="color-btn" data-color="#43A047" style="background-color: #43A047;"></button>
+                                <button class="color-btn" data-color="#FDD835" style="background-color: #FDD835;"></button>
+                                <button class="color-btn" data-color="#BDBDBD" style="background-color: #BDBDBD;"></button>
+                            </div>
+                        </div>
+                    </div>
+        
+                    <div id="timeline-panel" class="glass-panel">
+                        <div class="playback-controls">
+                            <button id="play-pause-btn" title="Play/Pause (Spacebar)"><svg id="play-icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><svg id="pause-icon" class="hidden" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg></button>
+                            <button id="mute-btn" title="Mute/Unmute"><svg id="unmute-icon" class="hidden" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg><svg id="mute-icon" viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L7 9H3v6h4l5 5v-8.27l-5.73-5.73z"/></svg></button>
+                        </div>
+                        <span id="time-display" title="Click to edit time">00:00</span>
+                        <input type="range" id="timeline-slider" value="0" step="0.01">
+                        <div id="speed-controls"><button class="speed-btn" data-speed="1">1x</button><button class="speed-btn" data-speed="2">2x</button><button class="speed-btn" data-speed="3">3x</button></div>
+                        <button id="snapshot-btn" title="Save Frame as PNG"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg></button>
+                    </div>
+        
+                    <div id="help-panel" class="glass-panel">
+                        <button id="help-btn" title="Help & Shortcuts">?</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="right-panel" class="glass-panel">
+            <div id="list-header">
+                <input type="search" id="search-input" placeholder="Tìm kiếm...">
+            </div>
+            <div id="list-container"><ul id="annotation-list"></ul><button id="save-btn">Tải file QC</button></div>
+        </div>
+    </div>
+
+    <div id="help-modal" class="hidden">
+        <div class="modal-content glass-panel">
+            <button id="modal-close-btn">&times;</button>
+            <h3>Phím tắt & Trợ giúp</h3>
+            <ul>
+                <li><strong>Ctrl + D / Dbl-Click Zone</strong><span>Mở file chính</span></li>
+                <li><strong>Ctrl + S</strong><span>Lưu file QC</span></li>
+                <li><strong>Ctrl + V</strong><span>Dán hình ảnh / text từ clipboard</span></li>
+                <li><strong>Ctrl + C</strong><span>Copy text / hình ảnh đã chọn</span></li>
+                <li><strong>Ctrl + Z / Ctrl + Shift + Z</strong><span>Undo / Redo Xóa</span></li>
+                <li><strong>Spacebar</strong><span>Play / Pause</span></li>
+                <li><strong>Delete</strong><span>Xóa annotation(s) đã chọn</span></li>
+                <li><strong>← / → | Lăn chuột</strong><span>Từng frame</span></li>
+                <li><strong>Shift + ← / →</strong><span>Từng giây</span></li>
+                <li><strong>↑ / ↓</strong><span>Về đầu / cuối video</span></li>
+                <li><strong>Q, W, E, R, T</strong><span>Chọn công cụ</span></li>
+                <li><strong>Ctrl / Shift + Click</strong><span>Chọn nhiều</span></li>
+                <li><strong>Ctrl + A</strong><span>Chọn toàn bộ</span></li>
+                <li><strong>Ctrl + F</strong><span>Tìm kiếm</span></li>
+            </ul>
+            <hr>
+            <p><strong>Contact:</strong> tri.vu.trong@inbold.com</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const app = {
+                body: document.body, fileInput: document.getElementById('file-input'), imageInput: document.getElementById('image-input'), dropZone: document.getElementById('drop-zone'), annotationList: document.getElementById('annotation-list'), timelineSlider: document.getElementById('timeline-slider'), timeDisplay: document.getElementById('time-display'), canvasMain: document.getElementById('canvas-main'), videoMain: document.getElementById('video-main'), videoRef: document.getElementById('video-ref'), videoRefSlot: document.getElementById('video-slot-ref'), searchInput: document.getElementById('search-input'), 
+                refVideoAddIcon: document.getElementById('ref-video-add-icon'),
+                refVideoRemoveIcon: document.getElementById('ref-video-remove-icon'),
+                mainVideoFilename: document.getElementById('main-video-filename'),
+                refVideoFilename: document.getElementById('ref-video-filename'),
+                listContainer: document.getElementById('list-container'),
+                saveBtn: document.getElementById('save-btn'),
+                get ctxMain() { return this.canvasMain.getContext('2d'); },
+            };
+
+            let state = {
+                annotations: [], currentTool: null, activeColor: '#E53935', 
+                interaction: { mode: 'none', target: null, startPos: { x: 0, y: 0 }, lastMousePos: { x: 0, y: 0 } },
+                selectedIndices: [], 
+                frameDuration: 1 / 30, isMuted: true, lastClickedIndex: -1,
+                isLoadingRefVideo: false,
+                undoStack: [], redoStack: [],
+                currentFileHandle: null,
+                currentFileName: null,
+                hasUnsavedChanges: false
+            };
+            
+            const imageCache = new Map();
+
+            function init() {
+                app.dropZone.addEventListener('dblclick', () => { state.isLoadingRefVideo = false; app.fileInput.click(); });
+                
+                document.getElementById('load-ref-video-btn').addEventListener('click', () => {
+                    if (app.body.classList.contains('ref-video-loaded')) removeRefVideo();
+                    else { state.isLoadingRefVideo = true; app.fileInput.click(); }
+                });
+
+                app.fileInput.addEventListener('change', e => e.target.files.length && handleFile(e.target.files[0]));
+                app.imageInput.addEventListener('change', (e) => handleImageFileSelect(e.target.files[0]));
+
+                window.addEventListener('dragover', e => { e.preventDefault(); document.body.classList.add('dragging'); });
+                window.addEventListener('dragleave', e => { if (e.relatedTarget === null) document.body.classList.remove('dragging'); });
+                window.addEventListener('drop', e => { 
+                    e.preventDefault(); document.body.classList.remove('dragging'); 
+                    if (e.dataTransfer.files.length) {
+                        state.isLoadingRefVideo = (e.clientX < window.innerWidth / 2) && app.videoMain.src && !app.body.classList.contains('ref-video-loaded');
+                        handleFile(e.dataTransfer.files[0]);
+                    }
+                });
+                
+                window.addEventListener('paste', handlePaste);
+
+                document.getElementById('play-pause-btn').addEventListener('click', togglePlayPause);
+                document.getElementById('mute-btn').addEventListener('click', toggleMute);
+                document.querySelectorAll('.speed-btn').forEach(btn => btn.addEventListener('click', () => setPlaybackSpeed(parseFloat(btn.dataset.speed))));
+                document.getElementById('snapshot-btn').addEventListener('click', saveFrame);
+                app.timeDisplay.addEventListener('click', makeTimeEditable);
+                app.timelineSlider.addEventListener('input', () => { seekTo(parseFloat(app.timelineSlider.value)); updateTimeline(); });
+                
+                document.querySelectorAll('.tool-btn').forEach(b => b.addEventListener('click', () => {
+                    selectTool(b.dataset.tool);
+                }));
+
+                document.getElementById('active-color-btn').addEventListener('click', (e) => { e.stopPropagation(); toggleColorPalette(); });
+                document.querySelectorAll('#color-palette-popup .color-btn').forEach(b => b.addEventListener('click', (e) => { e.stopPropagation(); selectColor(b); }));
+                selectColor(document.querySelector('#color-palette-popup .color-btn[data-color="#E53935"]'));
+                
+                app.canvasMain.addEventListener('mousedown', onCanvasMouseDown);
+                app.canvasMain.addEventListener('mousemove', onCanvasMouseMove);
+                window.addEventListener('mouseup', onCanvasMouseUp);
+                app.canvasMain.addEventListener('dblclick', onCanvasDblClick);
+                app.canvasMain.addEventListener('wheel', onCanvasWheel, { passive: false });
+                window.addEventListener('keydown', onKeyDown);
+                
+                document.getElementById('help-btn').addEventListener('click', () => document.getElementById('help-modal').classList.remove('hidden'));
+                document.getElementById('modal-close-btn').addEventListener('click', () => document.getElementById('help-modal').classList.add('hidden'));
+                window.addEventListener('click', () => document.getElementById('color-palette-popup').classList.add('hidden'));
+                app.saveBtn.addEventListener('click', saveAnnotations);
+                app.searchInput.addEventListener('input', () => updateAnnotationList());
+
+                app.listContainer.addEventListener('click', (e) => {
+                    if (e.target === app.listContainer || e.target === app.annotationList) {
+                        state.selectedIndices = [];
+                        state.lastClickedIndex = -1;
+                        updateListSelection();
+                    }
+                });
+                updateSaveButtonState();
+            }
+
+            function handleFile(file) {
+                const fileURL = URL.createObjectURL(file);
+                if (file.type.startsWith('video/')) {
+                    if (state.isLoadingRefVideo) { loadRefVideo(fileURL, file.name); } else { loadMainVideo(fileURL, file.name); }
+                } else if (file.name.endsWith('.txt') && !state.isLoadingRefVideo) {
+                    const reader = new FileReader();
+                    reader.onload = async e => { 
+                        try { 
+                            const parsedAnnotations = JSON.parse(e.target.result);
+                            await preloadImages(parsedAnnotations);
+                            state.annotations = parsedAnnotations;
+                            updateAnnotationList(); 
+                            redrawAllCanvases(); 
+                        } catch (err) { 
+                            console.error("Error parsing annotation file:", err);
+                            alert('File annotation không hợp lệ.'); 
+                        } 
+                    };
+                    reader.readAsText(file);
+                }
+                state.isLoadingRefVideo = false;
+            }
+
+            async function preloadImages(annotations) {
+                const imageAnnotations = annotations.filter(ann => ann.type === 'image' && ann.data.base64);
+                const promises = imageAnnotations.map(ann => {
+                    return new Promise((resolve) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            imageCache.set(ann.data.base64, img);
+                            ann.data.imageObject = img;
+                            ann.data.p1 = { x: ann.data.x - ann.data.width / 2, y: ann.data.y - ann.data.height / 2 };
+                            ann.data.p2 = { x: ann.data.x + ann.data.width / 2, y: ann.data.y + ann.data.height / 2 };
+                            resolve();
+                        };
+                        img.onerror = () => {
+                            resolve();
+                        };
+                        img.src = ann.data.base64;
+                    });
+                });
+                await Promise.all(promises);
+            }
+
+            async function handleImageFileSelect(file) {
+                if (!file) return;
+                const img = await createImageFromBlob(file);
+                placeImageAnnotation(img);
+                document.getElementById('image-input').value = '';
+            }
+            
+            function createImageFromBlob(blob) {
+                return new Promise((resolve, reject) => {
+                    const url = URL.createObjectURL(blob);
+                    const img = new Image();
+                    img.onload = () => {
+                        resolve(img);
+                    };
+                    img.onerror = (err) => {
+                        URL.revokeObjectURL(url);
+                        reject(err);
+                    };
+                    img.src = url;
+                });
+            }
+
+            function placeImageAnnotation(img) {
+                const MAX_SIZE = 250;
+                let { naturalWidth: width, naturalHeight: height } = img;
+                if (width > height) {
+                    if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
+                } else {
+                    if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
+                }
+                
+                const pos = state.interaction.lastMousePos.x !== 0 ? state.interaction.lastMousePos : { x: app.videoMain.videoWidth / 2, y: app.videoMain.videoHeight / 2};
+
+                const ann = {
+                    type: 'image',
+                    time: app.videoMain.currentTime,
+                    data: {
+                        imageObject: img,
+                        p1: { x: pos.x - width / 2, y: pos.y - height / 2 },
+                        p2: { x: pos.x + width / 2, y: pos.y + height / 2 }
+                    },
+                    completed: false
+                };
+                addAnnotation(ann);
+            }
+
+            async function handlePaste(e) {
+                if (document.activeElement !== document.body && document.activeElement !== app.canvasMain) return;
+
+                const items = e.clipboardData.items;
+                let textItem = null;
+
+                for (const item of items) {
+                    if (item.type.startsWith('image/')) {
+                        e.preventDefault();
+                        const blob = item.getAsFile();
+                        const img = await createImageFromBlob(blob);
+                        placeImageAnnotation(img);
+                        return; 
+                    }
+                    if (item.type === 'text/plain') {
+                        textItem = item;
+                    }
+                }
+
+                if (textItem) {
+                    e.preventDefault();
+                    textItem.getAsString(text => {
+                        if (text.trim().length > 0) {
+                            const pos = state.interaction.lastMousePos.x !== 0 ? state.interaction.lastMousePos : { x: app.videoMain.videoWidth / 2, y: app.videoMain.videoHeight / 2 };
+                            
+                            const ann = {
+                                type: 'comment',
+                                time: app.videoMain.currentTime,
+                                data: { x: pos.x, y: pos.y },
+                                color: state.activeColor,
+                                text: text,
+                                completed: false
+                            };
+                            addAnnotation(ann, false); 
+                        }
+                    });
+                }
+            }
+
+
+            function loadMainVideo(src, name) {
+                app.videoMain.src = src; app.videoMain.muted = state.isMuted; app.dropZone.classList.add('hidden');
+                app.mainVideoFilename.textContent = name;
+                app.mainVideoFilename.classList.remove('hidden');
+                app.videoMain.addEventListener('loadedmetadata', () => {
+                    const track = app.videoMain.getVideoPlaybackQuality ? app.videoMain.getVideoPlaybackQuality() : {};
+                    const frameRate = (track.totalVideoFrames / app.videoMain.duration) || 30;
+                    state.frameDuration = 1 / frameRate;
+                    app.timelineSlider.max = app.videoMain.duration;
+                    new ResizeObserver(redrawAllCanvases).observe(app.videoMain.parentElement);
+                }, { once: true });
+                app.videoMain.addEventListener('timeupdate', updateTimeline);
+                app.videoMain.addEventListener('play', () => { setPlayButtonState(true); if (app.videoRef.src) app.videoRef.play(); });
+                app.videoMain.addEventListener('pause', () => { setPlayButtonState(false); if (app.videoRef.src) app.videoRef.pause(); });
+            }
+            
+            function loadRefVideo(src, name) {
+                app.videoRef.src = src; app.videoRef.muted = true;
+                app.body.classList.add('ref-video-loaded');
+                app.videoRefSlot.classList.remove('hidden');
+                app.refVideoFilename.textContent = name;
+                app.refVideoFilename.classList.remove('hidden');
+                app.refVideoAddIcon.classList.add('hidden');
+                app.refVideoRemoveIcon.classList.remove('hidden');
+                app.videoRef.addEventListener('loadedmetadata', () => { seekTo(app.videoMain.currentTime); }, { once: true });
+            }
+
+            function removeRefVideo() {
+                app.videoRef.src = '';
+                app.body.classList.remove('ref-video-loaded');
+                app.videoRefSlot.classList.add('hidden');
+                app.refVideoFilename.classList.add('hidden');
+                app.refVideoAddIcon.classList.remove('hidden');
+                app.refVideoRemoveIcon.classList.add('hidden');
+            }
+
+            async function getBase64FromImage(img) {
+                return new Promise(resolve => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = img.naturalWidth;
+                    canvas.height = img.naturalHeight;
+                    ctx.drawImage(img, 0, 0);
+                    resolve(canvas.toDataURL('image/jpeg', 0.7));
+                });
+            }
+
+            async function saveAnnotations() {
+                if (!app.videoMain.src) return;
+
+                const annotationsToSave = JSON.parse(JSON.stringify(state.annotations));
+                for (let i = 0; i < state.annotations.length; i++) {
+                    const ann = state.annotations[i];
+                    if (ann.type === 'image' && ann.data.imageObject) {
+                        const base64 = await getBase64FromImage(ann.data.imageObject);
+                        const { p1, p2 } = ann.data;
+                        annotationsToSave[i].data = {
+                            base64,
+                            x: (p1.x + p2.x) / 2,
+                            y: (p1.y + p2.y) / 2,
+                            width: Math.abs(p2.x - p1.x),
+                            height: Math.abs(p2.y - p1.y)
+                        };
+                    }
+                }
+                const dataStr = JSON.stringify(annotationsToSave, null, 2);
+
+                try {
+                    if (state.currentFileHandle) {
+                        const writable = await state.currentFileHandle.createWritable();
+                        await writable.write(dataStr);
+                        await writable.close();
+                        state.hasUnsavedChanges = false;
+                        updateSaveButtonState();
+                    } else {
+                        if ('showSaveFilePicker' in window) {
+                            try {
+                                const fileName = (app.videoMain.src.split('/').pop() || 'video').split('.')[0];
+                                const fileHandle = await window.showSaveFilePicker({
+                                    suggestedName: `${fileName}_QC.txt`,
+                                    types: [{ description: 'QC Files', accept: { 'text/plain': ['.txt'] } }]
+                                });
+                                
+                                const writable = await fileHandle.createWritable();
+                                await writable.write(dataStr);
+                                await writable.close();
+                                
+                                state.currentFileHandle = fileHandle;
+                                state.currentFileName = fileHandle.name;
+                                state.hasUnsavedChanges = false;
+                                updateSaveButtonState();
+                                
+                            } catch (err) {
+                                if (err.name !== 'AbortError') { console.error('Error saving file:', err); fallbackSave(dataStr); }
+                            }
+                        } else {
+                            fallbackSave(dataStr);
+                        }
+                    }
+                } catch (err) { console.error('Error saving:', err); }
+
+                function fallbackSave(data) {
+                    const fileName = (app.videoMain.src.split('/').pop() || 'video').split('.')[0];
+                    const blob = new Blob([data], { type: 'text/plain;charset=utf-8' });
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = `${fileName}_QC.txt`;
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                    state.hasUnsavedChanges = false;
+                    updateSaveButtonState();
+                }
+            }
+            
+            function updateSaveButtonState() {
+                if (state.hasUnsavedChanges) {
+                    app.saveBtn.textContent = 'Chưa lưu';
+                    app.saveBtn.classList.add('unsaved');
+                } else {
+                    app.saveBtn.textContent = state.currentFileHandle ? 'Đã lưu' : 'Tải file QC';
+                    app.saveBtn.classList.remove('unsaved');
+                }
+            }
+
+            function markAsChanged() {
+                if (!state.hasUnsavedChanges) {
+                    state.hasUnsavedChanges = true;
+                    updateSaveButtonState();
+                }
+            }
+
+            const togglePlayPause = () => app.videoMain.src && (app.videoMain.paused ? app.videoMain.play() : app.videoMain.pause());
+            const setPlayButtonState = isPlaying => { document.getElementById('play-icon').classList.toggle('hidden', isPlaying); document.getElementById('pause-icon').classList.toggle('hidden', !isPlaying); };
+            const toggleMute = () => { state.isMuted = !state.isMuted; app.videoMain.muted = state.isMuted; document.getElementById('mute-icon').classList.toggle('hidden', !state.isMuted); document.getElementById('unmute-icon').classList.toggle('hidden', state.isMuted); };
+            const setPlaybackSpeed = speed => { 
+                app.videoMain.playbackRate = speed;
+                if(app.videoRef.src) app.videoRef.playbackRate = speed;
+                document.querySelectorAll('.speed-btn').forEach(btn => btn.classList.toggle('active', parseFloat(btn.dataset.speed) === speed)); 
+            };
+            const seekTo = time => { 
+                if (app.videoMain.src) { 
+                    const newTime = Math.max(0, Math.min(app.videoMain.duration, time));
+                    app.videoMain.currentTime = newTime;
+                    if (app.videoRef.src) app.videoRef.currentTime = newTime;
+                    redrawAllCanvases();
+                }
+            };
+            const seekFrames = count => seekTo(app.videoMain.currentTime + count * state.frameDuration);
+            const seekSeconds = count => seekTo(app.videoMain.currentTime + count);
+            const updateTimeline = () => { if(!app.timelineSlider.matches(':active')) app.timelineSlider.value = app.videoMain.currentTime; app.timeDisplay.textContent = formatTime(app.videoMain.currentTime); redrawAllCanvases(); };
+
+            function onCanvasMouseDown(e) {
+                state.interaction.startPos = getMousePos(e);
+                const hit = getHitAnnotation(state.interaction.startPos);
+                if (hit.handle) {
+                    state.interaction.mode = 'resizing'; state.interaction.target = { index: hit.index, handle: hit.handle };
+                } else if (hit.index !== -1) {
+                    state.interaction.mode = 'dragging';
+                    if (!state.selectedIndices.includes(hit.index)) { state.selectedIndices = [hit.index]; state.lastClickedIndex = hit.index; updateListSelection(); }
+                    redrawAllCanvases();
+                } else if (state.currentTool) {
+                    app.videoMain.pause();
+                    if (state.currentTool === 'comment') {
+                        addAnnotation({ type: 'comment', time: app.videoMain.currentTime, data: { x: state.interaction.startPos.x, y: state.interaction.startPos.y }, color: state.activeColor, text: '', completed: false }, true);
+                    } else if (state.currentTool === 'image') {
+                        app.imageInput.click();
+                    } else {
+                        state.interaction.mode = 'drawing';
+                    }
+                } else {
+                    state.selectedIndices = []; state.lastClickedIndex = -1; updateListSelection(); redrawAllCanvases();
+                }
+            }
+            function onCanvasMouseMove(e) {
+                const currentPos = getMousePos(e);
+                state.interaction.lastMousePos = currentPos;
+                switch (state.interaction.mode) {
+                    case 'drawing': redrawAllCanvases(); drawShape(null, {type: state.currentTool, data: {p1: state.interaction.startPos, p2: currentPos}, color: state.activeColor}, true); break;
+                    case 'dragging':
+                        const dx = currentPos.x - state.interaction.startPos.x; const dy = currentPos.y - state.interaction.startPos.y;
+                        state.selectedIndices.forEach(idx => moveAnnotation(idx, dx, dy));
+                        state.interaction.startPos = currentPos; redrawAllCanvases(); markAsChanged(); break;
+                    case 'resizing': resizeAnnotation(state.interaction.target.index, state.interaction.target.handle, currentPos); redrawAllCanvases(); markAsChanged(); break;
+                    default: const hit = getHitAnnotation(currentPos); app.canvasMain.style.cursor = hit.cursor || (state.currentTool ? 'crosshair' : 'default');
+                }
+            }
+            function onCanvasMouseUp(e) {
+                if (state.interaction.mode === 'drawing') {
+                    const endPos = getMousePos(e);
+                    if (Math.hypot(endPos.x - state.interaction.startPos.x, endPos.y - state.interaction.startPos.y) > 5) {
+                        addAnnotation({ type: state.currentTool, time: app.videoMain.currentTime, data: { p1: state.interaction.startPos, p2: endPos }, color: state.activeColor, text: '', completed: false }, true);
+                    }
+                }
+                state.interaction.mode = 'none';
+                app.canvasMain.style.cursor = getHitAnnotation(getMousePos(e)).cursor || 'default';
+                redrawAllCanvases();
+            }
+            function onCanvasDblClick(e) {
+                const hit = getHitAnnotation(getMousePos(e));
+                if (hit.index !== -1) {
+                    const li = app.annotationList.querySelector(`li[data-index='${hit.index}']`);
+                    if (li) makeListItemEditable(li, hit.index);
+                }
+            }
+            function onCanvasWheel(e) {
+                e.preventDefault();
+                seekFrames(e.deltaY < 0 ? 1 : -1); 
+            }
+            
+            function onKeyDown(e) {
+                const activeEl = document.activeElement;
+                if (['TEXTAREA', 'INPUT'].includes(activeEl.tagName) && activeEl.id !== 'search-input') return;
+                
+                if (e.ctrlKey) {
+                    switch (e.key.toLowerCase()) {
+                        case 's': e.preventDefault(); saveAnnotations(); return;
+                        case 'z': e.preventDefault(); e.shiftKey ? redoDelete() : undoDelete(); return;
+                        case 'f': e.preventDefault(); app.searchInput.focus(); app.searchInput.select(); return;
+                        case 'a': e.preventDefault(); state.selectedIndices = state.annotations.map((_, i) => i); updateListSelection(); redrawAllCanvases(); return;
+                        case 'd': e.preventDefault(); state.isLoadingRefVideo = false; app.fileInput.click(); return;
+                        case 'c': 
+                            if (state.selectedIndices.length > 0) {
+                                e.preventDefault();
+                                const selectedAnn = state.annotations[state.selectedIndices[0]];
+                                if (selectedAnn.type === 'image') {
+                                    copyImageToClipboard(selectedAnn).catch(err => console.error('Failed to copy image:', err));
+                                } else {
+                                    const textToCopy = state.selectedIndices
+                                        .map(index => state.annotations[index].text || '')
+                                        .filter(text => text)
+                                        .join('\n');
+                                    if (textToCopy) navigator.clipboard.writeText(textToCopy).catch(err => console.error('Failed to copy text: ', err));
+                                }
+                            }
+                            return;
+                        case 'v': return;
+                    }
+                }
+
+                let handled = true;
+                switch(e.key) {
+                    case ' ': if (activeEl.id !== 'search-input') togglePlayPause(); break;
+                    case 'ArrowLeft': e.shiftKey ? seekSeconds(-1) : seekFrames(-1); break;
+                    case 'ArrowRight': e.shiftKey ? seekSeconds(1) : seekFrames(1); break;
+                    case 'ArrowUp': seekTo(0); break;
+                    case 'ArrowDown': seekTo(app.videoMain.duration); break;
+                    case 'Delete': deleteSelectedAnnotations(); break;
+                    default: handled = false;
+                }
+                if (handled) e.preventDefault();
+
+                if ('qwerty'.includes(e.key.toLowerCase())) {
+                    const toolMap = {q:'comment', w:'rect', e:'circle', r:'line', t:'arrow'};
+                    selectTool(toolMap[e.key]);
+                }
+            }
+
+            function addAnnotation(ann, startEditing = false) {
+                 if (['rect', 'circle', 'line', 'arrow'].includes(ann.type) && !ann.text) {
+                    ann.text = ''; 
+                }
+                state.annotations.push(ann);
+                state.annotations.sort((a,b) => a.time - b.time);
+                state.undoStack = []; state.redoStack = [];
+                const newIndex = state.annotations.findIndex(a => a === ann);
+                state.selectedIndices = [newIndex];
+                state.lastClickedIndex = newIndex;
+                markAsChanged();
+                updateAnnotationList();
+                redrawAllCanvases();
+                if (startEditing) {
+                    const li = app.annotationList.querySelector(`li[data-index='${newIndex}']`);
+                    if (li) { li.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); makeListItemEditable(li, newIndex); }
+                }
+            }
+            
+            function updateListSelection() {
+                app.annotationList.querySelectorAll('li').forEach(item => {
+                    item.classList.toggle('selected', state.selectedIndices.includes(parseInt(item.dataset.index, 10)));
+                });
+                redrawAllCanvases();
+            }
+            
+            async function copyImageToClipboard(annotation) {
+                const img = annotation.data.imageObject;
+                if (!img || !('write' in navigator.clipboard)) {
+                    throw new Error("Image object not found or Clipboard API not supported.");
+                }
+                
+                const blob = await new Promise(resolve => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.naturalWidth;
+                    canvas.height = img.naturalHeight;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    canvas.toBlob(blob => resolve(blob), 'image/png');
+                });
+
+                if (!blob) throw new Error("Failed to convert image to blob.");
+                
+                await navigator.clipboard.write([ new ClipboardItem({ [blob.type]: blob }) ]);
+            }
+
+            function updateAnnotationList() {
+                app.annotationList.innerHTML = '';
+                const searchTerm = app.searchInput.value.toLowerCase();
+                state.annotations.forEach((ann, index) => {
+                    const isTextSearchable = (ann.text || '').toLowerCase().includes(searchTerm);
+                    const isTypeSearchable = ann.type.toLowerCase().includes(searchTerm);
+                    if (searchTerm && !isTextSearchable && !isTypeSearchable) return;
+
+                    const li = document.createElement('li');
+                    li.dataset.index = index;
+                    li.classList.toggle('selected', state.selectedIndices.includes(index));
+                    li.classList.toggle('completed', ann.completed);
+                    
+                    let contentHtml = '';
+                    if (ann.type === 'image') {
+                        const img = ann.data.imageObject || imageCache.get(ann.data.base64);
+                        if(img) contentHtml += `<img src="${img.src}" class="annotation-image" alt="Annotation Image">`;
+                    }
+                    if (ann.text) {
+                        contentHtml += `<p class="content">${ann.text.replace(/\n/g, '<br>')}</p>`;
+                    }
+
+                    const title = ann.type === 'image' ? 'Copy image' : 'Copy text';
+                    const headerToolsHtml = `
+                        <button class="copy-btn" title="${title}">Copy</button>
+                        <input type="checkbox" class="complete-checkbox" ${ann.completed ? 'checked' : ''}>
+                    `;
+                    
+                    li.innerHTML = `
+                        <div class="header">
+                            <span class="time">${formatTime(ann.time)} - ${ann.type}</span>
+                            <div class="header-tools">${headerToolsHtml}</div>
+                        </div>
+                        ${contentHtml}`;
+                    
+                    li.addEventListener('click', e => {
+                        if (e.target.classList.contains('copy-btn')) return;
+                        const currentList = Array.from(app.annotationList.children).map(child => state.annotations[parseInt(child.dataset.index)]);
+                        const displayIndex = currentList.findIndex(a => a === ann);
+                        if (e.shiftKey && state.lastClickedIndex !== -1) {
+                            const lastDisplayIndex = currentList.findIndex(a => a === state.annotations[state.lastClickedIndex]);
+                            const start = Math.min(lastDisplayIndex, displayIndex);
+                            const end = Math.max(lastDisplayIndex, displayIndex);
+                            state.selectedIndices = [];
+                            for(let i = start; i <= end; i++) {
+                                if(currentList[i]) { state.selectedIndices.push(state.annotations.indexOf(currentList[i])); }
+                            }
+                        } else if (e.ctrlKey) {
+                            const idxInSelection = state.selectedIndices.indexOf(index);
+                            if (idxInSelection > -1) { state.selectedIndices.splice(idxInSelection, 1); } else { state.selectedIndices.push(index); }
+                        } else { state.selectedIndices = [index]; }
+                        state.lastClickedIndex = index;
+                        seekTo(ann.time); updateListSelection();
+                    });
+                    
+                    li.addEventListener('dblclick', () => makeListItemEditable(li, index));
+                    li.querySelector('.complete-checkbox').addEventListener('click', e => { e.stopPropagation(); ann.completed = e.target.checked; li.classList.toggle('completed', ann.completed); markAsChanged(); redrawAllCanvases(); });
+                    
+                    const copyBtn = li.querySelector('.copy-btn');
+                    if (copyBtn) {
+                        copyBtn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            const showFeedback = (target, success) => {
+                                target.textContent = success ? 'Copied!' : 'Error!';
+                                setTimeout(() => { target.textContent = 'Copy'; }, 1500);
+                            };
+
+                            if (ann.type === 'image') {
+                                copyImageToClipboard(ann).then(() => showFeedback(e.target, true))
+                                .catch(err => { console.error('Failed to copy image: ', err); showFeedback(e.target, false); });
+                            } else {
+                                navigator.clipboard.writeText(ann.text || '').then(() => showFeedback(e.target, true))
+                                .catch(err => { console.error('Failed to copy text: ', err); showFeedback(e.target, false); });
+                            }
+                        });
+                    }
+
+                    app.annotationList.appendChild(li);
+                });
+            }
+
+            function makeListItemEditable(li, index) {
+                const ann = state.annotations[index];
+                if(ann.type === 'image') return; 
+
+                let contentEl = li.querySelector('.content');
+                if (!contentEl) {
+                    contentEl = document.createElement('p');
+                    contentEl.className = 'content';
+                    li.appendChild(contentEl);
+                }
+                if (contentEl.querySelector('textarea')) return;
+
+                const oldText = ann.text || '';
+                contentEl.innerHTML = `<textarea rows="1">${oldText}</textarea>`;
+                const textarea = contentEl.querySelector('textarea');
+                const autoSize = () => { textarea.style.height = 'auto'; textarea.style.height = `${textarea.scrollHeight}px`; };
+                textarea.addEventListener('input', autoSize);
+                setTimeout(() => { textarea.focus(); textarea.select(); autoSize(); }, 0);
+                const save = () => { 
+                    const newText = textarea.value;
+                    if (newText !== oldText) { ann.text = newText; markAsChanged(); }
+                    const currentSelectedIndexes = [...state.selectedIndices];
+                    updateAnnotationList();
+                    state.selectedIndices = currentSelectedIndexes;
+                    updateListSelection();
+                    redrawAllCanvases();
+                };
+                textarea.addEventListener('blur', save);
+                textarea.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); textarea.removeEventListener('blur', save); updateAnnotationList();} if (e.ctrlKey && e.key === 'Enter') { e.stopPropagation(); textarea.blur(); } });
+            }
+            
+            function deleteSelectedAnnotations() {
+                if (state.selectedIndices.length === 0) return;
+                const deletedItems = state.selectedIndices.map(index => ({ annotation: state.annotations[index], originalIndex: index })).sort((a,b) => a.originalIndex - b.originalIndex);
+                state.undoStack.push(deletedItems); state.redoStack = [];
+                state.annotations = state.annotations.filter((_, i) => !state.selectedIndices.includes(i));
+                state.selectedIndices = []; state.lastClickedIndex = -1;
+                markAsChanged();
+                updateAnnotationList(); redrawAllCanvases();
+            }
+
+            function undoDelete() {
+                if (state.undoStack.length === 0) return;
+                const itemsToRestore = state.undoStack.pop();
+                state.redoStack.push(itemsToRestore);
+                itemsToRestore.forEach(item => state.annotations.splice(item.originalIndex, 0, item.annotation));
+                markAsChanged();
+                updateAnnotationList(); redrawAllCanvases();
+            }
+
+            function redoDelete() {
+                if (state.redoStack.length === 0) return;
+                const itemsToDelete = state.redoStack.pop();
+                state.undoStack.push(itemsToDelete);
+                const annotationsToDelete = new Set(itemsToDelete.map(item => item.annotation));
+                state.annotations = state.annotations.filter(ann => !annotationsToDelete.has(ann));
+                markAsChanged();
+                updateAnnotationList(); redrawAllCanvases();
+            }
+
+            function redrawAllCanvases() {
+                const { ctxMain: ctx, canvasMain: canvas, videoMain: video } = app;
+                if (!video.videoWidth) return;
+                
+                app.videoMain.style.transform = '';
+                if(app.videoRef.src) app.videoRef.style.transform = '';
+                canvas.style.transform = '';
+
+                const parentRect = canvas.parentElement.getBoundingClientRect();
+                canvas.width = parentRect.width; canvas.height = parentRect.height;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                state.annotations.forEach((ann, index) => {
+                    if (Math.abs(ann.time - video.currentTime) < state.frameDuration * 2) {
+                        drawShape(ctx, ann, state.selectedIndices.includes(index));
+                    }
+                });
+
+                if (state.interaction.mode === 'drawing') {
+                     const currentPos = state.interaction.lastMousePos;
+                     drawShape(ctx, {type: state.currentTool, data: {p1: state.interaction.startPos, p2: currentPos}, color: state.activeColor}, false, true);
+                }
+
+                if (state.selectedIndices.length === 1) {
+                    const ann = state.annotations[state.selectedIndices[0]];
+                    if (ann && ann.type !== 'comment' && Math.abs(ann.time - video.currentTime) < state.frameDuration * 2) {
+                        drawHandles(ctx, ann);
+                    }
+                }
+            }
+
+            function getHitAnnotation(pos) {
+                let found = { index: -1, handle: null, cursor: null };
+                for (let i = state.annotations.length - 1; i >= 0; i--) {
+                    const ann = state.annotations[i];
+                    if (Math.abs(app.videoMain.currentTime - ann.time) > state.frameDuration * 2) continue;
+                    
+                    if (state.selectedIndices.includes(i) && ann.type !== 'comment') {
+                        const handle = getHitHandle(pos, ann);
+                        if(handle) { return { index: i, handle, cursor: handle.cursor }; }
+                    }
+
+                    const padding = 5;
+                    let hit = false;
+                    if (ann.type === 'comment') { 
+                        hit = Math.hypot(pos.x - ann.data.x, pos.y - ann.data.y) < 10;
+                    } else {
+                        const { p1, p2 } = ann.data; 
+                        const bb = { x: Math.min(p1.x, p2.x) - padding, y: Math.min(p1.y, p2.y) - padding, w: Math.abs(p1.x - p2.x) + 2 * padding, h: Math.abs(p1.y - p2.y) + 2 * padding };
+                        hit = (pos.x > bb.x && pos.x < bb.x + bb.w && pos.y > bb.y && pos.y < bb.y + bb.h);
+                    }
+
+                    if(hit) { return { index: i, handle: null, cursor: 'move' }; }
+                }
+                return found;
+            }
+
+            function drawShape(ctx, ann, isSelected, isPreview = false) {
+                if (!ctx) return; 
+                ctx.save();
+                const videoRect = getVideoRect(app.canvasMain, app.videoMain);
+                ctx.translate(videoRect.x, videoRect.y);
+                
+                const { type, data, color } = ann;
+                ctx.strokeStyle = color;
+                ctx.lineWidth = isSelected ? 4 : 2;
+                if(isPreview) { ctx.setLineDash([6, 3]); ctx.lineWidth = 3; }
+                
+                ctx.beginPath();
+                switch (type) {
+                    case 'comment':
+                        ctx.fillStyle = color;
+                        ctx.beginPath(); ctx.arc(data.x, data.y, 8, 0, 2 * Math.PI); ctx.fill();
+                        if (isSelected) { 
+                            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'; 
+                            ctx.beginPath(); 
+                            ctx.arc(data.x, data.y, 12, 0, 2 * Math.PI); 
+                            ctx.fill(); 
+                        }
+                        break;
+                    case 'image':
+                        const img = data.imageObject || imageCache.get(data.base64);
+                        if (img && img.complete && img.naturalHeight !== 0) {
+                            ctx.drawImage(img, data.p1.x, data.p1.y, data.p2.x - data.p1.x, data.p2.y - data.p1.y);
+                            if (isSelected) { 
+                                ctx.strokeStyle = '#00aaff';
+                                ctx.strokeRect(data.p1.x, data.p1.y, data.p2.x - data.p1.x, data.p2.y - data.p1.y);
+                            }
+                        }
+                        break;
+                    case 'rect': ctx.rect(data.p1.x, data.p1.y, data.p2.x - data.p1.x, data.p2.y - data.p1.y); break;
+                    case 'circle': ctx.ellipse(data.p1.x + (data.p2.x-data.p1.x)/2, data.p1.y + (data.p2.y-data.p1.y)/2, Math.abs((data.p2.x-data.p1.x)/2), Math.abs((data.p2.y-data.p1.y)/2), 0, 0, 2 * Math.PI); break;
+                    case 'line': ctx.moveTo(data.p1.x, data.p1.y); ctx.lineTo(data.p2.x, data.p2.y); break;
+                    case 'arrow':
+                        const h = 15, dx = data.p2.x - data.p1.x, dy = data.p2.y - data.p1.y, a = Math.atan2(dy, dx);
+                        ctx.moveTo(data.p1.x, data.p1.y); ctx.lineTo(data.p2.x, data.p2.y);
+                        ctx.lineTo(data.p2.x - h * Math.cos(a - Math.PI / 6), data.p2.y - h * Math.sin(a - Math.PI / 6));
+                        ctx.moveTo(data.p2.x, data.p2.y);
+                        ctx.lineTo(data.p2.x - h * Math.cos(a + Math.PI / 6), data.p2.y - h * Math.sin(a + Math.PI / 6));
+                        break;
+                }
+                if (type !== 'comment' && type !== 'image') ctx.stroke();
+                ctx.restore();
+            }
+
+            function drawHandles(ctx, ann) {
+                ctx.save();
+                const videoRect = getVideoRect(app.canvasMain, app.videoMain);
+                ctx.translate(videoRect.x, videoRect.y);
+
+                const handles = getHandlesFor(ann);
+                ctx.fillStyle = 'white'; 
+                const handleSize = 8;
+                handles.forEach(h => ctx.fillRect(h.x - handleSize/2, h.y - handleSize/2, handleSize, handleSize));
+                ctx.restore();
+            }
+            
+            function moveAnnotation(index, dx, dy) {
+                const ann = state.annotations[index];
+                if (ann.type === 'comment') { ann.data.x += dx; ann.data.y += dy; }
+                else { ann.data.p1.x += dx; ann.data.p1.y += dy; ann.data.p2.x += dx; ann.data.p2.y += dy; }
+            }
+
+            function resizeAnnotation(index, handle, pos) {
+                const ann = state.annotations[index];
+                
+                if (ann.type === 'image' && ann.data.imageObject) {
+                    const ratio = ann.data.imageObject.naturalWidth / ann.data.imageObject.naturalHeight;
+                    if (!ratio) return;
+
+                    const { p1, p2 } = ann.data;
+                    const minX = Math.min(p1.x, p2.x), minY = Math.min(p1.y, p2.y);
+                    const maxX = Math.max(p1.x, p2.x), maxY = Math.max(p1.y, p2.y);
+                    
+                    let newP1, newP2;
+
+                    switch (handle) {
+                        case 'br': {
+                            const newWidth = Math.max(10, pos.x - minX);
+                            const newHeight = newWidth / ratio;
+                            newP1 = { x: minX, y: minY };
+                            newP2 = { x: minX + newWidth, y: minY + newHeight };
+                            break;
+                        }
+                        case 'tl': {
+                            const newWidth = Math.max(10, maxX - pos.x);
+                            const newHeight = newWidth / ratio;
+                            newP2 = { x: maxX, y: maxY };
+                            newP1 = { x: maxX - newWidth, y: maxY - newHeight };
+                            break;
+                        }
+                        case 'tr': {
+                            const newWidth = Math.max(10, pos.x - minX);
+                            const newHeight = newWidth / ratio;
+                            newP1 = { x: minX, y: maxY - newHeight };
+                            newP2 = { x: minX + newWidth, y: maxY };
+                            break;
+                        }
+                        case 'bl': {
+                            const newWidth = Math.max(10, maxX - pos.x);
+                            const newHeight = newWidth / ratio;
+                            newP1 = { x: maxX - newWidth, y: minY };
+                            newP2 = { x: maxX, y: minY + newHeight };
+                            break;
+                        }
+                        default: return;
+                    }
+                    ann.data.p1 = newP1;
+                    ann.data.p2 = newP2;
+
+                } else {
+                    const { p1, p2 } = ann.data;
+                    const minX = Math.min(p1.x, p2.x), minY = Math.min(p1.y, p2.y), maxX = Math.max(p1.x, p2.x), maxY = Math.max(p1.y, p2.y);
+                    switch (handle) {
+                        case 'p1': ann.data.p1 = pos; break;
+                        case 'p2': ann.data.p2 = pos; break;
+                        case 'tl': ann.data.p1 = pos; ann.data.p2 = {x: maxX, y: maxY}; break;
+                        case 'br': ann.data.p1 = {x: minX, y: minY}; ann.data.p2 = pos; break;
+                        case 'tr': ann.data.p1 = {x: minX, y: pos.y}; ann.data.p2 = {x: pos.x, y: maxY}; break;
+                        case 'bl': ann.data.p1 = {x: pos.x, y: minY}; ann.data.p2 = {x: maxX, y: pos.y}; break;
+                    }
+                }
+            }
+
+            const getHandlesFor = (ann) => {
+                const { p1, p2 } = ann.data;
+                if (ann.type === 'line' || ann.type === 'arrow') return [{name: 'p1', x: p1.x, y: p1.y, cursor: 'pointer'}, {name: 'p2', x: p2.x, y: p2.y, cursor: 'pointer'}];
+                const minX = Math.min(p1.x, p2.x), minY = Math.min(p1.y, p2.y); const maxX = Math.max(p1.x, p2.x), maxY = Math.max(p1.y, p2.y);
+                return [ {name: 'tl', x: minX, y: minY, cursor: 'nwse-resize'}, {name: 'tr', x: maxX, y: minY, cursor: 'nesw-resize'}, {name: 'bl', x: minX, y: maxY, cursor: 'nesw-resize'}, {name: 'br', x: maxX, y: maxY, cursor: 'nwse-resize'} ];
+            };
+
+            const getHitHandle = (pos, ann) => {
+                const handleSize = 8;
+                return getHandlesFor(ann).find(h => pos.x > h.x - handleSize/2 && pos.x < h.x + handleSize/2 && pos.y > h.y - handleSize/2 && pos.y < h.y + handleSize/2)?.name || null;
+            }
+            
+            const selectTool = tool => { state.currentTool = state.currentTool === tool ? null : tool; document.querySelectorAll('.tool-btn').forEach(b => b.classList.toggle('active', b.dataset.tool === state.currentTool)); app.canvasMain.style.cursor = state.currentTool ? 'crosshair' : 'default'; };
+            const selectColor = btn => { state.activeColor = btn.dataset.color; document.getElementById('active-color-btn').style.backgroundColor = state.activeColor; document.getElementById('color-palette-popup').classList.add('hidden'); };
+            const toggleColorPalette = () => document.getElementById('color-palette-popup').classList.toggle('hidden');
+            
+            function saveFrame() {
+                if (!app.videoMain.src) return;
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = app.videoMain.videoWidth; tempCanvas.height = app.videoMain.videoHeight;
+                tempCanvas.getContext('2d').drawImage(app.videoMain, 0, 0, tempCanvas.width, tempCanvas.height);
+                const a = document.createElement('a'); a.href = tempCanvas.toDataURL('image/png'); a.download = `frame_${formatTime(app.videoMain.currentTime, true).replace(/:/g, '-')}.png`; a.click();
+            }
+            const formatTime = (secs, forFilename = false) => { const s = Math.floor(secs % 60); const m = Math.floor((secs / 60) % 60); const d = forFilename ? '-' : ':'; return `${String(m).padStart(2,'0')}${d}${String(s).padStart(2,'0')}`; };
+            
+            const getMousePos = (e) => {
+                const canvasRect = app.canvasMain.getBoundingClientRect();
+                const screenX = e.clientX - canvasRect.left;
+                const screenY = e.clientY - canvasRect.top;
+                
+                const videoRect = getVideoRect(app.canvasMain, app.videoMain);
+                const videoLocalX = screenX - videoRect.x;
+                const videoLocalY = screenY - videoRect.y;
+
+                return { x: videoLocalX, y: videoLocalY };
+            };
+
+            function getVideoRect(canvas, video) {
+                if (!video.videoWidth) return { x: 0, y: 0, width: 0, height: 0 };
+                const videoRatio = video.videoWidth / video.videoHeight;
+                const canvasRatio = canvas.width / canvas.height;
+                let width, height;
+                if (videoRatio > canvasRatio) {
+                    width = canvas.width;
+                    height = canvas.width / videoRatio;
+                } else {
+                    height = canvas.height;
+                    width = canvas.height * videoRatio;
+                }
+                return { x: (canvas.width - width) / 2, y: (canvas.height - height) / 2, width, height };
+            }
+
+            function makeTimeEditable() {
+                const originalTime = app.timeDisplay.textContent;
+                app.timeDisplay.innerHTML = `<input type="text" value="${originalTime}">`;
+                const input = app.timeDisplay.querySelector('input');
+                input.focus(); input.select();
+                const save = () => {
+                    const parts = input.value.split(':').map(Number);
+                    if(parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) { seekTo(parts[0]*60 + parts[1]); }
+                    app.timeDisplay.textContent = formatTime(app.videoMain.currentTime);
+                };
+                input.addEventListener('blur', save);
+                input.addEventListener('keydown', e => { if (e.key === 'Enter') input.blur(); });
+            }
+
+            init();
+        });
+    </script>
+</body>
+</html>
