@@ -492,9 +492,22 @@
                         image_renderWorkspace();
                     } else {
                         if (!videoFilename) throw new Error("Video filename missing for video mode data.");
-                        switchToVideoMode({name: videoFilename}, []);
+
+                        // --- FIX STARTS HERE ---
+                        // Manually set up the UI for video mode instead of calling switchToVideoMode
+                        state.mode = 'video';
+                        app.dropZone.classList.add('hidden');
+                        app.imageModeContainer.classList.add('hidden');
+                        app.videoModeContainer.classList.remove('hidden');
+                        app.bottomControlsContainer.classList.remove('hidden');
+                        app.rightPanel.classList.remove('hidden');
+                        app.timelinePanel.classList.remove('hidden');
+                        app.refVideoPanel.classList.remove('hidden');
                         
+                        // Load the video using the filename as a relative path
                         video_loadMainVideo(videoFilename, videoFilename);
+                        // --- FIX ENDS HERE ---
+
                         app.videoMain.addEventListener('loadedmetadata', async () => {
                             await video_processLoadedAnnotations(loadedData);
                             state.annotations = loadedData;
