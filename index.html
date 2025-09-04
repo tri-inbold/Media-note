@@ -15,7 +15,6 @@
         body.theme-light {
             --bg-color: #f0f2f5; --panel-bg: #ffffff; --border-color: #dee2e6; --text-color: #212529; --text-color-light: #6c757d; --input-bg: #ffffff; --list-item-bg: #ffffff; --list-item-reply-bg: #f1f3f5; --checkbox-border: #adb5bd; --icon-btn-color: #6c757d; --icon-btn-hover-color: #212529; --workspace-bg: #e9ecef; --video-slot-bg: #ffffff;
         }
-        /* UPDATED: Unified background color */
         body, html { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--workspace-bg); color: var(--text-color); overflow: hidden; height: 100vh; width: 100vw; }
         .hidden { display: none !important; }
         .glass-panel { background: var(--panel-bg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid var(--border-color); box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2); transition: transform 0.4s ease, opacity 0.4s ease; }
@@ -168,10 +167,19 @@
         #theme-selector {-webkit-appearance: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23f0f0f0'%3E%3Cpath d='M6 9L.5 3h11z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 6px center; padding-right: 20px;}
         body.theme-light #theme-selector { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%231a1a1a'%3E%3Cpath d='M6 9L.5 3h11z'/%3E%3C/svg%3E");}
         #theme-selector option { background: var(--panel-bg); color: var(--text-color); }
+
+        /* NEW: Video Path Modal Styles */
+        #video-path-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 300; display: flex; justify-content: center; align-items: center; }
+        #video-path-modal .modal-content { padding: 25px 30px; width: 600px; text-align: center; }
+        #video-path-modal p { margin: 0 0 15px 0; line-height: 1.5; }
+        #video-path-modal p strong { color: var(--highlight-color); word-break: break-all; }
+        #video-path-modal input { width: 100%; margin-bottom: 15px; }
+        #video-path-modal #filename-warning { color: #E53935; font-weight: bold; margin-top: 10px; }
+
     </style>
 </head>
 <body class="theme-dark">
-    <input type="file" id="file-input" accept="image/*" style="display: none;" multiple>
+    <input type="file" id="file-input" accept="image/*,video/*" style="display: none;" multiple>
     
     <div id="app-container">
         <div id="main-content">
@@ -331,6 +339,18 @@
             <p><strong>Contact:</strong> tri.vu.trong@inbold.com</p>
         </div>
     </div>
+    
+    <!-- NEW: Modal for when video file is not found -->
+    <div id="video-path-modal" class="hidden">
+        <div class="modal-content glass-panel">
+            <h3>Không tìm thấy file Video</h3>
+            <p>Không thể tải video từ vị trí đã lưu:<br><strong><span id="original-video-path-display"></span></strong></p>
+            <p>Vui lòng cung cấp đường dẫn mới đến file video.</p>
+            <input type="text" id="new-video-path-input" class="video-path-input" placeholder="Dán đường dẫn mới vào đây (VD: D:\folder\video.mp4)">
+            <button id="load-new-path-btn" class="load-video-btn">Tải Video</button>
+            <p id="filename-warning" class="hidden"></p>
+        </div>
+    </div>
 
     <!-- Embedded data will be placed here on save -->
     <script id="app-data" type="application/json"></script>
@@ -372,7 +392,7 @@
                     selectedIndices: [], lastClickedIndex: -1,
                     undoStack: [], redoStack: [],
                     currentFileHandle: null, hasUnsavedChanges: false, currentUser: null,
-                    videoPath: null, // NEW: Store the original video path
+                    videoPath: null, 
                     clipboard: [],
                     interaction: { mode: 'none', target: null, startPos: { x: 0, y: 0 }, lastMousePos: { x: 0, y: 0 } },
                     isAddingFiles: false,
@@ -393,19 +413,14 @@
                 app.mainContent.addEventListener('dblclick', (e) => { 
                     if (e.target.closest('#image-load-section') || e.target === app.workspaceContainer) {
                         state.isAddingFiles = (state.mode !== 'none');
-                        // Ensure file input is reset for multi-use (e.g., ref videos)
-                        app.fileInput.setAttribute('accept', 'video/*,image/*');
+                        app.fileInput.setAttribute('accept', 'image/*');
                         app.fileInput.click();
                     } 
                 });
                 
-                // NEW: Event listeners for video path input
                 document.getElementById('load-video-btn').addEventListener('click', loadVideoFromPath);
                 document.getElementById('video-path-input').addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        loadVideoFromPath();
-                    }
+                    if (e.key === 'Enter') { e.preventDefault(); loadVideoFromPath(); }
                 });
 
                 window.addEventListener('dragover', e => { e.preventDefault(); document.body.classList.add('dragging'); });
@@ -458,7 +473,6 @@
                 updateSaveButtonState();
             }
 
-            // NEW: Function to start video mode from path input
             function loadVideoFromPath() {
                 const pathInput = document.getElementById('video-path-input');
                 const videoPath = pathInput.value.trim();
@@ -471,10 +485,9 @@
                 switchToVideoMode(videoPath);
             }
 
-            // UPDATED: Now takes a path string instead of a file object
             function switchToVideoMode(videoPath) {
                 state.mode = 'video';
-                state.videoPath = videoPath; // Store the raw path for saving
+                state.videoPath = videoPath;
 
                 app.dropZone.classList.add('hidden');
                 app.imageModeContainer.classList.add('hidden');
@@ -503,34 +516,36 @@
                 image_updateWorkspaceTransform();
             }
 
+            // --- UPDATED AUTO-LOAD LOGIC ---
             async function autoLoadData() {
                 const dataScript = document.getElementById('app-data');
                 const videoFilenameMeta = document.querySelector('meta[name="video-filename"]');
                 const dataJson = dataScript ? dataScript.textContent.trim() : null;
-                const videoFilename = videoFilenameMeta ? videoFilenameMeta.getAttribute('content') : null;
+                const savedFileUri = videoFilenameMeta ? videoFilenameMeta.getAttribute('content') : null;
 
-                if (!dataJson) return;
+                if (!dataJson) return; // No data, do nothing
 
                 try {
                     const loadedData = JSON.parse(dataJson);
-                    if (loadedData.artboards) {
+                    
+                    if (loadedData.artboards) { // It's an image QC file
                         switchToImageMode([]);
                         state.annotations = loadedData.annotations || [];
                         const artboardPromises = (loadedData.artboards || []).map(boardData => {
                             return new Promise((resolve) => {
                                 const img = new Image();
                                 img.onload = () => { state.artboards.push({ ...boardData, imageObject: img }); resolve(); };
-                                img.onerror = resolve;
+                                img.onerror = resolve; // Continue even if one image fails
                                 img.src = boardData.imageData;
                             });
                         });
                         await Promise.all(artboardPromises);
                         if(loadedData.layout) state.layout = loadedData.layout;
                         image_renderWorkspace();
-                    } else {
-                        if (!videoFilename) throw new Error("Video filename missing for video mode data.");
-
-                        // UPDATED: Handle file:/// URI on load
+                    } else { // It's a video QC file
+                        if (!savedFileUri) throw new Error("Video filename missing from meta tag.");
+                        
+                        // Prepare for video mode
                         state.mode = 'video';
                         app.dropZone.classList.add('hidden');
                         app.imageModeContainer.classList.add('hidden');
@@ -539,24 +554,61 @@
                         app.rightPanel.classList.remove('hidden');
                         app.timelinePanel.classList.remove('hidden');
                         app.refVideoPanel.classList.remove('hidden');
-                        
-                        // The saved filename is the full file URI
-                        const fileUri = videoFilename;
-                        // Convert back to system path for state and get just the name for display
-                        const videoName = fileUri.split('/').pop();
-                        // Store original-style path for re-saving
-                        state.videoPath = fileUri.replace(/^file:\/\/\//i, '').replace(/\//g, '\\'); 
 
-                        // Load the video using the file URI
-                        video_loadMainVideo(fileUri, videoName);
+                        const originalFilename = savedFileUri.split('/').pop();
+                        const originalSystemPath = savedFileUri.replace(/^file:\/\/\//i, '').replace(/\//g, '\\');
+                        state.videoPath = originalSystemPath; // Set initial path
 
-                        app.videoMain.addEventListener('loadedmetadata', async () => {
-                            await video_processLoadedAnnotations(loadedData);
-                            state.annotations = loadedData;
-                            updateAnnotationList();
-                            video_redrawAllCanvases();
-                        }, { once: true });
+                        const completeVideoSetup = (loadedPath, displayName) => {
+                            video_loadMainVideo(loadedPath, displayName);
+                            app.videoMain.addEventListener('loadedmetadata', async () => {
+                                await video_processLoadedAnnotations(loadedData);
+                                state.annotations = loadedData;
+                                updateAnnotationList();
+                                video_redrawAllCanvases();
+                            }, { once: true });
+                        };
+
+                        const tryLoadVideo = (path) => {
+                            return new Promise((resolve, reject) => {
+                                const tempVideo = document.createElement('video');
+                                tempVideo.oncanplay = () => {
+                                    tempVideo.oncanplay = null;
+                                    tempVideo.onerror = null;
+                                    resolve(path);
+                                };
+                                tempVideo.onerror = () => {
+                                    tempVideo.oncanplay = null;
+                                    tempVideo.onerror = null;
+                                    reject(new Error(`Failed to load video from ${path}`));
+                                };
+                                tempVideo.src = path;
+                            });
+                        };
+
+                        // Start loading cascade
+                        tryLoadVideo(originalFilename) // 1. Try relative path
+                            .then(loadedPath => {
+                                console.log("Successfully loaded video from relative path.");
+                                state.videoPath = originalFilename; // Update state to reflect it's now relative
+                                completeVideoSetup(loadedPath, originalFilename);
+                            })
+                            .catch(() => { // 2. Try absolute path
+                                console.log("Relative path failed, trying absolute path...");
+                                return tryLoadVideo(savedFileUri);
+                            })
+                            .then(loadedPath => {
+                                if(loadedPath){ // This check is needed because the first then() doesn't return anything
+                                    console.log("Successfully loaded video from absolute path.");
+                                    completeVideoSetup(loadedPath, originalFilename);
+                                }
+                            })
+                            .catch(() => { // 3. Both failed, ask user
+                                console.log("Absolute path failed, asking user for new path.");
+                                showVideoPathModal(originalSystemPath, originalFilename, completeVideoSetup);
+                            });
                     }
+
                     updateAnnotationList();
                     updateSaveButtonState();
                 } catch (err) {
@@ -565,14 +617,40 @@
                 }
             }
 
+            function showVideoPathModal(originalSystemPath, originalFilename, callback) {
+                const modal = document.getElementById('video-path-modal');
+                const pathDisplay = document.getElementById('original-video-path-display');
+                const pathInput = document.getElementById('new-video-path-input');
+                const loadBtn = document.getElementById('load-new-path-btn');
+                
+                pathDisplay.textContent = originalSystemPath;
+                modal.classList.remove('hidden');
+
+                const onButtonClick = () => {
+                    const newPath = pathInput.value.trim();
+                    if (!newPath) return;
+
+                    const newFilename = newPath.split(/[\\/]/).pop();
+                    
+                    if (newFilename.toLowerCase() !== originalFilename.toLowerCase()) {
+                        const proceed = confirm(`CẢNH BÁO:\nTên file mới (${newFilename}) khác với tên file gốc (${originalFilename}).\n\nBạn có chắc chắn muốn tiếp tục không?`);
+                        if (!proceed) return;
+                    }
+                    
+                    const newFileUri = 'file:///' + newPath.replace(/\\/g, '/');
+                    state.videoPath = newPath; // Update state with the new, correct path
+                    modal.classList.add('hidden');
+                    loadBtn.removeEventListener('click', onButtonClick); // Clean up listener
+                    callback(newFileUri, newFilename);
+                };
+
+                loadBtn.addEventListener('click', onButtonClick);
+            }
+
 
             // --- GLOBAL EVENT HANDLERS ---
             function processFileInput(e) {
-                // Reset accept attribute after use
-                const currentAccept = app.fileInput.getAttribute('accept');
-                if(currentAccept !== 'video/*,image/*'){
-                     app.fileInput.setAttribute('accept', 'video/*,image/*');
-                }
+                app.fileInput.setAttribute('accept', 'image/*,video/*');
 
                 if (!e.target.files.length) return;
                 const files = Array.from(e.target.files);
@@ -615,10 +693,9 @@
                     handleFiles(files);
                 }
             }
-
-            // UPDATED: To only handle image files for initial startup
+            
             function handleFiles(files) {
-                if (state.mode !== 'none') return; // Should not be called if already in a mode
+                if (state.mode !== 'none') return; 
 
                 const imageFiles = files.filter(f => f.type.startsWith('image/'));
 
@@ -627,7 +704,6 @@
                     promptForUser();
                     switchToImageMode(imageFiles);
                 }
-                // Silently ignore video files dropped on the initial screen
             }
             
             async function handlePaste(e) {
@@ -793,12 +869,12 @@
                 const docClone = document.cloneNode(true);
                 docClone.getElementById('app-data').textContent = '\n' + dataStr + '\n';
 
-                // UPDATED: Save video path as file:/// URI
                 if (state.mode === 'video') {
                     const videoMeta = docClone.querySelector('meta[name="video-filename"]');
                     if (videoMeta && state.videoPath) {
-                        // Convert path like "Z:\Nilfisk\Video.mp4" to "file:///Z:/Nilfisk/Video.mp4" for saving
-                        const fileUri = 'file:///' + state.videoPath.replace(/\\/g, '/');
+                        // Check if the path is relative (doesn't contain slashes). If so, don't convert.
+                        const isRelative = !state.videoPath.includes('/') && !state.videoPath.includes('\\');
+                        const fileUri = isRelative ? state.videoPath : 'file:///' + state.videoPath.replace(/\\/g, '/');
                         videoMeta.setAttribute('content', fileUri);
                     }
                 }
@@ -1082,7 +1158,7 @@
             function image_startPanning(e) { e.preventDefault(); e.stopPropagation(); state.interaction.mode = 'panning'; app.workspaceContainer.classList.add('panning'); if(state.spacebarPressed) app.body.classList.add('panning'); state.interaction.startPos = { x: e.clientX - state.view.offsetX, y: e.clientY - state.view.offsetY }; }
             function image_onCanvasMouseDown(e, artboardId) { if (state.spacebarPressed || e.button === 1) { image_startPanning(e); return; } if (state.interaction.mode !== 'none') return; e.stopPropagation(); const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return; const pos = image_getMousePosOnArtboard(e, artboard); state.interaction.startPos = pos; const hit = image_getHitAnnotation(pos, artboardId); if (hit.handle) { state.interaction.mode = 'resizing'; state.interaction.target = { index: hit.index, handle: hit.handle, artboardId }; } else if (hit.index !== -1) { if (!state.selectedIndices.includes(hit.index)) { state.selectedIndices = [hit.index]; updateListSelection(); } if (e.altKey) { image_copySelectedAnnotations(); image_pasteAnnotations(); } state.interaction.mode = 'dragging'; state.interaction.target = { artboardId }; } else if (state.currentTool) { if (state.currentTool === 'comment') { image_addAnnotation({ type: 'comment', artboardId, data: pos, color: state.activeColor, text: '', completed: false }, true); } else { state.interaction.mode = 'drawing'; state.interaction.target = { artboardId }; } } else { state.selectedIndices = []; updateListSelection(); } }
             function image_onCanvasMouseUp(e) { if (state.interaction.mode === 'none' || ['panning', 'draggingArtboard', 'resizingArtboard'].includes(state.interaction.mode)) return; const { artboardId } = state.interaction.target; if (!artboardId) return; const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return; const { ctxInteraction } = image_getArtboardCanvases(artboardId); if (ctxInteraction) ctxInteraction.clearRect(0, 0, artboard.width, artboard.height); if (state.interaction.mode === 'drawing') { const endPos = image_getMousePosOnArtboard(e, artboard); const p1_abs = { x: state.interaction.startPos.x * artboard.width, y: state.interaction.startPos.y * artboard.height }; const p2_abs = { x: endPos.x * artboard.width, y: endPos.y * artboard.height }; if (Math.hypot(p2_abs.x - p1_abs.x, p2_abs.y - p1_abs.y) > 5) { image_addAnnotation({ type: state.currentTool, artboardId, data: { p1: state.interaction.startPos, p2: endPos }, color: state.activeColor, text: '', completed: false }, true); } } else if (state.interaction.mode === 'dragging') { const workspacePos = image_getWorkspaceMousePos(e); const targetArtboard = image_findArtboardAtWorkspacePos(workspacePos); if (targetArtboard && targetArtboard.id !== artboardId) { state.selectedIndices.forEach(index => { const ann = state.annotations[index]; const oldArtboard = state.artboards.find(b => b.id === ann.artboardId); const newPos = image_getMousePosOnArtboard(e, targetArtboard); ann.artboardId = targetArtboard.id; if (ann.type === 'comment' || ann.type === 'reply') { ann.data = newPos; } else { const absWidth = Math.abs(ann.data.p1.x - ann.data.p2.x) * oldArtboard.width; const absHeight = Math.abs(ann.data.p1.y - ann.data.p2.y) * oldArtboard.height; let newAbsWidth = absWidth; let newAbsHeight = absHeight; if (newAbsWidth > targetArtboard.width || newAbsHeight > targetArtboard.height) { const scale = Math.min(targetArtboard.width / newAbsWidth, targetArtboard.height / newAbsHeight); newAbsWidth *= scale; newAbsHeight *= scale; } ann.data.p1 = { x: newPos.x, y: newPos.y }; ann.data.p2 = { x: newPos.x + (newAbsWidth / targetArtboard.width), y: newPos.y + (newAbsHeight / targetArtboard.height) }; } }); updateAnnotationList(); } image_redrawAllAnnotations(); } }
-            function image_onCanvasDblClick(e, artboardId) { e.stopPropagation(); const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return; const pos = image_getMousePosOnArtboard(e, artboard); const hit = image_getHitAnnotation(pos, artboardId); if (hit.index !== -1) { const li = app.annotationList.querySelector(`li[data-id='${state.annotations[hit.index].id}']`); if (li) makeListItemEditable(li, hit.index); } }
+            function image_onCanvasDblClick(e, artboardId) { e.stopPropagation(); const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return; const pos = image_getMousePosOnArtboard(e, artboard); const hit = image_getHitAnnotation(pos, artboardId); if (hit.index !== -1) { const li = app.annotationList.querySelector(`li[data-id='${state.annotations[hit.index].id}']`); if (li) makeListItemEditable(li, index); } }
             function image_addAnnotation(ann, startEditing = false) { if (['rect', 'circle', 'line', 'arrow', 'reply'].includes(ann.type) && !ann.text) ann.text = ''; ann.user = state.currentUser; ann.id = crypto.randomUUID(); ann.parentId = ann.parentId || null; state.annotations.push(ann); state.undoStack = []; state.redoStack = []; const newIndex = state.annotations.length - 1; state.selectedIndices = [newIndex]; state.lastClickedIndex = newIndex; markAsChanged(); updateAnnotationList(); image_redrawAllAnnotations(); if (startEditing) { const li = app.annotationList.querySelector(`li[data-id='${ann.id}']`); if (li) { li.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); makeListItemEditable(li, newIndex); } } }
             function image_updateAnnotationList() { const listScrollTop = app.annotationList.scrollTop; app.annotationList.innerHTML = ''; const searchTerm = app.searchInput.value.toLowerCase(); const filteredAnnotations = searchTerm ? state.annotations.filter(ann => (ann.text || '').toLowerCase().includes(searchTerm) || (ann.user || '').toLowerCase().includes(searchTerm)) : state.annotations; const grouped = filteredAnnotations.reduce((acc, ann) => { const key = ann.artboardId || 'workspace'; if (!acc[key]) acc[key] = []; acc[key].push(ann); return acc; }, {}); const artboardNameMap = new Map(state.artboards.map(b => [b.id, b.name])); const renderGroup = (groupId, groupName) => { const groupAnnotations = grouped[groupId]; if (!groupAnnotations || groupAnnotations.length === 0) return; const header = document.createElement('li'); header.className = 'group-header'; header.innerHTML = `<span>${groupName}</span><span class="collapse-toggle">▼</span>`; app.annotationList.appendChild(header); const annotationMap = new Map(groupAnnotations.map(ann => [ann.id, ann])); const annotationItems = []; const renderThread = (ann, depth) => { const originalIndex = state.annotations.findIndex(a => a.id === ann.id); if (originalIndex > -1) { const item = image_createAnnotationListItem(ann, originalIndex); if(depth > 0) item.style.marginLeft = `${depth * 20}px`; annotationItems.push(item); app.annotationList.appendChild(item); const children = groupAnnotations.filter(child => child.parentId === ann.id); children.forEach(child => renderThread(child, depth + 1)); } }; groupAnnotations.filter(a => !a.parentId || !annotationMap.has(a.parentId)).forEach(ann => renderThread(ann, 0)); header.addEventListener('click', () => { header.classList.toggle('collapsed'); annotationItems.forEach(item => item.classList.toggle('hidden')); }); }; state.artboards.forEach(board => renderGroup(board.id, board.name)); renderGroup('workspace', 'Chưa gán'); app.annotationList.scrollTop = listScrollTop; }
             function image_createAnnotationListItem(ann, index) { const li = document.createElement('li'); li.dataset.id = ann.id; li.dataset.index = index; li.classList.toggle('selected', state.selectedIndices.includes(index)); li.classList.toggle('completed', ann.completed); li.classList.toggle('reply-item', !!ann.parentId); const contentHtml = ann.text ? `<p class="content">${ann.text.replace(/\n/g, '<br>')}</p>` : ''; const headerToolsHtml = `<button class="icon-btn" title="Xóa"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button><button class="icon-btn" title="Sao chép Text"><svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg></button><button class="icon-btn" title="Trả lời"><svg viewBox="0 0 24 24"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg></button><input type="checkbox" class="complete-checkbox" ${ann.completed ? 'checked' : ''}>`; const typeDisplay = ann.type === 'reply' ? 'reply' : (ann.type === 'comment' ? 'cmt' : ann.type); const userDisplay = ann.user ? ` - <strong>${ann.user}</strong>` : ''; li.innerHTML = `<div class="header"><span class="time">${index + 1}${userDisplay} - ${typeDisplay}</span><div class="header-tools">${headerToolsHtml}</div></div>${contentHtml}`; li.addEventListener('click', e => { if (e.target.closest('.icon-btn')) return; const clickedIndex = parseInt(li.dataset.index, 10); if (e.shiftKey && state.lastClickedIndex !== -1) { const start = Math.min(state.lastClickedIndex, clickedIndex), end = Math.max(state.lastClickedIndex, clickedIndex); state.selectedIndices = Array.from({length: end - start + 1}, (_, i) => start + i); } else if (e.ctrlKey) { const idxInSelection = state.selectedIndices.indexOf(clickedIndex); if (idxInSelection > -1) state.selectedIndices.splice(idxInSelection, 1); else state.selectedIndices.push(clickedIndex); } else { state.selectedIndices = [clickedIndex]; } state.lastClickedIndex = clickedIndex; updateListSelection(); }); li.addEventListener('dblclick', () => makeListItemEditable(li, index)); li.querySelector('.complete-checkbox').addEventListener('click', e => { e.stopPropagation(); ann.completed = e.target.checked; li.classList.toggle('completed', ann.completed); markAsChanged(); image_redrawAllAnnotations(); }); li.querySelector('.icon-btn[title="Xóa"]').addEventListener('click', e => { e.stopPropagation(); deleteAnnotationsByIndices([index]); }); li.querySelector('.icon-btn[title="Sao chép Text"]').addEventListener('click', e => { e.stopPropagation(); if (ann.text) { navigator.clipboard.writeText(ann.text); } }); li.querySelector('.icon-btn[title="Trả lời"]').addEventListener('click', e => { e.stopPropagation(); image_addAnnotation({ type: 'reply', artboardId: ann.artboardId, text: '', completed: false, parentId: ann.id }, true); }); return li; }
