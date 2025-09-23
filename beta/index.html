@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Media QC v21</title>
+    <title>Unified Media QC Tool v12.5 (Final)</title>
     
     <style>
         /* --- COMBINED AND NORMALIZED CSS --- */
@@ -30,10 +30,10 @@
         body.spacebar-down, body.spacebar-down .artboard, body.spacebar-down .interaction-canvas { cursor: grab !important; }
         body.spacebar-down.panning, body.spacebar-down.panning .artboard, body.spacebar-down.panning .interaction-canvas { cursor: grabbing !important; }
         #workspace { position: absolute; transform-origin: 0 0; }
-        .artboard { position: absolute; background-color: var(--panel-bg); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); padding-top: 30px; border: 2px solid transparent; overflow: hidden; transition: border-color 0.2s; }
+        .artboard { position: absolute; background-color: var(--panel-bg); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); border: 2px solid transparent; overflow: hidden; transition: border-color 0.2s; display: flex; flex-direction: column;}
         .artboard.dragging { z-index: 10; box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
         .artboard.selected { border-color: var(--highlight-color); }
-        .artboard-header { position: absolute; top: 0; left: 0; width: 100%; height: 30px; background-color: rgba(0,0,0,0.3); display: flex; justify-content: space-between; align-items: center; padding: 0 5px 0 10px; box-sizing: border-box; font-size: 12px; color: var(--text-color); cursor: grab; }
+        .artboard-header { position: relative; width: 100%; height: 30px; background-color: rgba(0,0,0,0.3); display: flex; justify-content: space-between; align-items: center; padding: 0 5px 0 10px; box-sizing: border-box; font-size: 12px; color: var(--text-color); cursor: grab; flex-shrink: 0; }
         .artboard-header:active { cursor: grabbing; }
         .artboard-header-tools { display: flex; align-items: center; }
         .artboard-title-container { flex: 1 1 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 5px; display: flex; align-items: baseline; }
@@ -43,26 +43,37 @@
         .header-icon-btn svg { width: 14px; height: 14px; fill: currentColor; }
         .header-icon-btn:hover, .artboard-close-btn:hover { color: #fff; background-color: rgba(255,255,255,0.1); }
         .artboard-close-btn { font-size: 1.4em; }
-        .artboard-content { position: relative; width: 100%; height: 100%; }
-        .artboard-content.transparent-grid { background-image: linear-gradient(45deg, #444 25%, transparent 25%), linear-gradient(-45deg, #444 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #444 75%), linear-gradient(-45deg, transparent 75%, #444 75%); background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0px; }
-        body.theme-light .artboard-content.transparent-grid { background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); }
-        .artboard img, .artboard video { display: block; width: 100%; height: 100%; user-select: none; -webkit-user-drag: none; object-fit: contain; background-color: #000;}
-        .artboard canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-        .artboard canvas.interaction-canvas { pointer-events: auto; }
+        .artboard-content { position: relative; width: 100%; flex-grow: 1; background-color: #000; }
+        .artboard-content.transparent-grid { background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0px; }
+        body.theme-dark .artboard-content.transparent-grid { background-image: linear-gradient(45deg, #444 25%, transparent 25%), linear-gradient(-45deg, #444 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #444 75%), linear-gradient(-45deg, transparent 75%, #444 75%); }
+        .artboard img, .artboard video, .artboard iframe { display: block; width: 100%; height: 100%; user-select: none; -webkit-user-drag: none; object-fit: contain; background-color: #000; position: absolute; top:0; left:0; border: none;}
+        .artboard video, .artboard .frame-backup { z-index: 1; }
+        .artboard canvas.grid-canvas { z-index: 2; pointer-events: none; }
+        .artboard canvas.display-canvas { z-index: 3; }
+        .artboard canvas.interaction-canvas { pointer-events: auto; z-index: 4; }
+        .artboard canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;}
         .artboard-resizer { position: absolute; right: 2px; bottom: 2px; width: 16px; height: 16px; cursor: se-resize; z-index: 5; color: rgba(255,255,255,0.5); }
         .artboard-resizer:hover { color: white; }
-        .artboard-video-controls { position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; padding: 2px 5px; box-sizing: border-box; height: 24px; z-index: 5; }
-        .artboard-video-controls button { background:none; border:none; color:white; cursor:pointer; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;}
+        .artboard-video-controls { position: relative; width: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; padding: 2px 5px; box-sizing: border-box; height: 24px; z-index: 5; flex-shrink: 0; }
+        .artboard-video-controls button { background:none; border:none; color:white; cursor:pointer; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; padding:0; font-size: 1em;}
         .artboard-video-controls button svg { width: 14px; height: 14px; fill: currentColor; }
-        .artboard-video-controls .vid-time { color:white; font-size:10px; margin: 0 5px; font-variant-numeric: tabular-nums; }
-        .artboard-video-controls .vid-timeline { flex-grow:1; -webkit-appearance: none; appearance: none; height: 3px; background: rgba(255,255,255,0.3); cursor: pointer;}
+        .vid-timeline-wrapper { position: relative; flex-grow: 1; height: 100%; display: flex; align-items: center;}
+        .vid-timeline-bg { position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 100%; height: 3px; background: rgba(255,255,255,0.3); border-radius: 3px;}
+        .vid-timeline-markers { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none;}
+        .artboard-video-controls .vid-timeline { flex-grow:1; -webkit-appearance: none; appearance: none; height: 100%; background: transparent; cursor: pointer; position: relative; z-index: 2;}
         .artboard-video-controls .vid-timeline::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 8px; height: 8px; background: #fff; border-radius: 50%; }
+        .time-input { background: transparent; border: none; color: white; font-size:10px; margin: 0 5px; font-variant-numeric: tabular-nums; text-align: center; padding: 2px; width: 70px; border-radius: 3px; }
+        .time-input:focus { background: rgba(255,255,255,0.2); outline: 1px solid var(--highlight-color); }
+        #time-display { width: 80px; font-size: 1em; color: var(--text-color); }
+        #time-display:focus { color: var(--text-color); }
 
         #bottom-controls-container { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 20; }
-        #bottom-controls { display: flex; gap: 10px; align-items: flex-end; }
+        #bottom-controls { display: flex; gap: 10px; align-items: center; }
         #tools-panel, #timeline-panel, #help-panel { padding: 8px; border-radius: 12px; display: flex; align-items: center; }
         #tools-panel { padding: 8px 10px; gap: 4px; }
         #timeline-panel { position: relative; gap: 10px; flex-grow: 1; width: 650px; }
+        #timeline-panel.out-of-sync #timeline-slider::-webkit-slider-thumb, #timeline-panel.out-of-sync #time-display { opacity: 0.3; transition: opacity 0.3s; pointer-events: none; }
+        #timeline-panel:hover #timeline-slider::-webkit-slider-thumb, #timeline-panel:hover #time-display { opacity: 1; pointer-events: auto;}
         #help-panel { padding: 0; background: none; border: none; }
         .playback-controls { display: flex; align-items: center; gap: 4px; }
         .tool-btn { width: 28px; height: 28px; border-radius: 8px; border: none; background: transparent; color: var(--text-color-light); cursor: pointer; display: flex; justify-content: center; align-items: center; transition: all 0.2s; padding: 0; }
@@ -80,26 +91,27 @@
         #play-pause-btn, #mute-btn { background: none; border: none; color: var(--text-color); cursor: pointer; padding: 5px; display: flex; align-items: center; }
         #play-pause-btn svg, #mute-btn svg { width: 20px; height: 20px; fill: currentColor; }
         #help-btn { background: var(--panel-bg); border: 1px solid var(--border-color); color: var(--text-color); cursor: pointer; display: flex; align-items: center; justify-content: center; height: 38px; padding: 0 12px; border-radius: 8px; font-weight: bold; font-size: 1.2em; }
-        #time-display { padding: 2px 5px; font-variant-numeric: tabular-nums; width: 35px; text-align: center; }
         #timeline-wrapper { position: relative; flex-grow: 1; display: flex; align-items: center; }
         #timeline-bg { position: absolute; left: 0; top: 50%; transform: translateY(-50%); height: 5px; border-radius: 5px; pointer-events: none; width: 100%; background: rgba(255, 255, 255, 0.3); }
         body.theme-light #timeline-bg { background: rgba(0,0,0,0.1); }
         #timeline-slider { position: relative; z-index: 1; flex-grow: 1; -webkit-appearance: none; appearance: none; width: 100%; height: 5px; background: transparent !important; border-radius: 5px; outline: none; }
         #timeline-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 15px; height: 15px; background: var(--text-color); cursor: pointer; border-radius: 50%; transition: opacity 0.2s; }
-        #timeline-slider.desynced::-webkit-slider-thumb { opacity: 0; pointer-events: none; }
         #speed-controls { display: flex; background: rgba(0,0,0,0.2); border-radius: 8px; }
         body.theme-light #speed-controls { background: rgba(0,0,0,0.05); }
-        .speed-btn { background: none; border: none; color: var(--text-color-light); padding: 6px 12px; cursor: pointer; }
+        .speed-btn { background: none; border: none; color: var(--text-color-light); padding: 4px 8px; cursor: pointer; font-size: 0.9em;}
         .speed-btn.active { color: #fff; background: var(--highlight-color); border-radius: 8px; }
         body.theme-light .speed-btn.active { color: #fff; }
 
-        #right-panel { flex: 0 0 340px; margin: 10px; margin-left: 0; display: flex; flex-direction: column; z-index: 20; border-radius: 15px; overflow: hidden; background: var(--workspace-bg); border: 1px solid var(--border-color); flex-shrink: 0; box-shadow: 0 2px 10px rgba(0,0,0,0.07); }
+        #right-panel { flex: 0 0 340px; margin: 10px; margin-left: 0; display: flex; flex-direction: column; z-index: 20; border-radius: 15px; overflow: hidden; background: var(--workspace-bg); border: 1px solid var(--border-color); flex-shrink: 0; box-shadow: 0 2px 10px rgba(0,0,0,0.07); transition: all 0.3s ease; }
+        #right-panel.collapsed { flex-basis: 0 !important; min-width: 0 !important; margin-left: 0; border: none; }
+        #right-panel.collapsed > * { display: none; }
         #list-header { padding: 10px; border-bottom: 1px solid var(--border-color); }
         #search-input { width: 100%; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-color); padding: 8px; box-sizing: border-box; }
         #list-container { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
         #annotation-list { list-style: none; padding: 10px; margin: 0; overflow-y: auto; flex-grow: 1; }
-        #save-btn { display: block; width: calc(100% - 20px); margin: 10px; padding: 12px; border: none; border-radius: 10px; background-color: var(--highlight-color); color: #fff; font-size: 1em; font-weight: bold; cursor: pointer; flex-shrink: 0; transition: background-color 0.3s ease, color 0.3s ease; }
+        #save-btn { display: block; width: calc(100% - 20px); margin: 10px; padding: 12px; border: none; border-radius: 10px; background-color: var(--highlight-color); color: #fff; font-size: 1em; font-weight: bold; cursor: pointer; flex-shrink: 0; transition: background-color 0.3s ease, color 0.3s ease, opacity 0.3s ease; }
         #save-btn.unsaved { background-color: #ffc107; color: #000; }
+        #save-btn.saving { background-color: #17a2b8; opacity: 0.7; cursor: default;}
         #annotation-list li { padding: 10px 12px; border-radius: 8px; margin-bottom: 8px; position: relative; background-color: var(--list-item-bg); transition: all 0.2s; cursor: pointer; border: 1px solid var(--border-color); }
         #annotation-list li.selected { background-color: rgba(0, 170, 255, 0.15); box-shadow: 0 0 0 2px var(--highlight-color) inset; border-color: var(--highlight-color);}
         #annotation-list li.completed { opacity: 0.6; }
@@ -125,59 +137,80 @@
         .complete-checkbox:checked::after { content: '\2713'; display: block; text-align: center; color: #fff; font-weight: bold; font-size: 11px; line-height: 13px; }
         #panel-resizer { width: 5px; cursor: col-resize; flex-shrink: 0; background-color: transparent; transition: background-color 0.2s ease; align-self: stretch; margin: 10px 0; }
         #panel-resizer:hover { background-color: var(--highlight-color); }
+        #right-panel.collapsed + #panel-resizer { display: none; }
 
         #help-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; display: flex; justify-content: center; align-items: center; }
         body.theme-light #help-modal { background: rgba(0,0,0,0.4); }
-        #help-modal .modal-content { position: relative; padding: 20px 30px; width: 500px; border-radius: 15px; max-height: 80vh; overflow-y: auto; }
-        #help-modal .shortcuts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        #help-modal .modal-content { position: relative; padding: 20px 30px; width: 975px; border-radius: 15px; max-height: 80vh; overflow-y: auto; }
+        #help-modal .shortcuts-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px 25px; }
         #help-modal ul { list-style: none; padding-left: 0; margin-top: 5px; }
-        #help-modal li { margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 0.9em; }
+        #help-modal li { margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 0.85em; }
         #help-modal h3 { margin-top: 0; }
         #help-modal h4 { margin-top: 15px; margin-bottom: 5px; color: var(--text-color-light); border-bottom: 1px solid var(--border-color); padding-bottom: 5px; font-size: 1em; }
         #help-modal strong { color: var(--highlight-color); }
         #modal-close-btn { position: absolute; top: 10px; right: 15px; background: none; border: none; color: var(--text-color); font-size: 28px; cursor: pointer; }
         #help-modal hr { border-color: var(--border-color); }
+        .help-actions { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+        .help-actions button { background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 5px; padding: 4px 8px; cursor: pointer; }
+        .help-actions label { display: flex; align-items: center; gap: 5px; }
+        input[type="color"] { background-color: transparent; border: none; width: 30px; height: 30px; padding: 0; border-radius: 50%; cursor: pointer; }
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border: 1px solid var(--border-color); border-radius: 50%; }
         #change-user-btn, #theme-selector { background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 5px; padding: 2px 6px; margin-left: 10px; cursor: pointer; }
         #theme-selector {-webkit-appearance: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23f0f0f0'%3E%3Cpath d='M6 9L.5 3h11z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 6px center; padding-right: 20px;}
         body.theme-light #theme-selector { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%231a1a1a'%3E%3Cpath d='M6 9L.5 3h11z'/%3E%3C/svg%3E");}
         #theme-selector option { background: var(--panel-bg); color: var(--text-color); }
         
-        #tool-cursor-icon {
-          position: fixed;
-          pointer-events: none;
-          z-index: 9999;
-          transform: translate(12px, 12px);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        #tool-cursor-icon svg {
-          width: 14px;
-          height: 14px;
-          fill: #ffffff;
-          filter: drop-shadow(0 0 1.5px rgba(0,0,0,0.9));
-          display: block;
-        }
+        #tool-cursor-icon { position: fixed; pointer-events: none; z-index: 9999; transform: translate(12px, 12px); display: flex; align-items: center; justify-content: center; }
+        #tool-cursor-icon svg { width: 14px; height: 14px; fill: #ffffff; filter: drop-shadow(0 0 1.5px rgba(0,0,0,0.9)); display: block; }
+
+        /* --- NEW STYLES FOR CONTEXT MENU, GRIDS, DRAGGABLE UI --- */
+        #context-menu { position: fixed; z-index: 1000; min-width: 180px; padding: 5px 0; border-radius: 8px; font-size: 14px; }
+        .context-menu-item { padding: 8px 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .context-menu-item:hover { background-color: var(--highlight-color); color: #fff; }
+        .context-menu-item.disabled { color: var(--text-color-light); cursor: default; }
+        .context-menu-item.disabled:hover { background-color: transparent; }
+        .context-menu-divider { height: 1px; background-color: var(--border-color); margin: 5px 0; }
+        
+        #workspace-grid-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 15; }
+        .artboard-edge-highlight { position: absolute; background-color: var(--highlight-color); opacity: 0.8; pointer-events: none; z-index: 10; }
+        .artboard-edge-highlight.top, .artboard-edge-highlight.bottom { width: 100%; height: 4px; left: 0; }
+        .artboard-edge-highlight.left, .artboard-edge-highlight.right { width: 4px; height: 100%; top: 0; }
+        .artboard-edge-highlight.top { top: -2px; } .artboard-edge-highlight.bottom { bottom: -2px; } .artboard-edge-highlight.left { left: -2px; } .artboard-edge-highlight.right { right: -2px; }
+
+        #toolbar-drag-handle { cursor: grab; padding: 0px; margin-right: 6px; align-self: stretch; display: flex; align-items: center; justify-content: center; }
+        #toolbar-drag-handle::before { content: ''; width: 4px; height: 20px; background-color: var(--text-color-light); border-radius: 2px; opacity: 0.7; }
+        #toolbar-drag-handle:active { cursor: grabbing; }
+        #toolbar-drag-handle:active::before { opacity: 1; }
+        
+        #bottom-controls.simple-mode #timeline-panel,
+        #bottom-controls.simple-mode #help-panel,
+        #bottom-controls.simple-mode #tools-panel .tool-btn:not([data-tool="comment"]):not([data-tool="rect"]):not([data-tool="line"]),
+        #bottom-controls.simple-mode #tools-panel .divider,
+        #bottom-controls.simple-mode #tools-panel #color-picker { display: none; }
+        #bottom-controls.simple-mode #tools-panel { flex-direction: row; }
     </style>
 </head>
 <body class="theme-dark">
-    <input type="file" id="file-input" accept="video/*,image/*" style="display: none;" multiple>
+    <input type="file" id="file-input" accept="video/*,image/*,.html" style="display: none;" multiple>
     <input type="file" id="image-tool-input" accept="image/*" style="display:none;">
+    <a id="frame-download-link" class="hidden"></a>
     
     <div id="app-container">
         <div id="main-content">
-
             <div id="drop-zone">
-                <p>Kéo & thả Video hoặc Hình ảnh vào đây<br>Hoặc bấm đúp để chọn file</p>
+                <p>Kéo & thả Video, Hình ảnh hoặc file HTML vào đây<br>Hoặc bấm đúp / Ctrl+D để chọn file</p>
             </div>
 
             <div id="workspace-container" class="hidden">
                 <div id="workspace"></div>
+                <canvas id="workspace-grid-canvas"></canvas>
             </div>
             
             <div id="bottom-controls-container" class="hidden">
                 <div id="bottom-controls">
                     <div id="tools-panel" class="glass-panel">
+                        <div id="toolbar-drag-handle" title="Giữ để đổi vị trí. Nhấp đôi để chuyển chế độ. Nhấp reset vị trí."></div>
                         <button class="tool-btn" data-tool="comment" title="Comment (Q)"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 14v-2h12v2H6zm0-3v-2h12v2H6zm0-3v-2h12v2H6z"/></svg></button>
                         <button class="tool-btn" data-tool="rect" title="Square (W)"><svg viewBox="0 0 24 24"><path d="M3 3v18h18V3H3zm16 16H5V5h14v14z"/></svg></button>
                         <button class="tool-btn" data-tool="circle" title="Circle (E)"><svg viewBox="0 0 24 24"><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg></button>
@@ -201,15 +234,15 @@
         
                     <div id="timeline-panel" class="glass-panel hidden">
                         <div class="playback-controls">
-                            <button id="play-pause-btn" title="Play/Pause (Spacebar)"><svg id="play-icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><svg id="pause-icon" class="hidden" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg></button>
-                            <button id="mute-btn" title="Mute/Unmute"><svg id="unmute-icon" class="hidden" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg><svg id="mute-icon" viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L7 9H3v6h4l5 5v-8.27l-5.73-5.73z"/></svg></button>
+                            <button id="play-pause-btn" title="Play/Pause (Spacebar/Ctrl+Spacebar)"><svg id="play-icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><svg id="pause-icon" class="hidden" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg></button>
+                            <button id="mute-btn" title="Mute/Unmute (M/Ctrl+M)"><svg id="unmute-icon" class="hidden" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg><svg id="mute-icon" viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L7 9H3v6h4l5 5v-8.27l-5.73-5.73z"/></svg></button>
                         </div>
-                        <span id="time-display">00:00</span>
+                        <input type="text" id="time-display" class="time-input" value="00:00:00:00">
                         <div id="timeline-wrapper">
                             <div id="timeline-bg"></div>
                             <input type="range" id="timeline-slider" value="0" step="0.01">
                         </div>
-                        <div id="speed-controls"><button class="speed-btn" data-speed="1">1x</button><button class="speed-btn" data-speed="2">2x</button><button class="speed-btn" data-speed="3">3x</button></div>
+                        <div id="speed-controls"><button class="speed-btn" data-speed="0.5">0.5x</button><button class="speed-btn active" data-speed="1">1x</button><button class="speed-btn" data-speed="2">2x</button></div>
                     </div>
         
                     <div id="help-panel" class="glass-panel">
@@ -219,7 +252,7 @@
             </div>
         </div>
 
-        <div id="panel-resizer"></div>
+        <div id="panel-resizer" title="Double-click to toggle panel. Ctrl+H"></div>
 
         <div id="right-panel" class="hidden">
             <div id="list-header">
@@ -237,54 +270,68 @@
                 <div>
                     <h4>Chung</h4>
                     <ul>
-                        <li><strong>V</strong><span>Công cụ Chọn/Di chuyển (Select)</span></li>
+                        <li><strong>V</strong><span>Công cụ Chọn/Di chuyển</span></li>
                         <li><strong>Q,W,E,R,T,Y</strong><span>Chọn công cụ</span></li>
+                        <li><strong>Shift + Kéo vẽ</strong><span>Vẽ hình vuông/tròn/thẳng</span></li>
                         <li><strong>Ctrl + D</strong><span>Mở / Thêm file</span></li>
+                        <li><strong>Ctrl + W</strong><span>Đóng Artboard đã chọn</span></li>
                         <li><strong>Ctrl + S</strong><span>Lưu file</span></li>
                         <li><strong>Ctrl + Shift + S</strong><span>Lưu thành file mới</span></li>
                         <li><strong>Ctrl + C / V</strong><span>Copy / Dán</span></li>
-                        <li><strong>Ctrl + Z / Shift+Z</strong><span>Undo / Redo Xóa</span></li>
+                        <li><strong>Ctrl + Z / Shift+Z</strong><span>Undo / Redo</span></li>
                         <li><strong>Delete</strong><span>Xóa mục đã chọn</span></li>
-                        <li><strong>Shift + Click</strong><span>Chọn nhiều Artboard/Comment</span></li>
                         <li><strong>Ctrl + A</strong><span>Chọn toàn bộ Comment</span></li>
                         <li><strong>Ctrl + F</strong><span>Tìm kiếm</span></li>
+                        <li><strong>Ctrl + H</strong><span>Ẩn/Hiện Panel</span></li>
                     </ul>
                 </div>
                 <div>
-                    <h4>Workspace</h4>
+                    <h4>Workspace & Grid</h4>
                     <ul>
-                        <li><strong>Space+Kéo / Chuột giữa</strong><span>Di chuyển (Pan)</span></li>
+                        <li><strong>Space+Kéo</strong><span>Di chuyển (Pan)</span></li>
                         <li><strong>Ctrl + Lăn chuột</strong><span>Phóng to / Thu nhỏ</span></li>
-                        <li><strong>Ctrl + Kéo Artboard</strong><span>Di chuyển Artboard</span></li>
+                        <li><strong>Ctrl + 1</strong><span>Xem 100% / Fit Artboard</span></li>
                         <li><strong>Ctrl + 0</strong><span>Reset góc nhìn</span></li>
                         <li><strong>Ctrl + Alt + 0</strong><span>Vừa tất cả Artboard</span></li>
-                        <li><strong>Click Artboard Header</strong><span>Fit Artboard to View</span></li>
                         <li><strong>Ctrl + G</strong><span>Sắp xếp Artboard</span></li>
+                        <li><strong>Ctrl + ;</strong><span>Hiện/Ẩn Grid</span></li>
+                        <li><strong>Ctrl + '</strong><span>Khóa/Mở khóa Grid</span></li>
                         <li><strong>Alt + Kéo Comment</strong><span>Sao chép nhanh</span></li>
                     </ul>
-                     <h4>Video (Timeline tổng)</h4>
-                     <ul>
-                        <li><strong>Spacebar</strong><span>Play / Pause tất cả</span></li>
-                        <li><strong>Ctrl + Spacebar</strong><span>Play / Pause mục đã chọn</span></li>
-                        <li><strong>← / →</strong><span>Từng frame</span></li>
-                        <li><strong>Shift + ← / →</strong><span>Từng giây</span></li>
-                    </ul>
+                </div>
+                 <div>
+                    <h4>Video</h4>
+                    <ul>
+                       <li><strong>Spacebar</strong><span>Play / Pause mục đã chọn</span></li>
+                       <li><strong>Ctrl + Spacebar</strong><span>Play / Pause tất cả</span></li>
+                       <li><strong>M / Ctrl+M</strong><span>Mute chọn / Mute tất cả</span></li>
+                       <li><strong>← / →</strong><span>Từng frame</span></li>
+                       <li><strong>Shift + ← / →</strong><span>10 frames</span></li>
+                       <li><strong>Alt + ← / →</strong><span>Qua lại giữa các comment</span></li>
+                       <li><strong>↑ / ↓</strong><span>Đầu / Cuối video</span></li>
+                       <li><strong>Ctrl + Mũi tên</strong><span>Áp dụng cho mọi video</span></li>
+                   </ul>
                 </div>
             </div>
             <hr>
-            <p><strong>User:</strong> <span id="current-user-display"></span> <button id="change-user-btn">[Sửa]</button></p>
-            <p><strong>Chế độ:</strong> 
-                <select id="theme-selector">
-                    <option value="system">Tự động (System)</option>
-                    <option value="light">Sáng (Light)</option>
-                    <option value="dark">Tối (Dark)</option>
-                </select>
-            </p>
+            <div class="help-actions">
+                <span><strong>User:</strong> <span id="current-user-display"></span> <button id="change-user-btn">[Sửa]</button></span>
+                 <label>Nền Artboard: <input type="color" id="artboard-bg-color-picker" title="Artboard Background Color"></label>
+                 <label>Màu Grid: <input type="color" id="grid-color-picker" title="Grid Color"></label>
+                <span><strong>Chế độ:</strong> 
+                    <select id="theme-selector">
+                        <option value="system">Tự động (System)</option>
+                        <option value="light">Sáng (Light)</option>
+                        <option value="dark">Tối (Dark)</option>
+                    </select>
+                </span>
+            </div>
             <p><strong>Contact:</strong> tri.vu.trong@inbold.com</p>
         </div>
     </div>
     
     <div id="tool-cursor-icon" class="hidden"></div>
+    <div id="context-menu" class="hidden glass-panel"></div>
 
     <script id="app-data" type="application/json"></script>
 
@@ -294,12 +341,16 @@
                 body: document.body,
                 fileInput: document.getElementById('file-input'),
                 imageToolInput: document.getElementById('image-tool-input'),
+                frameDownloadLink: document.getElementById('frame-download-link'),
                 dropZone: document.getElementById('drop-zone'),
                 mainContent: document.getElementById('main-content'),
                 workspaceContainer: document.getElementById('workspace-container'),
                 workspace: document.getElementById('workspace'),
+                workspaceGridCanvas: document.getElementById('workspace-grid-canvas'),
                 bottomControlsContainer: document.getElementById('bottom-controls-container'),
+                bottomControls: document.getElementById('bottom-controls'),
                 rightPanel: document.getElementById('right-panel'),
+                panelResizer: document.getElementById('panel-resizer'),
                 annotationList: document.getElementById('annotation-list'),
                 searchInput: document.getElementById('search-input'),
                 listContainer: document.getElementById('list-container'),
@@ -311,25 +362,36 @@
                 playIcon: document.getElementById('play-icon'),
                 pauseIcon: document.getElementById('pause-icon'),
                 toolCursorIcon: document.getElementById('tool-cursor-icon'),
+                contextMenu: document.getElementById('context-menu'),
             };
 
+            const FRAME_RATE = 30;
             const MUTE_ICON_SVG = `<svg viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L7 9H3v6h4l5 5v-8.27l-5.73-5.73z"/></svg>`;
             const UNMUTE_ICON_SVG = `<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>`;
 
             let state = {};
             let imageAnnotationCache = new Map();
+            let historyManager;
+            let autoSaveTimeout;
+            let artboardEdgeHoverTimeout = null; 
+            let dragHandleClicks = { count: 0, time: 0 };
 
             function resetState() {
                 state = {
                     annotations: [], artboards: [], currentTool: null, activeColor: '#E53935',
+                    pendingImageData: { data: null, width: 0, height: 0 },
                     selectedAnnotationIndices: [], selectedArtboardIds: [], lastClickedAnnIndex: -1,
-                    undoStack: [], redoStack: [], currentFileHandle: null, hasUnsavedChanges: false,
+                    currentFileHandle: null, hasUnsavedChanges: false,
                     currentUser: null, clipboard: [],
-                    interaction: { mode: 'none', target: null, startPos: { x: 0, y: 0 }, startWorkspacePos: {x:0, y:0}, startAnnPositions: new Map() },
+                    interaction: { mode: 'none', target: null, startPos: { x: 0, y: 0 }, startWorkspacePos: {x:0, y:0}, startData: new Map() },
                     view: { scale: 1, offsetX: 0, offsetY: 0, minScale: 0.1, maxScale: 10 },
-                    layout: { nextX: 50, nextY: 50, rowMaxHeight: 0, margin: 50, maxRowWidth: 4000 },
+                    layout: { nextX: 50, nextY: 50, rowMaxHeight: 0, margin: 50, maxRowWidth: 4000, isPanelCollapsed: false, artboardBgColor: '#000000' },
                     spacebarPressed: false, isGlobalMuted: true, areVideosInSync: true,
+                    grids: { visible: true, locked: false, color: '#00FFFF', workspace: [], artboard: {} },
+                    artboardEdgeHover: null,
+                    toolbar: { x: 0, y: 0, isSimple: false, isDefault: true }
                 };
+                historyManager = createHistoryManager();
                 imageAnnotationCache.clear();
             }
 
@@ -349,6 +411,8 @@
                 window.addEventListener('keydown', onKeyDown);
                 window.addEventListener('keyup', onKeyUp);
                 
+                window.addEventListener('focus', () => { setTimeout(() => { if (state.interaction.mode === 'placingImage' && app.imageToolInput.files.length === 0) { state.interaction.mode = 'none'; state.interaction.target = null; app.imageToolInput.value = ''; } }, 500); });
+                
                 app.workspaceContainer.addEventListener('mousedown', onWorkspaceMouseDown);
                 window.addEventListener('mousemove', onWindowMouseMove);
                 window.addEventListener('mouseup', onWindowMouseUp);
@@ -365,18 +429,34 @@
                 app.saveBtn.addEventListener('click', saveState);
                 app.searchInput.addEventListener('input', () => updateAnnotationList());
                 app.listContainer.addEventListener('click', (e) => { if (e.target === app.listContainer || e.target === app.annotationList) { state.selectedAnnotationIndices = []; state.lastClickedAnnIndex = -1; updateListSelection(); } });
-                document.getElementById('panel-resizer').addEventListener('mousedown', initPanelResize);
+                app.panelResizer.addEventListener('mousedown', initPanelResize);
+                app.panelResizer.addEventListener('dblclick', toggleRightPanel);
                 
                 app.playPauseBtn.addEventListener('click', () => global_togglePlayPause(false));
                 document.getElementById('mute-btn').addEventListener('click', global_toggleMute);
                 document.querySelectorAll('.speed-btn').forEach(btn => btn.addEventListener('click', () => global_setPlaybackSpeed(parseFloat(btn.dataset.speed))));
                 app.timelineSlider.addEventListener('input', () => global_seekTo(parseFloat(app.timelineSlider.value)));
+                initTimeInput(app.timeDisplay, () => app.timelineSlider.valueAsNumber, global_seekTo);
 
                 document.getElementById('help-btn').addEventListener('click', () => document.getElementById('help-modal').classList.remove('hidden'));
                 document.getElementById('modal-close-btn').addEventListener('click', () => document.getElementById('help-modal').classList.add('hidden'));
                 document.getElementById('change-user-btn').addEventListener('click', changeUser);
-                window.addEventListener('click', (e) => { if (!e.target.closest('#color-picker')) document.getElementById('color-palette-popup').classList.add('hidden'); });
                 
+                const artboardBgColorPicker = document.getElementById('artboard-bg-color-picker');
+                artboardBgColorPicker.addEventListener('input', (e) => changeArtboardBg(e.target.value));
+                artboardBgColorPicker.addEventListener('change', (e) => markAsChanged());
+
+                const gridColorPicker = document.getElementById('grid-color-picker');
+                gridColorPicker.addEventListener('input', (e) => changeGridColor(e.target.value));
+                gridColorPicker.addEventListener('change', (e) => markAsChanged());
+
+                window.addEventListener('click', (e) => { if (!e.target.closest('#color-picker')) document.getElementById('color-palette-popup').classList.add('hidden'); hideContextMenu(); });
+                
+                app.workspaceContainer.addEventListener('contextmenu', onWorkspaceContextMenu);
+                app.annotationList.addEventListener('contextmenu', onAnnotationListContextMenu);
+
+                document.getElementById('toolbar-drag-handle').addEventListener('mousedown', onToolbarDragStart);
+
                 updateSaveButtonState();
             }
 
@@ -395,51 +475,44 @@
                     app.rightPanel.classList.remove('hidden');
                     
                     state.annotations = data.annotations || [];
-                    if(data.layout) state.layout = data.layout;
+                    state.artboards = data.artboards || [];
+                    if(data.layout) Object.assign(state.layout, data.layout);
+                    if(data.grids) Object.assign(state.grids, data.grids);
+                    if(data.toolbar) Object.assign(state.toolbar, data.toolbar);
 
-                    const artboardPromises = (data.artboards || []).map(boardData => {
-                        return new Promise((resolve) => {
-                            if (boardData.type === 'image') {
-                                const img = new Image();
-                                img.onload = () => { state.artboards.push({ ...boardData, imageObject: img, src: boardData.imageData }); resolve(); };
-                                img.onerror = resolve;
-                                img.src = boardData.imageData;
-                            } else if (boardData.type === 'video') {
-                                state.artboards.push({ ...boardData, src: boardData.name });
-                                app.timelinePanel.classList.remove('hidden');
-                                resolve();
-                            } else { resolve(); }
-                        });
-                    });
+                    document.getElementById('artboard-bg-color-picker').value = state.layout.artboardBgColor;
+                    document.getElementById('grid-color-picker').value = state.grids.color;
 
-                    await Promise.all(artboardPromises);
+                    if (state.artboards.some(b => b.type === 'video')) {
+                        app.timelinePanel.classList.remove('hidden');
+                    }
+                    
+                    applyToolbarState();
+                    applyRightPanelState();
+                    applyArtboardBackgroundColor();
                     renderWorkspace();
                     updateAnnotationList();
                     updateSaveButtonState();
                     global_updateTimeline();
+
                 } catch (err) { console.error("Error auto-loading embedded data:", err); alert('Lỗi khi tải dữ liệu. Hãy chắc chắn file video (nếu có) nằm cùng thư mục với file HTML.'); }
             }
             
-            async function handleDrop(e) { e.preventDefault(); document.body.classList.remove('dragging'); if (e.dataTransfer.files.length) handleFiles(Array.from(e.dataTransfer.files)); }
-            function handleFiles(files) { if (!files || files.length === 0) return; if (state.artboards.length === 0) { app.dropZone.classList.add('hidden'); app.workspaceContainer.classList.remove('hidden'); app.bottomControlsContainer.classList.remove('hidden'); app.rightPanel.classList.remove('hidden'); } const imageFiles = files.filter(f => f.type.startsWith('image/')); const videoFiles = files.filter(f => f.type.startsWith('video/')); imageFiles.forEach(file => { const reader = new FileReader(); reader.onload = e => addArtboard(file.name, e.target.result, 'image'); reader.readAsDataURL(file); }); videoFiles.forEach(file => { const url = URL.createObjectURL(file); addArtboard(file.name, url, 'video'); if (app.timelinePanel.classList.contains('hidden')) app.timelinePanel.classList.remove('hidden'); }); }
+            async function handleDrop(e) { e.preventDefault(); document.body.classList.remove('dragging'); if (e.dataTransfer.files.length) handleFiles(Array.from(e.target.files)); }
+            function handleFiles(files) { if (!files || files.length === 0) return; if (state.artboards.length === 0) { app.dropZone.classList.add('hidden'); app.workspaceContainer.classList.remove('hidden'); app.bottomControlsContainer.classList.remove('hidden'); app.rightPanel.classList.remove('hidden'); } const imageFiles = files.filter(f => f.type.startsWith('image/')); const videoFiles = files.filter(f => f.type.startsWith('video/')); const htmlFiles = files.filter(f => f.type === 'text/html'); imageFiles.forEach(file => { const reader = new FileReader(); reader.onload = e => addArtboard(file.name, e.target.result, 'image', {width: 0, height: 0}); reader.readAsDataURL(file); }); videoFiles.forEach(file => { const url = URL.createObjectURL(file); addArtboard(file.name, url, 'video'); if (app.timelinePanel.classList.contains('hidden')) app.timelinePanel.classList.remove('hidden'); }); htmlFiles.forEach(file => { const reader = new FileReader(); reader.onload = e => addArtboard(file.name, e.target.result, 'html', {width: 300, height: 250}); reader.readAsText(file); }); }
             async function handlePaste(e) {
-                const activeEl = document.activeElement;
-                if (activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'INPUT') return;
-                
+                const activeEl = document.activeElement; if (activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'INPUT') return;
                 const imageItem = Array.from(e.clipboardData.items).find(item => item.type.startsWith('image/'));
                 if (imageItem) {
                     e.preventDefault();
                     const file = imageItem.getAsFile();
                     const artboardId = state.selectedArtboardIds.length > 0 ? state.selectedArtboardIds[0] : (state.artboards.length > 0 ? state.artboards[0].id : null);
                     if (artboardId) {
-                        const compressedDataUrl = await compressImage(file);
-                        addAnnotation({ type: 'image', artboardId, data: { p1: {x:0.1, y:0.1}, p2: {x:0.9, y:0.9}, imageData: compressedDataUrl }, text: '' }, true);
-                    } else {
-                        handleFiles([file]);
-                    }
+                        const {data, width, height} = await compressImage(file, true);
+                        addAnnotation({ type: 'image', artboardId, data: { p1: {x:0.1, y:0.1}, p2: {x:0.9, y:0.9}, imageData: data, imgRatio: width/height }, text: '' }, true);
+                    } else { handleFiles([file]); }
                     return;
                 }
-
                 if (state.clipboard.length > 0) { e.preventDefault(); pasteAnnotations(); }
             }
             function onKeyUp(e) { if (e.key === ' ') { e.preventDefault(); state.spacebarPressed = false; app.body.classList.remove('spacebar-down', 'panning'); } }
@@ -449,55 +522,122 @@
                 if (['TEXTAREA', 'INPUT'].includes(activeEl.tagName) && activeEl.id !== 'search-input') return;
 
                 if (e.key.toLowerCase() === 'v' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); selectTool(null); return; }
-                
-                if (e.key === ' ' && !state.spacebarPressed) {
-                    e.preventDefault();
-                    state.spacebarPressed = true;
-                    app.body.classList.add('spacebar-down');
-                     if (state.artboards.some(b => b.type === 'video')) { global_togglePlayPause(e.ctrlKey); }
-                }
+                if (e.key === ' ' && !state.spacebarPressed) { e.preventDefault(); state.spacebarPressed = true; app.body.classList.add('spacebar-down'); if (state.artboards.some(b => b.type === 'video')) { global_togglePlayPause(!e.ctrlKey); } }
+                if (e.key.toLowerCase() === 'm' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); toggleMuteForSelected(); }
                 
                 if (e.ctrlKey || e.metaKey) {
+                    const rect = app.workspaceContainer.getBoundingClientRect();
+                    const centerX = rect.width / 2; const centerY = rect.height / 2;
                     switch (e.key.toLowerCase()) {
+                        case '=': e.preventDefault(); zoomAtPoint(1.1, centerX, centerY); return;
+                        case '-': e.preventDefault(); zoomAtPoint(1 / 1.1, centerX, centerY); return;
                         case 's': e.preventDefault(); e.shiftKey ? saveStateAs() : saveState(); return;
-                        case 'z': e.preventDefault(); e.shiftKey ? redoDelete() : undoDelete(); return;
+                        case 'z': e.preventDefault(); e.shiftKey ? historyManager.redo() : historyManager.undo(); return;
                         case 'f': e.preventDefault(); app.searchInput.focus(); app.searchInput.select(); return;
                         case 'a': e.preventDefault(); state.selectedAnnotationIndices = state.annotations.map((_, i) => i); updateListSelection(); return;
                         case 'd': e.preventDefault(); app.fileInput.click(); return;
-                        case 'c': if (state.selectedAnnotationIndices.length > 0) { e.preventDefault(); copyAnnotations(); } return;
+                        case 'w': e.preventDefault(); if (state.selectedArtboardIds.length > 0) { deleteSelectedArtboards(); } return;
+                        case 'm': e.preventDefault(); global_toggleMute(); return;
+                        case 'c': if (state.selectedAnnotationIndices.length > 0) { copyAnnotations(); } return;
                         case 'v': e.preventDefault(); pasteAnnotations(); return;
-                        case 'g': e.preventDefault(); rearrangeArtboards(); return;
+                        case 'h': e.preventDefault(); toggleRightPanel(); return;
+                        case 'g': e.preventDefault(); if (e.shiftKey) { resizeAllVideosTo720p(); } else { rearrangeArtboards(); } return;
+                        case '1': e.preventDefault(); if(state.selectedArtboardIds.length === 1) { fitArtboardToView(state.selectedArtboardIds[0]); } else { state.view.scale = 1; updateWorkspaceTransform(); } return;
                         case '0': if (e.altKey) { e.preventDefault(); fitAllArtboardsToView(); } else { e.preventDefault(); state.view = { ...state.view, scale: 1, offsetX: 0, offsetY: 0 }; updateWorkspaceTransform(); } return;
+                        case ';': e.preventDefault(); state.grids.visible = !state.grids.visible; drawGrids(); return;
+                        case "'": e.preventDefault(); state.grids.locked = !state.grids.locked; drawGrids(); return;
                     }
                 }
 
-                if (e.key === 'Delete') { e.preventDefault(); deleteAnnotationsByIndices(state.selectedAnnotationIndices); }
+                if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); if (state.selectedAnnotationIndices.length > 0) { deleteAnnotationsByIndices(state.selectedAnnotationIndices); } else if (state.selectedArtboardIds.length > 0) { deleteSelectedArtboards(); } }
                 if ('qwerty'.includes(e.key.toLowerCase())) { const toolMap = {q:'comment', w:'rect', e:'circle', r:'line', t:'arrow', y:'image'}; selectTool(toolMap[e.key]); }
-                
                 if (state.artboards.some(b => b.type === 'video')) {
-                     let handled = true;
+                    let handled = true;
+                    const frameCount = e.shiftKey ? 10 : 1; const target = e.ctrlKey ? 'all' : 'selected';
                     switch(e.key) {
-                        case 'ArrowLeft': e.shiftKey ? global_seekSeconds(-1) : global_seekFrames(-1); break;
-                        case 'ArrowRight': e.shiftKey ? global_seekSeconds(1) : global_seekFrames(1); break;
+                        case 'ArrowLeft': e.altKey ? navigateCommentMarkers(-1) : advancedSeek({ frameDelta: -frameCount, target }); break;
+                        case 'ArrowRight': e.altKey ? navigateCommentMarkers(1) : advancedSeek({ frameDelta: frameCount, target }); break;
+                        case 'ArrowUp': advancedSeek({ position: 'start', target }); break;
+                        case 'ArrowDown': advancedSeek({ position: 'end', target }); break;
                         default: handled = false;
                     }
                     if (handled) e.preventDefault();
                 }
             }
             
-            function onWorkspaceMouseDown(e) { if (state.spacebarPressed || e.button === 1) { startPanning(e); return; } if (e.target.closest('.artboard')) return; state.selectedAnnotationIndices = []; state.selectedArtboardIds = []; updateListSelection(); updateArtboardSelection(); }
-            function onWindowMouseMove(e) { switch(state.interaction.mode) { case 'panning': state.view.offsetX = e.clientX - state.interaction.startPos.x; state.view.offsetY = e.clientY - state.interaction.startPos.y; updateWorkspaceTransform(); break; case 'draggingArtboard': onArtboardDrag(e); break; case 'resizingArtboard': onArtboardResize(e); break; default: onCanvasMouseMove(e); break; } }
-            function onWindowMouseUp(e) { if(['panning', 'draggingArtboard', 'resizingArtboard'].includes(state.interaction.mode)) { if (state.interaction.mode === 'panning') { app.workspaceContainer.classList.remove('panning'); app.body.classList.remove('panning'); } else if (state.interaction.mode === 'draggingArtboard' || state.interaction.mode === 'resizingArtboard') { const artboardEl = document.querySelector(`.artboard[data-id="${state.interaction.target.artboardId}"]`); if (artboardEl) artboardEl.classList.remove('dragging'); } state.interaction.mode = 'none'; state.interaction.target = null; } else { onCanvasMouseUp(e); state.interaction.mode = 'none'; state.interaction.target = null; }}
+            function startPanning(e) {
+                e.preventDefault(); e.stopPropagation();
+                state.interaction.mode = 'panning';
+                state.interaction.startPos = { x: e.clientX, y: e.clientY };
+                state.interaction.startWorkspacePos = { x: state.view.offsetX, y: state.view.offsetY };
+                app.workspaceContainer.classList.add('panning'); app.body.classList.add('panning');
+            }
+
+            function onWorkspaceMouseDown(e) {
+                hideContextMenu();
+                if (e.button === 2) return;
+                if (state.spacebarPressed || e.button === 1) { startPanning(e); return; }
+                
+                const hitGrid = getHitGrid(e);
+                if(hitGrid) {
+                    e.preventDefault(); e.stopPropagation();
+                    state.interaction.mode = 'draggingGrid';
+                    state.interaction.target = hitGrid;
+                    state.interaction.startData.set('grid', { position: hitGrid.grid.position });
+                    return;
+                }
+                
+                if (state.artboardEdgeHover && !state.grids.locked) {
+                    e.preventDefault(); e.stopPropagation();
+                    state.interaction.mode = 'draggingArtboardGrid';
+                    state.interaction.target = { artboardId: state.artboardEdgeHover.artboardId, type: ['left', 'right'].includes(state.artboardEdgeHover.edge) ? 'vertical' : 'horizontal' };
+                    return;
+                }
+                if (e.target.closest('.artboard')) return;
+                state.selectedAnnotationIndices = []; state.selectedArtboardIds = [];
+                updateListSelection(); updateArtboardSelection();
+            }
+            function onWindowMouseMove(e) { 
+                switch(state.interaction.mode) { 
+                    case 'panning': { const dx = e.clientX - state.interaction.startPos.x; const dy = e.clientY - state.interaction.startPos.y; state.view.offsetX = state.interaction.startWorkspacePos.x + dx; state.view.offsetY = state.interaction.startWorkspacePos.y + dy; updateWorkspaceTransform(); break; }
+                    case 'draggingToolbar': onToolbarDrag(e); break;
+                    case 'draggingArtboard': onArtboardDrag(e); break; 
+                    case 'resizingArtboard': onArtboardResize(e); break; 
+                    case 'draggingArtboardGrid': drawGrids(e); break;
+                    case 'draggingGrid': onGridDrag(e); break;
+                    default: onCanvasMouseMove(e); break; 
+                } 
+                handleArtboardEdgeHover(e);
+            }
+            function onWindowMouseUp(e) {
+                if (['panning'].includes(state.interaction.mode)) { app.workspaceContainer.classList.remove('panning'); app.body.classList.remove('panning'); } 
+                else if (['draggingArtboard', 'resizingArtboard'].includes(state.interaction.mode)) {
+                    document.querySelectorAll('.artboard.dragging').forEach(el => el.classList.remove('dragging'));
+                    const beforeState = []; const afterState = [];
+                    state.selectedArtboardIds.forEach(id => { const board = state.artboards.find(b => b.id === id); const start = state.interaction.startData.get(id); if(board && start) { beforeState.push({id, x: start.x, y: start.y }); afterState.push({id, x: board.x, y: board.y }); } });
+                     if (JSON.stringify(beforeState) !== JSON.stringify(afterState)) {
+                        historyManager.execute({ type: 'MOVE_ARTBOARDS', before: beforeState, after: afterState,
+                            do: (action) => { action.after.forEach(s => { const board = state.artboards.find(b=>b.id===s.id); if(board) Object.assign(board, {x:s.x, y:s.y}); }); renderWorkspace(); },
+                            undo: (action) => { action.before.forEach(s => { const board = state.artboards.find(b=>b.id===s.id); if(board) Object.assign(board, {x:s.x, y:s.y}); }); renderWorkspace(); }
+                        });
+                     }
+                } else if (state.interaction.mode === 'draggingArtboardGrid') {
+                    const { artboardId, type } = state.interaction.target;
+                    const artboard = state.artboards.find(b => b.id === artboardId);
+                    if (artboard) {
+                        const pos = getMousePosOnArtboard(e, artboard); const position = type === 'vertical' ? pos.x : pos.y;
+                        if (!state.grids.artboard[artboardId]) { state.grids.artboard[artboardId] = []; }
+                        state.grids.artboard[artboardId].push({ type, position, id: crypto.randomUUID() });
+                        markAsChanged(); drawGrids();
+                    }
+                }
+                onCanvasMouseUp(e); state.interaction.mode = 'none'; state.interaction.target = null;
+            }
             function onWorkspaceWheel(e) { e.preventDefault(); const rect = app.workspaceContainer.getBoundingClientRect(); zoomAtPoint(e.deltaY < 0 ? 1.1 : 1/1.1, e.clientX - rect.left, e.clientY - rect.top); }
             
             function selectArtboard(artboardId, isShift) {
-                if (isShift) {
-                    const index = state.selectedArtboardIds.indexOf(artboardId);
-                    if (index > -1) state.selectedArtboardIds.splice(index, 1);
-                    else state.selectedArtboardIds.push(artboardId);
-                } else {
-                    state.selectedArtboardIds = [artboardId];
-                }
+                if (isShift) { const index = state.selectedArtboardIds.indexOf(artboardId); if (index > -1) state.selectedArtboardIds.splice(index, 1); else state.selectedArtboardIds.push(artboardId); } 
+                else { if (!state.selectedArtboardIds.includes(artboardId)) { state.selectedArtboardIds = [artboardId]; } }
                 updateArtboardSelection();
             }
             function updateArtboardSelection() { document.querySelectorAll('.artboard').forEach(el => el.classList.toggle('selected', state.selectedArtboardIds.includes(el.dataset.id))); }
@@ -507,152 +647,155 @@
                 document.querySelectorAll('.tool-btn').forEach(b => b.classList.toggle('active', b.dataset.tool === state.currentTool));
                 if (state.currentTool) { const toolBtn = document.querySelector(`.tool-btn[data-tool='${state.currentTool}']`); if (toolBtn) { app.toolCursorIcon.innerHTML = ''; app.toolCursorIcon.appendChild(toolBtn.querySelector('svg').cloneNode(true)); } } 
             };
-            function updateCursorVisibility(canvas, hit) { const systemCursor = (hit && hit.cursor) ? hit.cursor : 'default'; if (canvas) canvas.style.cursor = systemCursor; if (state.currentTool && systemCursor === 'default') { app.toolCursorIcon.classList.remove('hidden'); } else { app.toolCursorIcon.classList.add('hidden'); } }
             function updateCursorOnMouseMove(e) {
                 if (state.interaction.mode !== 'none' || state.spacebarPressed) return;
+                const hitGrid = getHitGrid(e);
+                if(hitGrid) { app.workspaceContainer.style.cursor = hitGrid.grid.type === 'horizontal' ? 'row-resize' : 'col-resize'; app.toolCursorIcon.classList.add('hidden'); return; }
                 const canvas = e.target;
                 if (canvas.classList.contains('interaction-canvas')) {
                     const artboardEl = canvas.closest('.artboard');
                     if (artboardEl) {
                         const artboard = state.artboards.find(b => b.id === artboardEl.dataset.id);
-                        if (artboard) { const pos = getMousePosOnArtboard(e, artboard); const hit = getHitAnnotation(pos, artboard.id); updateCursorVisibility(canvas, hit); }
+                        if (artboard) { const pos = getMousePosOnArtboard(e, artboard); const hit = getHitAnnotation(pos, artboard.id); if (canvas) { canvas.style.cursor = (hit && hit.cursor) ? hit.cursor : 'default'; } if (state.currentTool && (!hit || hit.cursor === 'default')) { app.toolCursorIcon.classList.remove('hidden'); } else { app.toolCursorIcon.classList.add('hidden'); } }
                     }
                 } else { app.workspaceContainer.style.cursor = 'grab'; app.toolCursorIcon.classList.add('hidden'); }
             }
 
-            function addArtboard(name, src, type) {
-                const mediaElement = (type === 'image') ? new Image() : document.createElement('video');
+            function addArtboard(name, src, type, size = {width:0, height:0}) {
+                const mediaElement = (type === 'image') ? new Image() : (type === 'video') ? document.createElement('video') : null;
                 const onMediaReady = () => {
-                    const isImage = type === 'image';
-                    const mediaWidth = isImage ? mediaElement.naturalWidth : mediaElement.videoWidth;
-                    const mediaHeight = isImage ? mediaElement.naturalHeight : mediaElement.videoHeight;
-                    const { margin, maxRowWidth } = state.layout;
-                    if (state.layout.nextX + mediaWidth > maxRowWidth && state.artboards.length > 0) {
-                        state.layout.nextY += state.layout.rowMaxHeight + margin;
-                        state.layout.nextX = margin;
-                        state.layout.rowMaxHeight = 0;
-                    }
-                    const artboard = { id: crypto.randomUUID(), name, type, src, x: state.layout.nextX, y: state.layout.nextY, width: mediaWidth, height: mediaHeight, originalWidth: mediaWidth, originalHeight: mediaHeight, scale: 1, };
-                    if (isImage) { artboard.imageData = src; artboard.imageObject = mediaElement; } else { artboard.videoObject = mediaElement; }
-                    state.artboards.push(artboard);
-                    state.layout.nextX += artboard.width + margin;
-                    state.layout.rowMaxHeight = Math.max(state.layout.rowMaxHeight, artboard.height);
-                    renderWorkspace(); markAsChanged(); updateAnnotationList();
-                    if (type === 'video') { global_updateTimeline(); }
+                    let mediaWidth, mediaHeight;
+                    if (type === 'image') { mediaWidth = mediaElement.naturalWidth; mediaHeight = mediaElement.naturalHeight; }
+                    else if (type === 'video') { mediaWidth = mediaElement.videoWidth; mediaHeight = mediaElement.videoHeight; }
+                    else { mediaWidth = size.width; mediaHeight = size.height; }
+
+                    const { margin } = state.layout;
+                    const artboard = { id: crypto.randomUUID(), name, type, src, x: margin, y: margin, width: mediaWidth, height: mediaHeight, originalWidth: mediaWidth, originalHeight: mediaHeight, scale: 1, };
+                    if (type === 'html') { artboard.htmlContent = src; }
+                    if (type === 'video') { artboard.frameBackups = {}; artboard.videoFailedToLoad = false; }
+                    state.grids.artboard[artboard.id] = [];
+                    historyManager.execute({ type: 'ADD_ARTBOARD', artboard: artboard,
+                        do: () => { state.artboards.push(artboard); rearrangeArtboards(); if (type === 'video') global_updateTimeline(); },
+                        undo: () => { state.artboards = state.artboards.filter(b => b.id !== artboard.id); delete state.grids.artboard[artboard.id]; rearrangeArtboards(); if (type === 'video') global_updateTimeline(); }
+                    });
+                    updateAnnotationList();
                 };
-                if (type === 'image') { mediaElement.onload = onMediaReady; } else { mediaElement.onloadedmetadata = onMediaReady; }
-                mediaElement.src = src;
+                if (type === 'html') { onMediaReady(); } 
+                else { if (type === 'image') { mediaElement.onload = onMediaReady; } else if (type === 'video') { mediaElement.onloadedmetadata = onMediaReady; } mediaElement.src = src; }
             }
 
             function renderWorkspace() {
-                app.workspace.innerHTML = '';
+                app.workspace.innerHTML = ''; const transparentFileTypes = ['.png', '.webp', '.webm', '.gif', '.tiff'];
                 state.artboards.forEach(artboard => {
-                    const artboardEl = document.createElement('div');
-                    artboardEl.className = 'artboard';
-                    artboardEl.dataset.id = artboard.id;
-                    artboardEl.style.cssText = `left: ${artboard.x}px; top: ${artboard.y}px; width: ${artboard.width}px; height: ${artboard.height}px;`;
+                    const artboardEl = document.createElement('div'); artboardEl.className = 'artboard'; artboardEl.dataset.id = artboard.id;
+                    const controlsHeight = artboard.type === 'video' ? 24 : 0;
+                    artboardEl.style.cssText = `left: ${artboard.x}px; top: ${artboard.y}px; width: ${artboard.width}px; height: ${artboard.height + 30 + controlsHeight}px;`;
                     artboardEl.classList.toggle('selected', state.selectedArtboardIds.includes(artboard.id));
-
-                    let contentHTML = (artboard.type === 'image') ? `<img src="${artboard.src}" alt="${artboard.name}">` : `<video src="${artboard.src}" playsinline loop></video>`;
-                    let videoControlsHTML = artboard.type === 'video' ? `<div class="artboard-video-controls"><button class="vid-play-btn" title="Play/Pause">▶</button><button class="vid-mute-btn" title="Mute/Unmute">${MUTE_ICON_SVG}</button><span class="vid-time">00:00</span><input type="range" class="vid-timeline" value="0" step="0.1"></div>` : '';
-                    
-                    const scaleDisplay = artboard.scale !== 1 ? `<span class="artboard-info">(${Math.round(artboard.scale * 100)}%)</span>` : '';
+                    let contentHTML = ''; const artboardSrc = artboard.src || artboard.name; 
+                    switch(artboard.type) {
+                        case 'image': contentHTML = `<img src="${artboardSrc}" alt="${artboard.name}">`; break;
+                        case 'video': contentHTML = `<video src="${artboardSrc}" playsinline loop></video><img class="frame-backup hidden" alt="Backup Frame">`; break;
+                        case 'html': contentHTML = `<iframe srcdoc="${artboard.htmlContent.replace(/"/g, '&quot;')}"></iframe>`; break;
+                    }
+                    let videoControlsHTML = artboard.type === 'video' ? `<div class="artboard-video-controls"><button class="vid-play-btn" title="Play/Pause">▶</button><button class="vid-mute-btn" title="Mute/Unmute">${MUTE_ICON_SVG}</button><input type="text" class="time-input vid-time" value="00:00:00:00"><div class="vid-timeline-wrapper"><div class="vid-timeline-bg"></div><canvas class="vid-timeline-markers"></canvas><input type="range" class="vid-timeline" value="0" step="0.01"></div></div>` : '';
                     const dimensionsDisplay = `<span class="artboard-info">(${artboard.originalWidth}x${artboard.originalHeight})</span>`;
-                    const headerToolsHTML = `<div class="artboard-header-tools"><button class="header-icon-btn fit-view-btn" title="Fit to View"><svg viewBox="0 0 24 24"><path d="M15 3h6v6l-2-2-4 4-2-2 4-4-2-2zM9 21H3v-6l2 2 4-4 2 2-4 4 2 2z"/></svg></button><button class="artboard-close-btn" title="Xóa Artboard">&times;</button></div>`;
-
+                    const headerToolsHTML = `<div class="artboard-header-tools"><button class="header-icon-btn fit-view-btn" title="Fit to View (Ctrl+1)"><svg viewBox="0 0 24 24"><path d="M15 3h6v6l-2-2-4 4-2-2 4-4-2-2zM9 21H3v-6l2 2 4-4 2 2-4 4 2 2z"/></svg></button><button class="artboard-close-btn" title="Xóa Artboard (Delete)">&times;</button></div>`;
+                    let transparencyToggleHTML = ''; if (transparentFileTypes.some(ext => artboard.name.toLowerCase().endsWith(ext))) { transparencyToggleHTML = `<button class="header-icon-btn transparency-btn" title="Toggle Transparency Grid"><svg viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M0 0h8v8H0V0zm8 8h8v8H8V8z" clip-rule="evenodd"></path></svg></button>`; }
                     artboardEl.innerHTML = `
-                        <div class="artboard-header">
-                           <div class="artboard-title-container" title="${artboard.name} ${artboard.originalWidth}x${artboard.originalHeight}">
-                               <span class="artboard-title">${artboard.name}</span>${dimensionsDisplay}${scaleDisplay}
-                           </div>
-                           ${headerToolsHTML}
-                        </div>
-                        <div class="artboard-content"><canvas class="display-canvas"></canvas>${contentHTML}<canvas class="interaction-canvas"></canvas></div>
+                        <div class="artboard-header"><div class="artboard-title-container" title="${artboard.name} ${artboard.originalWidth}x${artboard.originalHeight}">${transparencyToggleHTML}<span class="artboard-title">${artboard.name}</span><span class="artboard-info-wrapper">${dimensionsDisplay}</span></div>${headerToolsHTML}</div>
+                        <div class="artboard-content">${contentHTML}<canvas class="grid-canvas"></canvas><canvas class="display-canvas"></canvas><canvas class="interaction-canvas"></canvas></div>
                         ${videoControlsHTML}
                         <div class="artboard-resizer" title="Resize (Double-click to reset)"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10.0002 12.0001L12.0002 10.0001" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M6.00009 16.0001L16.0001 6.00009" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M14.0002 12.0001L12.0002 14.0001" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>`;
                     app.workspace.appendChild(artboardEl);
-
-                    artboardEl.addEventListener('mousedown', e => { if(e.target.classList.contains('artboard')) selectArtboard(artboard.id, e.shiftKey); });
+                    artboardEl.querySelector('.artboard-content').style.backgroundColor = state.layout.artboardBgColor;
+                    artboardEl.addEventListener('mousedown', e => { if(e.target === artboardEl) selectArtboard(artboard.id, e.shiftKey || e.ctrlKey || e.metaKey); });
+                    artboardEl.addEventListener('contextmenu', e => onArtboardContextMenu(e, artboard.id));
+                    const transparencyBtn = artboardEl.querySelector('.transparency-btn'); if(transparencyBtn) { transparencyBtn.addEventListener('click', (e) => { e.stopPropagation(); artboardEl.querySelector('.artboard-content').classList.toggle('transparent-grid'); }); }
                     artboardEl.querySelector('.artboard-header').addEventListener('mousedown', e => onArtboardHeaderMouseDown(e, artboard.id));
                     artboardEl.querySelector('.fit-view-btn').addEventListener('click', () => fitArtboardToView(artboard.id));
-                    artboardEl.querySelector('.artboard-close-btn').addEventListener('click', () => removeArtboard(artboard.id));
+                    artboardEl.querySelector('.artboard-close-btn').addEventListener('click', () => deleteSelectedArtboards());
                     artboardEl.querySelector('.artboard-resizer').addEventListener('mousedown', e => onArtboardResizeMouseDown(e, artboard.id));
                     artboardEl.querySelector('.artboard-resizer').addEventListener('dblclick', e => { e.stopPropagation(); resetArtboardScale(artboard.id); });
                     const interactionCanvas = artboardEl.querySelector('.interaction-canvas');
                     interactionCanvas.addEventListener('mousedown', e => onCanvasMouseDown(e, artboard.id));
                     interactionCanvas.addEventListener('dblclick', e => onCanvasDblClick(e, artboard.id));
-
+                    interactionCanvas.addEventListener('contextmenu', e => onAnnotationCanvasContextMenu(e, artboard.id));
                     if (artboard.type === 'video') {
-                        const video = artboardEl.querySelector('video');
-                        const playBtn = artboardEl.querySelector('.vid-play-btn'); const muteBtn = artboardEl.querySelector('.vid-mute-btn'); const timeDisplay = artboardEl.querySelector('.vid-time'); const timeline = artboardEl.querySelector('.vid-timeline');
+                        const video = artboardEl.querySelector('video'); artboard.videoFailedToLoad = false;
+                        video.onerror = () => { artboard.videoFailedToLoad = true; video.classList.add('hidden'); redrawArtboardAnnotations(artboard.id); };
+                        const playBtn = artboardEl.querySelector('.vid-play-btn'); const muteBtn = artboardEl.querySelector('.vid-mute-btn'); const timeInput = artboardEl.querySelector('.vid-time'); const timeline = artboardEl.querySelector('.vid-timeline');
                         video.muted = state.isGlobalMuted; muteBtn.innerHTML = video.muted ? MUTE_ICON_SVG : UNMUTE_ICON_SVG;
                         playBtn.addEventListener('click', e => { e.stopPropagation(); video.paused ? video.play() : video.pause(); });
                         muteBtn.addEventListener('click', e => { e.stopPropagation(); video.muted = !video.muted; muteBtn.innerHTML = video.muted ? MUTE_ICON_SVG : UNMUTE_ICON_SVG; });
                         video.addEventListener('play', () => { playBtn.textContent = '❚❚'; global_updatePlayButtonState(); });
                         video.addEventListener('pause', () => { playBtn.textContent = '▶'; global_updatePlayButtonState(); });
                         video.addEventListener('loadedmetadata', () => { timeline.max = video.duration; global_updateTimeline(); });
-                        video.addEventListener('timeupdate', () => { if (!timeline.matches(':active')) timeline.value = video.currentTime; timeDisplay.textContent = formatTime(video.currentTime); });
-                        timeline.addEventListener('input', e => { e.stopPropagation(); video.currentTime = timeline.value; });
+                        video.addEventListener('timeupdate', () => { if (!timeline.matches(':active')) timeline.value = video.currentTime; if (document.activeElement !== timeInput) { timeInput.value = formatTimeHHMMSSFF(video.currentTime, video.duration); } redrawArtboardAnnotations(artboard.id); });
+                        timeline.addEventListener('input', e => { e.stopPropagation(); video.currentTime = parseFloat(timeline.value); redrawArtboardAnnotations(artboard.id); });
+                        initTimeInput(timeInput, () => video.currentTime, (newTime) => {video.currentTime = newTime; redrawArtboardAnnotations(artboard.id);}, () => video.duration);
                     }
                 });
-                redrawAllAnnotations();
+                redrawAllAnnotations(); drawGrids();
             }
 
-            function removeArtboard(artboardId) {
-                const commentsOnArtboard = state.annotations.filter(a => a.artboardId === artboardId);
-                if (commentsOnArtboard.length > 0 && !confirm(`Xóa artboard này và ${commentsOnArtboard.length} comment trên đó?`)) return;
-                const artboardToRemove = state.artboards.find(b => b.id === artboardId); if(artboardToRemove && artboardToRemove.type === 'video') { URL.revokeObjectURL(artboardToRemove.src); }
-                state.annotations = state.annotations.filter(ann => ann.artboardId !== artboardId); state.artboards = state.artboards.filter(board => board.id !== artboardId);
-                renderWorkspace(); updateAnnotationList(); markAsChanged();
-                if (!state.artboards.some(b => b.type === 'video')) { app.timelinePanel.classList.add('hidden'); }
+            async function captureFrame(videoEl) { const canvas = document.createElement('canvas'); canvas.width = videoEl.videoWidth; canvas.height = videoEl.videoHeight; const ctx = canvas.getContext('2d'); ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height); return canvas.toDataURL('image/webp', 0.5); }
+            async function saveVideoFrame(artboardId) {
+                const artboard = state.artboards.find(b => b.id === artboardId);
+                const videoEl = document.querySelector(`.artboard[data-id="${artboardId}"] video`);
+                if (!artboard || !videoEl) return;
+                const canvas = document.createElement('canvas'); canvas.width = videoEl.videoWidth; canvas.height = videoEl.videoHeight; const ctx = canvas.getContext('2d'); ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+                app.frameDownloadLink.href = canvas.toDataURL('image/png');
+                const timecode = formatTimeHHMMSSFF(videoEl.currentTime, videoEl.duration).replace(/:/g, '_');
+                app.frameDownloadLink.download = `${artboard.name}_Frame_${timecode}.png`;
+                app.frameDownloadLink.click();
+            }
+
+            function deleteSelectedArtboards() {
+                if (state.selectedArtboardIds.length === 0) return;
+                 const artboardsToRemove = state.artboards.filter(b => state.selectedArtboardIds.includes(b.id));
+                 const annotationsOnArtboards = state.annotations.filter(a => state.selectedArtboardIds.includes(a.artboardId));
+                if ((artboardsToRemove.length > 0 || annotationsOnArtboards.length > 0) && !confirm(`Xóa ${artboardsToRemove.length} artboard(s) và ${annotationsOnArtboards.length} comment trên đó?`)) return;
+                historyManager.execute({ type: 'DELETE_ARTBOARDS', artboards: JSON.parse(JSON.stringify(artboardsToRemove)), annotations: JSON.parse(JSON.stringify(annotationsOnArtboards)),
+                    do: () => { artboardsToRemove.forEach(board => { if(board.type === 'video' && board.src.startsWith('blob:')) URL.revokeObjectURL(board.src); delete state.grids.artboard[board.id]; }); state.artboards = state.artboards.filter(b => !state.selectedArtboardIds.includes(b.id)); state.annotations = state.annotations.filter(a => !state.selectedArtboardIds.includes(a.artboardId)); state.selectedArtboardIds = []; rearrangeArtboards(); updateAnnotationList(); },
+                    undo: (action) => { state.artboards.push(...action.artboards); state.annotations.push(...action.annotations); action.artboards.forEach(b => state.grids.artboard[b.id] = state.grids.artboard[b.id] || [] ); state.selectedArtboardIds = action.artboards.map(b => b.id); rearrangeArtboards(); updateAnnotationList(); }
+                });
             }
             
-            async function compressImage(file, quality = 0.8) {
+            async function compressImage(file, returnSize = false, quality = 0.8) {
                 return new Promise((resolve, reject) => {
                     const reader = new FileReader();
                     reader.onload = (event) => {
                         const img = new Image();
-                        img.onload = () => {
-                            const canvas = document.createElement('canvas');
-                            canvas.width = img.width;
-                            canvas.height = img.height;
-                            const ctx = canvas.getContext('2d');
-                            ctx.drawImage(img, 0, 0);
-                            resolve(canvas.toDataURL('image/webp', quality));
-                        };
-                        img.onerror = reject;
-                        img.src = event.target.result;
+                        img.onload = () => { const canvas = document.createElement('canvas'); canvas.width = img.width; canvas.height = img.height; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0); const data = canvas.toDataURL('image/webp', quality); if (returnSize) { resolve({ data, width: img.width, height: img.height }); } else { resolve(data); } };
+                        img.onerror = reject; img.src = event.target.result;
                     };
-                    reader.onerror = reject;
-                    reader.readAsDataURL(file);
+                    reader.onerror = reject; reader.readAsDataURL(file);
                 });
             }
 
             async function handleImageToolFile(e) {
-                const file = e.target.files[0];
-                if (!file || !state.interaction.target) return;
-                const { artboardId } = state.interaction.target;
-                
+                const file = e.target.files[0]; if (!file || !state.interaction.target) { state.interaction.mode = 'none'; state.interaction.target = null; return; }
                 try {
-                    const compressedDataUrl = await compressImage(file);
-                    addAnnotation({ type: 'image', artboardId, data: { p1: state.interaction.startPos, p2: state.interaction.startPos, imageData: compressedDataUrl }, text: '' });
-                } catch(err) {
-                    console.error("Image compression failed", err);
-                } finally {
-                    state.interaction.mode = 'none';
-                    state.interaction.target = null;
-                    app.imageToolInput.value = '';
-                }
+                    const { data, width, height } = await compressImage(file, true); state.pendingImageData = { data, width, height };
+                    const { artboardId } = state.interaction.target; const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard || !state.pendingImageData.data) return;
+                    const pos = state.interaction.startPos; const defaultWidth = 300; const imgRatio = state.pendingImageData.width / state.pendingImageData.height; const defaultHeight = defaultWidth / imgRatio;
+                    const normWidth = defaultWidth / artboard.width; const normHeight = defaultHeight / artboard.height; const p1 = { x: pos.x, y: pos.y }; const p2 = { x: pos.x + normWidth, y: pos.y + normHeight };
+                    addAnnotation({ type: 'image', artboardId, data: { p1, p2, imageData: data, imgRatio: imgRatio }, text: '' }, false);
+                } catch(err) { console.error("Image compression failed", err); } 
+                finally { state.pendingImageData = { data: null, width: 0, height: 0 }; state.interaction.mode = 'none'; state.interaction.target = null; app.imageToolInput.value = ''; }
             }
             
-            function addAnnotation(ann, startEditing = false) {
-                ann.user = state.currentUser; ann.id = crypto.randomUUID(); ann.parentId = ann.parentId || null; ann.completed = false;
-                const artboard = state.artboards.find(b => b.id === ann.artboardId);
-                if (artboard && artboard.type === 'video') { const videoEl = document.querySelector(`.artboard[data-id="${artboard.id}"] video`); if (videoEl) { ann.videoTime = videoEl.currentTime; } }
-                state.annotations.push(ann); state.undoStack = []; state.redoStack = [];
-                const newIndex = state.annotations.length - 1; state.selectedAnnotationIndices = [newIndex]; state.lastClickedAnnIndex = newIndex;
-                markAsChanged(); updateAnnotationList(); redrawAllAnnotations();
-                if (startEditing) { const li = app.annotationList.querySelector(`li[data-id='${ann.id}']`); if (li) { li.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); makeListItemEditable(li, newIndex); } }
+            async function addAnnotation(ann, startEditing = false) {
+                const newAnn = { ...ann, user: state.currentUser, id: crypto.randomUUID(), parentId: ann.parentId || null, completed: false, };
+                const artboard = state.artboards.find(b => b.id === newAnn.artboardId);
+                if (artboard && artboard.type === 'video') {
+                     const videoEl = document.querySelector(`.artboard[data-id="${artboard.id}"] video`);
+                     if (videoEl && !artboard.videoFailedToLoad) { newAnn.videoTime = videoEl.currentTime; videoEl.pause(); const frameKey = newAnn.videoTime.toFixed(5); if (!artboard.frameBackups) artboard.frameBackups = {}; if (!artboard.frameBackups[frameKey]) { artboard.frameBackups[frameKey] = await captureFrame(videoEl); } }
+                }
+                historyManager.execute({ type: 'ADD_ANNOTATION', annotation: newAnn,
+                    do: () => { state.annotations.push(newAnn); state.selectedAnnotationIndices = [state.annotations.length - 1]; state.lastClickedAnnIndex = state.annotations.length - 1; updateAnnotationList(); redrawAllAnnotations(); if (startEditing) { const li = app.annotationList.querySelector(`li[data-id='${newAnn.id}']`); if (li) { li.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); makeListItemEditable(li, state.annotations.length - 1); } } },
+                    undo: () => { state.annotations = state.annotations.filter(a => a.id !== newAnn.id); state.selectedAnnotationIndices = []; updateAnnotationList(); redrawAllAnnotations(); }
+                });
             }
             
             function createAnnotationListItem(ann, index) {
@@ -661,30 +804,22 @@
                 const contentHtml = ann.text ? `<p class="content">${ann.text.replace(/\n/g, '<br>')}</p>` : '';
                 const headerToolsHtml = `<button class="icon-btn" title="Xóa"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button><button class="icon-btn" title="Sao chép Text"><svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg></button><button class="icon-btn" title="Trả lời"><svg viewBox="0 0 24 24"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg></button><input type="checkbox" class="complete-checkbox" ${ann.completed ? 'checked' : ''}>`;
                 const typeDisplay = ann.type === 'reply' ? 'reply' : (ann.type === 'comment' ? 'cmt' : ann.type);
-                const userDisplay = ann.user ? ` - <strong>${ann.user}</strong>` : '';
-                let timeInfo = ann.videoTime ? ` @${formatTime(ann.videoTime)}` : '';
+                const userDisplay = ann.user ? ` - <strong>${ann.user}</strong>` : ''; let timeInfo = ann.videoTime !== undefined ? ` @${formatTime(ann.videoTime)}` : '';
                 li.innerHTML = `<div class="header"><span class="time">${index + 1}${userDisplay} - ${typeDisplay}${timeInfo}</span><div class="header-tools">${headerToolsHtml}</div></div>${contentHtml}`;
                 li.addEventListener('click', e => {
-                    if (e.target.closest('.icon-btn')) return;
-                    const clickedIndex = parseInt(li.dataset.index, 10);
-                    if (e.shiftKey && state.lastClickedAnnIndex !== -1) {
-                        const start = Math.min(state.lastClickedAnnIndex, clickedIndex), end = Math.max(state.lastClickedAnnIndex, clickedIndex);
-                        state.selectedAnnotationIndices = Array.from({length: end - start + 1}, (_, i) => start + i);
-                    } else if (e.ctrlKey) {
-                        const idxInSelection = state.selectedAnnotationIndices.indexOf(clickedIndex);
-                        if (idxInSelection > -1) state.selectedAnnotationIndices.splice(idxInSelection, 1);
-                        else state.selectedAnnotationIndices.push(clickedIndex);
-                    } else { state.selectedAnnotationIndices = [clickedIndex]; }
-                    state.lastClickedAnnIndex = clickedIndex;
-                    updateListSelection();
-
+                    if (e.target.closest('.icon-btn')) return; const clickedIndex = parseInt(li.dataset.index, 10);
+                    if (e.shiftKey && state.lastClickedAnnIndex !== -1) { const start = Math.min(state.lastClickedAnnIndex, clickedIndex), end = Math.max(state.lastClickedAnnIndex, clickedIndex); state.selectedAnnotationIndices = Array.from({length: end - start + 1}, (_, i) => start + i); } 
+                    else if (e.ctrlKey || e.metaKey) { const idxInSelection = state.selectedAnnotationIndices.indexOf(clickedIndex); if (idxInSelection > -1) state.selectedAnnotationIndices.splice(idxInSelection, 1); else state.selectedAnnotationIndices.push(clickedIndex); } 
+                    else { state.selectedAnnotationIndices = [clickedIndex]; }
+                    state.lastClickedAnnIndex = clickedIndex; updateListSelection();
                     const clickedAnn = state.annotations[clickedIndex];
                     if (clickedAnn && clickedAnn.artboardId) {
-                         selectArtboard(clickedAnn.artboardId, e.shiftKey);
-                         const artboard = state.artboards.find(b => b.id === clickedAnn.artboardId);
+                         selectArtboard(clickedAnn.artboardId, e.shiftKey); const artboard = state.artboards.find(b => b.id === clickedAnn.artboardId);
                          if (artboard && artboard.type === 'video' && clickedAnn.videoTime !== undefined) {
-                             const videoEl = document.querySelector(`.artboard[data-id="${artboard.id}"] video`);
-                             if(videoEl) { videoEl.currentTime = clickedAnn.videoTime; if(videoEl.paused) videoEl.play(); }
+                             const artboardEl = document.querySelector(`.artboard[data-id="${artboard.id}"]`);
+                             const videoEl = artboardEl ? artboardEl.querySelector('video') : null; const timelineEl = artboardEl ? artboardEl.querySelector('.vid-timeline') : null;
+                             if(videoEl && !artboard.videoFailedToLoad) { videoEl.currentTime = clickedAnn.videoTime; videoEl.pause(); } 
+                             else if (timelineEl) { timelineEl.value = clickedAnn.videoTime; redrawArtboardAnnotations(artboard.id); }
                          }
                     }
                 });
@@ -697,8 +832,7 @@
             }
 
             function updateAnnotationList() {
-                const listScrollTop = app.annotationList.scrollTop;
-                app.annotationList.innerHTML = '';
+                const listScrollTop = app.annotationList.scrollTop; app.annotationList.innerHTML = '';
                 const searchTerm = app.searchInput.value.toLowerCase();
                 const filteredAnnotations = searchTerm ? state.annotations.filter(ann => (ann.text || '').toLowerCase().includes(searchTerm) || (ann.user || '').toLowerCase().includes(searchTerm)) : state.annotations;
                 const grouped = filteredAnnotations.reduce((acc, ann) => { const key = ann.artboardId || 'workspace'; if (!acc[key]) acc[key] = []; acc[key].push(ann); return acc; }, {});
@@ -722,31 +856,40 @@
             }
 
             function onCanvasMouseDown(e, artboardId) {
+                if (e.button === 2) return;
                 if (state.spacebarPressed || e.button === 1) { startPanning(e); return; }
                 e.stopPropagation();
                 const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return;
-                selectArtboard(artboardId, e.shiftKey);
-                if (e.ctrlKey) { onArtboardHeaderMouseDown(e, artboardId); return; }
+                selectArtboard(artboardId, e.shiftKey || e.ctrlKey || e.metaKey);
                 if (state.interaction.mode !== 'none') return; 
-                
-                const pos = getMousePosOnArtboard(e, artboard);
-                state.interaction.startPos = pos;
+                const pos = getMousePosOnArtboard(e, artboard); state.interaction.startPos = pos;
                 const hit = getHitAnnotation(pos, artboardId);
-
                 if (hit.handle) {
-                    state.interaction.mode = 'resizing';
-                    state.interaction.target = { index: hit.index, handle: hit.handle, artboardId };
+                    state.interaction.mode = 'resizing'; state.interaction.target = { index: hit.index, handle: hit.handle, artboardId };
+                    const ann = state.annotations[hit.index]; state.interaction.startData.set(ann.id, JSON.parse(JSON.stringify(ann.data)));
                 } else if (hit.index !== -1) {
+                    const ann = state.annotations[hit.index];
+                    if (ann.videoTime !== undefined) {
+                        const artboardEl = document.querySelector(`.artboard[data-id="${artboardId}"]`); const videoEl = artboardEl ? artboardEl.querySelector('video') : null;
+                        if (videoEl && !artboard.videoFailedToLoad && Math.abs(videoEl.currentTime - ann.videoTime) > (1 / FRAME_RATE / 2)) { if (!state.selectedAnnotationIndices.includes(hit.index)) { state.selectedAnnotationIndices = [hit.index]; updateListSelection(); } return; }
+                    }
                     if (!state.selectedAnnotationIndices.includes(hit.index)) { state.selectedAnnotationIndices = [hit.index]; updateListSelection(); }
-                    if (e.altKey) { copyAnnotations(); pasteAnnotations(); }
-                    state.interaction.mode = 'dragging'; state.interaction.target = { artboardId };
-                    state.interaction.startWorkspacePos = getWorkspaceMousePos(e); state.interaction.startAnnPositions.clear();
-                    state.selectedAnnotationIndices.forEach(index => { state.interaction.startAnnPositions.set(index, JSON.parse(JSON.stringify(state.annotations[index].data))); });
+                    if (e.altKey) { copyAnnotations(); pasteAnnotations(); return; }
+                    state.interaction.mode = 'dragging'; state.interaction.target = { artboardId }; state.interaction.startData.clear();
+                    state.selectedAnnotationIndices.forEach(index => { const ann = state.annotations[index]; state.interaction.startData.set(ann.id, JSON.parse(JSON.stringify(ann.data))); });
                 } else if (state.currentTool) {
                     if (state.currentTool === 'comment') { addAnnotation({ type: 'comment', artboardId, data: pos, color: state.activeColor, text: '' }, true); }
                     else if (state.currentTool === 'image') { state.interaction.mode = 'placingImage'; state.interaction.target = { artboardId }; app.imageToolInput.click(); }
                     else { state.interaction.mode = 'drawing'; state.interaction.target = { artboardId }; }
                 } else { state.selectedAnnotationIndices = []; updateListSelection(); }
+            }
+
+            function getConstrainedPos(startPos, currentPos, tool, isShiftPressed, artboard) {
+                if (!isShiftPressed) return currentPos;
+                let finalPos = { ...currentPos }; let dx = currentPos.x - startPos.x; let dy = currentPos.y - startPos.y;
+                if (tool === 'rect' || tool === 'circle') { const dx_pixels = dx * artboard.width; const dy_pixels = dy * artboard.height; const side_pixels = Math.max(Math.abs(dx_pixels), Math.abs(dy_pixels)); finalPos = { x: startPos.x + (side_pixels * Math.sign(dx_pixels || 1)) / artboard.width, y: startPos.y + (side_pixels * Math.sign(dy_pixels || 1)) / artboard.height }; } 
+                else if (tool === 'line' || tool === 'arrow') { if (dx === 0 && dy === 0) return currentPos; const angle = Math.atan2(dy * artboard.height, dx * artboard.width); const snappedAngle = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4); const dist = Math.hypot(dx * artboard.width, dy * artboard.height); finalPos = { x: startPos.x + (dist * Math.cos(snappedAngle)) / artboard.width, y: startPos.y + (dist * Math.sin(snappedAngle)) / artboard.height }; }
+                return finalPos;
             }
 
             function onCanvasMouseMove(e) {
@@ -756,117 +899,88 @@
                 const currentPos = getMousePosOnArtboard(e, artboard); const { ctxInteraction } = getArtboardCanvases(artboardId); if (!ctxInteraction) return;
                 ctxInteraction.clearRect(0, 0, artboard.width, artboard.height);
                 switch (state.interaction.mode) {
-                    case 'drawing': drawShape(ctxInteraction, { type: state.currentTool, data: { p1: state.interaction.startPos, p2: currentPos }, color: state.activeColor }, artboard, false, true); break;
-                    case 'dragging':
-                        const dx = currentPos.x - state.interaction.startPos.x; const dy = currentPos.y - state.interaction.startPos.y;
-                        state.selectedAnnotationIndices.forEach(idx => {
-                            const startData = state.interaction.startAnnPositions.get(idx); if (!startData) return;
-                            const ann = state.annotations[idx];
-                            if (ann.type === 'comment' || ann.type === 'reply') { ann.data.x = startData.x + dx; ann.data.y = startData.y + dy; }
-                            else { ann.data.p1.x = startData.p1.x + dx; ann.data.p1.y = startData.p1.y + dy; ann.data.p2.x = startData.p2.x + dx; ann.data.p2.y = startData.p2.y + dy; }
-                        });
-                        redrawAllAnnotations(); markAsChanged();
-                        break;
-                    case 'resizing': resizeAnnotation(state.interaction.target.index, state.interaction.target.handle, currentPos); redrawAllAnnotations(); markAsChanged(); break;
+                    case 'drawing': { const finalPos = getConstrainedPos(state.interaction.startPos, currentPos, state.currentTool, e.shiftKey, artboard); drawShape(ctxInteraction, { type: state.currentTool, data: { p1: state.interaction.startPos, p2: finalPos }, color: state.activeColor }, artboard, false, true); break; }
+                    case 'dragging': { const dx = currentPos.x - state.interaction.startPos.x; const dy = currentPos.y - state.interaction.startPos.y; state.selectedAnnotationIndices.forEach(idx => { const ann = state.annotations[idx]; const startData = state.interaction.startData.get(ann.id); if (!startData) return; if (ann.type === 'comment' || ann.type === 'reply') { ann.data.x = startData.x + dx; ann.data.y = startData.y + dy; } else { ann.data.p1.x = startData.p1.x + dx; ann.data.p1.y = startData.p1.y + dy; ann.data.p2.x = startData.p2.x + dx; ann.data.p2.y = startData.p2.y + dy; } }); redrawAllAnnotations(); break; }
+                    case 'resizing': resizeAnnotation(state.interaction.target.index, state.interaction.target.handle, currentPos); redrawAllAnnotations(); break;
                 }
             }
 
             function onCanvasMouseUp(e) {
-                if (state.interaction.mode === 'none' || !state.interaction.target) return;
+                if (state.interaction.mode === 'none' || !state.interaction.target) { return; }
                 const { artboardId } = state.interaction.target; if (!artboardId) return;
                 const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return;
                 const { ctxInteraction } = getArtboardCanvases(artboardId); if (ctxInteraction) ctxInteraction.clearRect(0, 0, artboard.width, artboard.height);
 
                 if (state.interaction.mode === 'drawing') {
-                    const endPos = getMousePosOnArtboard(e, artboard);
-                    const p1_abs = { x: state.interaction.startPos.x * artboard.width, y: state.interaction.startPos.y * artboard.height };
-                    const p2_abs = { x: endPos.x * artboard.width, y: endPos.y * artboard.height };
-                    if (Math.hypot(p2_abs.x - p1_abs.x, p2_abs.y - p1_abs.y) > 5) {
-                        addAnnotation({ type: state.currentTool, artboardId, data: { p1: state.interaction.startPos, p2: endPos }, color: state.activeColor, text: '' }, true);
-                    }
-                } else if (state.interaction.mode === 'dragging') {
-                    const workspacePos = getWorkspaceMousePos(e);
-                    const targetArtboardEl = e.target.closest('.artboard');
-                    if (targetArtboardEl && targetArtboardEl.dataset.id !== artboardId) {
-                        const targetArtboard = state.artboards.find(b => b.id === targetArtboardEl.dataset.id);
-                        if (!targetArtboard) return;
-                        
-                        const oldArtboard = state.artboards.find(b => b.id === artboardId);
-                        
-                        state.selectedAnnotationIndices.forEach(index => {
-                           const ann = state.annotations[index];
-                           // This is the key fix: use the absolute WORKSPACE position to translate between artboards
-                           // 1. Get original annotation center in workspace pixels
-                           let annCenterWorkspace;
-                           const startAnnData = state.interaction.startAnnPositions.get(index);
-                           if (startAnnData.p1) {
-                               annCenterWorkspace = {
-                                   x: oldArtboard.x + (startAnnData.p1.x + startAnnData.p2.x) / 2 * oldArtboard.width,
-                                   y: oldArtboard.y + (startAnnData.p1.y + startAnnData.p2.y) / 2 * oldArtboard.height
-                               };
-                           } else {
-                               annCenterWorkspace = {
-                                   x: oldArtboard.x + startAnnData.x * oldArtboard.width,
-                                   y: oldArtboard.y + startAnnData.y * oldArtboard.height
-                               };
-                           }
-                           
-                           // 2. Calculate mouse delta in workspace pixels
-                           const dx = workspacePos.x - state.interaction.startWorkspacePos.x;
-                           const dy = workspacePos.y - state.interaction.startWorkspacePos.y;
-
-                           // 3. New annotation center in workspace pixels
-                           const newAnnCenterWorkspace = { x: annCenterWorkspace.x + dx, y: annCenterWorkspace.y + dy };
-
-                           // 4. Convert new workspace center to new artboard's normalized coords
-                           const newAnnCenterNormalized = {
-                               x: (newAnnCenterWorkspace.x - targetArtboard.x) / targetArtboard.width,
-                               y: (newAnnCenterWorkspace.y - targetArtboard.y) / targetArtboard.height
-                           };
-
-                           // 5. Apply the delta to the annotation data based on the new center
-                           if (ann.data.p1) {
-                               const oldCenterNorm = { x: (startAnnData.p1.x + startAnnData.p2.x)/2, y: (startAnnData.p1.y + startAnnData.p2.y)/2 };
-                               // This is tricky, for now let's just move it relative to the artboard change, assuming scale is similar.
-                               // A perfect implementation would re-calculate p1/p2 based on new dimensions, but this is a good approximation.
-                               const deltaX = (newAnnCenterWorkspace.x - (targetArtboard.x + oldCenterNorm.x * targetArtboard.width)) / targetArtboard.width;
-                               const deltaY = (newAnnCenterWorkspace.y - (targetArtboard.y + oldCenterNorm.y * targetArtboard.height)) / targetArtboard.height;
-                               ann.data.p1.x = startAnnData.p1.x + deltaX; ann.data.p1.y = startAnnData.p1.y + deltaY;
-                               ann.data.p2.x = startAnnData.p2.x + deltaX; ann.data.p2.y = startAnnData.p2.y + deltaY;
-                           } else {
-                               ann.data.x = newAnnCenterNormalized.x;
-                               ann.data.y = newAnnCenterNormalized.y;
-                           }
-                           
-                           ann.artboardId = targetArtboard.id;
+                    const currentPos = getMousePosOnArtboard(e, artboard); const endPos = getConstrainedPos(state.interaction.startPos, currentPos, state.currentTool, e.shiftKey, artboard);
+                    if (Math.hypot((endPos.x-state.interaction.startPos.x)*artboard.width, (endPos.y-state.interaction.startPos.y)*artboard.height) > 5) { addAnnotation({ type: state.currentTool, artboardId, data: { p1: state.interaction.startPos, p2: endPos }, color: state.activeColor, text: '' }, true); }
+                } else if (state.interaction.mode === 'dragging' || state.interaction.mode === 'resizing') {
+                     const beforeState = []; const afterState = [];
+                     if(state.interaction.mode === 'resizing') { const ann = state.annotations[state.interaction.target.index]; beforeState.push({ id: ann.id, data: state.interaction.startData.get(ann.id) }); afterState.push({ id: ann.id, data: JSON.parse(JSON.stringify(ann.data)) }); } 
+                     else { state.selectedAnnotationIndices.forEach(idx => { const ann = state.annotations[idx]; beforeState.push({ id: ann.id, data: state.interaction.startData.get(ann.id) }); afterState.push({ id: ann.id, data: JSON.parse(JSON.stringify(ann.data)) }); }); }
+                     if (JSON.stringify(beforeState) !== JSON.stringify(afterState)) {
+                        historyManager.execute({ type: 'TRANSFORM_ANNOTATIONS', before: beforeState, after: afterState,
+                            do: (action) => { action.after.forEach(s => { const ann = state.annotations.find(a => a.id === s.id); if(ann) ann.data = JSON.parse(JSON.stringify(s.data)); }); redrawAllAnnotations(); },
+                            undo: (action) => { action.before.forEach(s => { const ann = state.annotations.find(a => a.id === s.id); if(ann) ann.data = JSON.parse(JSON.stringify(s.data)); }); redrawAllAnnotations(); }
                         });
-                        updateAnnotationList();
-                    }
-                    redrawAllAnnotations();
+                     }
                 }
             }
             
             function onCanvasDblClick(e, artboardId) { e.stopPropagation(); const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return; const pos = getMousePosOnArtboard(e, artboard); const hit = getHitAnnotation(pos, artboardId); if (hit.index !== -1) { const li = app.annotationList.querySelector(`li[data-id='${state.annotations[hit.index].id}']`); if (li) makeListItemEditable(li, hit.index); } }
             function global_togglePlayPause(onlySelected) {
-                let videos;
-                if (onlySelected && state.selectedArtboardIds.length > 0) {
-                    videos = state.selectedArtboardIds.map(id => document.querySelector(`.artboard[data-id="${id}"] video`)).filter(Boolean);
-                } else {
-                    videos = Array.from(document.querySelectorAll('#workspace video'));
-                }
-                if (videos.length === 0) return;
-                const isPaused = videos.some(v => v.paused);
-                videos.forEach(v => isPaused ? v.play() : v.pause());
+                let videos; if (onlySelected && state.selectedArtboardIds.length > 0) { videos = state.selectedArtboardIds.map(id => document.querySelector(`.artboard[data-id="${id}"] video`)).filter(Boolean); } else { videos = Array.from(document.querySelectorAll('#workspace video')); }
+                if (videos.length === 0 && onlySelected) { videos = Array.from(document.querySelectorAll('#workspace video'));} if (videos.length === 0) return;
+                const isPaused = videos.some(v => v.paused); videos.forEach(v => isPaused ? v.play() : v.pause());
             };
             function global_updatePlayButtonState() { const videos = Array.from(document.querySelectorAll('#workspace video')); const isAnyPlaying = videos.some(v => !v.paused); app.playIcon.classList.toggle('hidden', isAnyPlaying); app.pauseIcon.classList.toggle('hidden', !isAnyPlaying); }
             function global_toggleMute() { state.isGlobalMuted = !state.isGlobalMuted; const muteIcon = document.getElementById('mute-icon'); const unmuteIcon = document.getElementById('unmute-icon'); muteIcon.classList.toggle('hidden', !state.isGlobalMuted); unmuteIcon.classList.toggle('hidden', state.isGlobalMuted); document.querySelectorAll('#workspace video').forEach(v => { v.muted = state.isGlobalMuted; const btn = v.closest('.artboard').querySelector('.vid-mute-btn'); if(btn) btn.innerHTML = state.isGlobalMuted ? MUTE_ICON_SVG : UNMUTE_ICON_SVG; }); }
+            function toggleMuteForSelected() { if(state.selectedArtboardIds.length === 0) return; const videos = state.selectedArtboardIds.map(id => document.querySelector(`.artboard[data-id="${id}"] video`)).filter(Boolean); if(videos.length === 0) return; const isAnyUnmuted = videos.some(v => !v.muted); videos.forEach(v => { v.muted = isAnyUnmuted; const btn = v.closest('.artboard').querySelector('.vid-mute-btn'); if(btn) btn.innerHTML = v.muted ? MUTE_ICON_SVG : UNMUTE_ICON_SVG; }); }
             function global_setPlaybackSpeed(speed) { document.querySelectorAll('#workspace video').forEach(v => v.playbackRate = speed); document.querySelectorAll('.speed-btn').forEach(btn => btn.classList.toggle('active', parseFloat(btn.dataset.speed) === speed)); }
             function global_seekTo(time) { document.querySelectorAll('#workspace video').forEach(v => { if (isFinite(v.duration)) v.currentTime = Math.min(time, v.duration); }); redrawAllAnnotations(); }
-            const FRAME_DURATION = 1/30;
-            const global_seekFrames = (count) => global_seekTo(app.timelineSlider.valueAsNumber + count * FRAME_DURATION);
-            const global_seekSeconds = (count) => global_seekTo(app.timelineSlider.valueAsNumber + count);
-            function global_updateTimeline() { let maxDuration = 0; let primaryVideo = null; const videos = Array.from(document.querySelectorAll('#workspace video')); if (videos.length === 0) { app.timelinePanel.classList.add('hidden'); return; } let firstDuration = -1; state.areVideosInSync = true; videos.forEach(v => { if (isFinite(v.duration)) { if (firstDuration === -1) firstDuration = v.duration; else if (Math.abs(firstDuration - v.duration) > 0.1) state.areVideosInSync = false; if (v.duration > maxDuration) { maxDuration = v.duration; primaryVideo = v; } } }); app.timelineSlider.max = maxDuration > 0 ? maxDuration : 100; app.timelineSlider.classList.toggle('desynced', !state.areVideosInSync); if (!state.areVideosInSync) app.timeDisplay.textContent = '--:--'; if(primaryVideo && !primaryVideo.timeUpdateAttached) { primaryVideo.addEventListener('timeupdate', () => { if(!app.timelineSlider.matches(':active')) { app.timelineSlider.value = primaryVideo.currentTime; } if (state.areVideosInSync) app.timeDisplay.textContent = formatTime(primaryVideo.currentTime); }); primaryVideo.timeUpdateAttached = true; }}
+            function advancedSeek({ frameDelta = 0, target = 'selected', position = null }) {
+                 let videos; if (target === 'selected' && state.selectedArtboardIds.length > 0) { videos = state.selectedArtboardIds.map(id => document.querySelector(`.artboard[data-id="${id}"] video`)).filter(Boolean); } else { videos = Array.from(document.querySelectorAll('#workspace video')); }
+                if (videos.length === 0) return;
+                videos.forEach(v => { if (position === 'start') { v.currentTime = 0; } else if (position === 'end') { v.currentTime = v.duration; } else { v.currentTime = Math.max(0, Math.min(v.duration, v.currentTime + (frameDelta / FRAME_RATE))); } });
+                redrawAllAnnotations();
+            }
+            function navigateCommentMarkers(direction) {
+                if (state.selectedArtboardIds.length !== 1) return;
+                const artboardId = state.selectedArtboardIds[0]; const video = document.querySelector(`.artboard[data-id="${artboardId}"] video`); if (!video) return;
+                const markerTimes = [...new Set(state.annotations.filter(a => a.artboardId === artboardId && a.videoTime !== undefined).map(a => a.videoTime))].sort((a,b) => a - b);
+                if (markerTimes.length === 0) return; const currentTime = video.currentTime; let nextTime;
+                if (direction > 0) { nextTime = markerTimes.find(t => t > currentTime + 0.01); if (nextTime === undefined) nextTime = markerTimes[0]; } 
+                else { const prevMarkers = markerTimes.filter(t => t < currentTime - 0.01); if (prevMarkers.length > 0) { nextTime = prevMarkers[prevMarkers.length - 1]; } else { nextTime = markerTimes[markerTimes.length - 1]; } }
+                video.currentTime = nextTime; video.pause();
+            }
+            function global_updateTimeline() { 
+                let maxDuration = 0; let primaryVideo = null; const videos = Array.from(document.querySelectorAll('#workspace video')); 
+                if (videos.length === 0) { app.timelinePanel.classList.add('hidden'); return; } 
+                let firstDuration = -1; state.areVideosInSync = true; 
+                videos.forEach(v => { if (isFinite(v.duration)) { if (firstDuration === -1) firstDuration = v.duration; else if (Math.abs(firstDuration - v.duration) > 0.1) state.areVideosInSync = false; if (v.duration > maxDuration) { maxDuration = v.duration; primaryVideo = v; } } }); 
+                app.timelineSlider.max = maxDuration > 0 ? maxDuration : 100; app.timelinePanel.classList.toggle('out-of-sync', !state.areVideosInSync);
+                if(primaryVideo && !primaryVideo.timeUpdateAttached) { 
+                    primaryVideo.addEventListener('timeupdate', () => { if(!app.timelineSlider.matches(':active')) { app.timelineSlider.value = primaryVideo.currentTime; } if (document.activeElement !== app.timeDisplay) { app.timeDisplay.value = formatTimeHHMMSSFF(primaryVideo.currentTime, primaryVideo.duration); } }); 
+                    primaryVideo.timeUpdateAttached = true; 
+                }
+            }
             const formatTime = (secs) => { if (isNaN(secs)) return '00:00'; const s = Math.floor(secs % 60); const m = Math.floor((secs / 60) % 60); return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; };
+            const formatTimeHHMMSSFF = (seconds, duration = 0) => {
+                if (isNaN(seconds)) seconds = 0; const totalFrames = Math.round(seconds * FRAME_RATE); const ff = String(totalFrames % FRAME_RATE).padStart(2, '0'); const ss = String(Math.floor(totalFrames / FRAME_RATE) % 60).padStart(2, '0'); const mm = String(Math.floor(totalFrames / (FRAME_RATE*60)) % 60).padStart(2, '0'); const hh = Math.floor(totalFrames / (FRAME_RATE*3600));
+                if (duration >= 3600 || hh > 0) { return `${String(hh).padStart(2, '0')}:${mm}:${ss}:${ff}`; } return `${mm}:${ss}:${ff}`;
+            };
+            const parseMMSSFFToSeconds = (mmssff) => {
+                const str = mmssff.replace(/\D/g, '').padStart(6, '0'); const mm = parseInt(str.substring(0, 2), 10); const ss = parseInt(str.substring(2, 4), 10); const ff = parseInt(str.substring(4, 6), 10);
+                if (isNaN(mm) || isNaN(ss) || isNaN(ff)) return 0;
+                return (mm * 60) + ss + (ff / FRAME_RATE);
+            };
+            function initTimeInput(inputEl, getTimeFunc, setTimeFunc, getDurationFunc) {
+                let originalValue = '';
+                inputEl.addEventListener('focus', () => { const duration = getDurationFunc ? getDurationFunc() : 0; originalValue = formatTimeHHMMSSFF(getTimeFunc(), duration); inputEl.value = originalValue.replace(/\D/g, '').slice(-6); });
+                inputEl.addEventListener('blur', () => { const newTime = parseMMSSFFToSeconds(inputEl.value); setTimeFunc(newTime); const duration = getDurationFunc ? getDurationFunc() : 0; inputEl.value = formatTimeHHMMSSFF(getTimeFunc(), duration); });
+                inputEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); inputEl.blur(); } else if (e.key === 'Escape') { inputEl.value = originalValue; inputEl.blur(); } });
+            }
+
             function promptForUser() { let user = localStorage.getItem('qcToolUser'); if (!user || user.trim() === '') { user = prompt('Vui lòng nhập tên của bạn (tối đa 16 ký tự):', user || ''); user = user ? user.substring(0, 16) : "Anonymous"; } state.currentUser = user.trim(); localStorage.setItem('qcToolUser', state.currentUser); updateUserDisplay(); }
             function changeUser() { let user = prompt('Nhập tên mới (tối đa 16 ký tự):', state.currentUser); if (user && user.trim() !== '') { state.currentUser = user.trim().substring(0, 16); localStorage.setItem('qcToolUser', state.currentUser); updateUserDisplay(); } }
             function updateUserDisplay() { document.getElementById('current-user-display').textContent = state.currentUser; }
@@ -876,83 +990,410 @@
             function initPanelResize(e) { e.preventDefault(); const startX = e.clientX; const startWidth = app.rightPanel.offsetWidth; const doResize = (e) => { const newWidth = startWidth - (e.clientX - startX); if (newWidth > 250 && newWidth < 800) { app.rightPanel.style.flexBasis = newWidth + 'px'; } }; const stopResize = () => { window.removeEventListener('mousemove', doResize); window.removeEventListener('mouseup', stopResize); }; window.addEventListener('mousemove', doResize); window.addEventListener('mouseup', stopResize); }
             const selectColor = btn => { state.activeColor = btn.dataset.color; document.getElementById('active-color-btn').style.backgroundColor = state.activeColor; document.getElementById('color-palette-popup').classList.add('hidden'); };
             const toggleColorPalette = () => document.getElementById('color-palette-popup').classList.toggle('hidden');
-            function markAsChanged() { if (!state.hasUnsavedChanges) { state.hasUnsavedChanges = true; updateSaveButtonState(); } }
-            function updateSaveButtonState() { const count = state.annotations.length; const countText = count > 0 ? ` (${count} cmt)` : ''; if (state.hasUnsavedChanges) { app.saveBtn.textContent = `Chưa lưu${countText}`; app.saveBtn.classList.add('unsaved'); } else { app.saveBtn.classList.remove('unsaved'); app.saveBtn.textContent = state.currentFileHandle ? `Đã lưu${countText}` : `Lưu file HTML${countText}`; } }
+            function markAsChanged() { if (!state.hasUnsavedChanges) { state.hasUnsavedChanges = true; updateSaveButtonState(); } triggerAutoSave(); }
+            function updateSaveButtonState() { const count = state.annotations.length; const countText = count > 0 ? ` (${count} cmt)` : ''; if(app.saveBtn.classList.contains('saving')) return; if (state.hasUnsavedChanges) { app.saveBtn.textContent = `Chưa lưu${countText}`; app.saveBtn.classList.add('unsaved'); } else { app.saveBtn.classList.remove('unsaved'); app.saveBtn.textContent = state.currentFileHandle ? `Đã lưu${countText}` : `Lưu file HTML${countText}`; } }
+            
+            async function saveStateSilently() { if (!state.currentFileHandle) return; const htmlContent = await generateAnnotatedHTML(); try { const writable = await state.currentFileHandle.createWritable(); await writable.write(htmlContent); await writable.close(); state.hasUnsavedChanges = false; app.saveBtn.classList.remove('saving'); updateSaveButtonState(); } catch (err) { console.error('Auto-save failed:', err); app.saveBtn.classList.remove('saving', 'unsaved'); app.saveBtn.textContent = 'Lỗi Lưu'; } }
+            function triggerAutoSave() { clearTimeout(autoSaveTimeout); if (!state.currentFileHandle) return; autoSaveTimeout = setTimeout(() => { app.saveBtn.classList.remove('unsaved'); app.saveBtn.classList.add('saving'); app.saveBtn.textContent = 'Đang lưu...'; saveStateSilently(); }, 2000); }
+
             async function generateAnnotatedHTML() {
                 const dataToSave = {
-                    artboards: state.artboards.map(({ id, name, type, imageData, x, y, width, height, originalWidth, originalHeight, scale }) => {
-                        const artboardData = { id, name, type, x, y, width, height, originalWidth, originalHeight, scale }; if (type === 'image') artboardData.imageData = imageData; return artboardData;
-                    }),
-                    annotations: state.annotations, layout: state.layout,
+                    artboards: state.artboards.map(board => { const { id, name, type, htmlContent, x, y, width, height, originalWidth, originalHeight, scale, frameBackups, src } = board; const artboardData = { id, name, type, x, y, width, height, originalWidth, originalHeight, scale }; if (htmlContent) artboardData.htmlContent = htmlContent; if (frameBackups) artboardData.frameBackups = frameBackups; if (src) { if (src.startsWith('data:')) { artboardData.src = src; } else if (src.startsWith('blob:')) { artboardData.src = name; } else { artboardData.src = src; } }  else { artboardData.src = name; } return artboardData; }),
+                    annotations: state.annotations, layout: state.layout, grids: state.grids, toolbar: state.toolbar,
                 };
-                const dataStr = JSON.stringify(dataToSave, null, 2); const docClone = document.cloneNode(true); docClone.getElementById('app-data').textContent = '\n' + dataStr + '\n'; return `<!DOCTYPE html>\n` + docClone.documentElement.outerHTML;
+                const dataStr = JSON.stringify(dataToSave, null, 2);
+                const docClone = document.cloneNode(true); docClone.getElementById('app-data').textContent = '\n' + dataStr + '\n';
+                const bodyTag = docClone.querySelector('body'); if (bodyTag) { bodyTag.classList.remove('spacebar-down', 'panning', 'dragging'); }
+                return `<!DOCTYPE html>\n` + docClone.documentElement.outerHTML;
             }
-            async function saveState() { if (!state.currentFileHandle) { await saveStateAs(); return; } const htmlContent = await generateAnnotatedHTML(); try { const writable = await state.currentFileHandle.createWritable(); await writable.write(htmlContent); await writable.close(); state.hasUnsavedChanges = false; updateSaveButtonState(); } catch (err) { console.error('Error saving:', err); alert("Lưu file thất bại. Vui lòng thử 'Lưu thành file mới'."); await saveStateAs(); } }
+            async function saveState() { if (!state.currentFileHandle) { await saveStateAs(); return; } await saveStateSilently(); }
             async function saveStateAs() { const htmlContent = await generateAnnotatedHTML(); const fallbackSave = (data) => { const blob = new Blob([data], { type: 'text/html;charset=utf-8' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Unified_QC.html`; a.click(); URL.revokeObjectURL(a.href); state.hasUnsavedChanges = false; updateSaveButtonState(); }; if ('showSaveFilePicker' in window) { try { const fileHandle = await window.showSaveFilePicker({ suggestedName: `Unified_QC.html`, types: [{ description: 'HTML QC File', accept: { 'text/html': ['.html'] } }] }); const writable = await fileHandle.createWritable(); await writable.write(htmlContent); await writable.close(); state.currentFileHandle = fileHandle; state.hasUnsavedChanges = false; updateSaveButtonState(); } catch (err) { if (err.name !== 'AbortError') { console.error('Error saving file:', err); fallbackSave(htmlContent); } } } else { fallbackSave(htmlContent); } }
-            function deleteAnnotationsByIndices(indicesToDelete) { if (!indicesToDelete || indicesToDelete.length === 0) return; const idsToDelete = new Set(); const queue = indicesToDelete.map(index => state.annotations[index]?.id).filter(id => id); queue.forEach(id => idsToDelete.add(id)); let currentQueue = [...queue]; while(currentQueue.length > 0) { const parentId = currentQueue.shift(); const children = state.annotations.filter(ann => ann.parentId === parentId); children.forEach(child => { if (!idsToDelete.has(child.id)) { idsToDelete.add(child.id); currentQueue.push(child.id); } }); } const deletedItems = state.annotations.map((annotation, originalIndex) => ({ annotation, originalIndex })).filter(item => idsToDelete.has(item.annotation.id)).sort((a,b) => a.originalIndex - b.originalIndex); if (deletedItems.length === 0) return; state.undoStack.push(deletedItems); state.redoStack = []; state.annotations = state.annotations.filter(ann => !idsToDelete.has(ann.id)); state.selectedAnnotationIndices = []; state.lastClickedAnnIndex = -1; markAsChanged(); updateAnnotationList(); redrawAllAnnotations(); }
-            function undoDelete() { if (state.undoStack.length === 0) return; const itemsToRestore = state.undoStack.pop(); state.redoStack.push(itemsToRestore); itemsToRestore.forEach(item => state.annotations.splice(item.originalIndex, 0, item.annotation)); markAsChanged(); updateAnnotationList(); redrawAllAnnotations(); }
-            function redoDelete() { if (state.redoStack.length === 0) return; const itemsToDeleteFromRedo = state.redoStack.pop(); state.undoStack.push(itemsToDeleteFromRedo); const idsToDelete = new Set(itemsToDeleteFromRedo.map(item => item.annotation.id)); state.annotations = state.annotations.filter(ann => !idsToDelete.has(ann.id)); markAsChanged(); updateAnnotationList(); redrawAllAnnotations(); }
+            function deleteAnnotationsByIndices(indicesToDelete) {
+                if (!indicesToDelete || indicesToDelete.length === 0) return;
+                const idsToDelete = new Set(); const queue = indicesToDelete.map(index => state.annotations[index]?.id).filter(id => id); queue.forEach(id => idsToDelete.add(id)); let currentQueue = [...queue];
+                while(currentQueue.length > 0) { const parentId = currentQueue.shift(); const children = state.annotations.filter(ann => ann.parentId === parentId); children.forEach(child => { if (!idsToDelete.has(child.id)) { idsToDelete.add(child.id); currentQueue.push(child.id); } }); }
+                const deletedItems = state.annotations.map((annotation, originalIndex) => ({ annotation, originalIndex })).filter(item => idsToDelete.has(item.annotation.id)).sort((a,b) => a.originalIndex - b.originalIndex);
+                if (deletedItems.length === 0) return;
+                historyManager.execute({ type: 'DELETE_ANNOTATIONS', items: deletedItems,
+                    do: () => { state.annotations = state.annotations.filter(ann => !idsToDelete.has(ann.id)); state.selectedAnnotationIndices = []; state.lastClickedAnnIndex = -1; updateAnnotationList(); redrawAllAnnotations(); },
+                    undo: (action) => { action.items.forEach(item => state.annotations.splice(item.originalIndex, 0, item.annotation)); state.selectedAnnotationIndices = action.items.map(item => item.originalIndex); updateAnnotationList(); redrawAllAnnotations(); }
+                });
+            }
             function updateListSelection() { const selectedIds = new Set(state.selectedAnnotationIndices.map(i => state.annotations[i]?.id)); document.querySelectorAll('#annotation-list li:not(.group-header)').forEach(item => { item.classList.toggle('selected', selectedIds.has(item.dataset.id)); }); redrawAllAnnotations(); }
-            function makeListItemEditable(li, index) { let contentEl = li.querySelector('.content'); if (!contentEl) { contentEl = document.createElement('p'); contentEl.className = 'content'; li.appendChild(contentEl); } if (contentEl.querySelector('textarea')) return; const ann = state.annotations[index]; const oldText = ann.text || ''; contentEl.innerHTML = `<textarea rows="1">${oldText}</textarea>`; const textarea = contentEl.querySelector('textarea'); const autoSize = () => { textarea.style.height = 'auto'; textarea.style.height = `${textarea.scrollHeight}px`; }; textarea.addEventListener('input', autoSize); setTimeout(() => { textarea.focus(); textarea.select(); autoSize(); }, 0); const save = () => { const newText = textarea.value; if (newText !== oldText) { ann.text = newText; markAsChanged(); } const currentSelectedIndexes = [...state.selectedAnnotationIndices]; updateAnnotationList(); state.selectedAnnotationIndices = currentSelectedIndexes; updateListSelection(); redrawAllAnnotations(); }; textarea.addEventListener('blur', save); textarea.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); textarea.removeEventListener('blur', save); updateAnnotationList();} if (e.ctrlKey && e.key === 'Enter') { e.stopPropagation(); textarea.blur(); } }); }
-            function redrawAllAnnotations() { state.artboards.forEach(artboard => { const artboardEl = app.workspace.querySelector(`.artboard[data-id="${artboard.id}"]`); if (!artboardEl) return; const displayCanvas = artboardEl.querySelector('.display-canvas'); const ctx = displayCanvas.getContext('2d'); displayCanvas.width = artboard.width; displayCanvas.height = artboard.height; artboardEl.querySelector('.interaction-canvas').width = artboard.width; artboardEl.querySelector('.interaction-canvas').height = artboard.height; ctx.clearRect(0, 0, displayCanvas.width, displayCanvas.height); const selectedIds = new Set(state.selectedAnnotationIndices.map(i => state.annotations[i]?.id)); state.annotations.forEach((ann, index) => { if (ann.artboardId === artboard.id) { const isSelected = state.selectedAnnotationIndices.includes(index); drawShape(ctx, ann, artboard, isSelected); if (isSelected && ann.type !== 'comment' && ann.type !== 'reply' && ann.type !== 'image') drawHandles(ctx, ann, artboard); } }); }); }
-            function updateWorkspaceTransform() { const { offsetX, offsetY, scale } = state.view; app.workspace.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`; }
+            function makeListItemEditable(li, index) { 
+                let contentEl = li.querySelector('.content'); if (!contentEl) { contentEl = document.createElement('p'); contentEl.className = 'content'; li.appendChild(contentEl); } 
+                if (contentEl.querySelector('textarea')) return; const ann = state.annotations[index]; const oldText = ann.text || ''; 
+                contentEl.innerHTML = `<textarea rows="1">${oldText}</textarea>`; 
+                const textarea = contentEl.querySelector('textarea'); const autoSize = () => { textarea.style.height = 'auto'; textarea.style.height = `${textarea.scrollHeight}px`; }; 
+                textarea.addEventListener('input', autoSize); setTimeout(() => { textarea.focus(); textarea.select(); autoSize(); }, 0); 
+                const save = () => { 
+                    const newText = textarea.value; 
+                    if (newText !== oldText) { 
+                        historyManager.execute({ type: 'EDIT_TEXT', annotationId: ann.id, before: oldText, after: newText,
+                            do: () => { state.annotations.find(a => a.id === ann.id).text = newText; updateAnnotationList(); redrawAllAnnotations(); },
+                            undo: () => { state.annotations.find(a => a.id === ann.id).text = oldText; updateAnnotationList(); redrawAllAnnotations(); } });
+                    }
+                    const currentSelectedIndexes = [...state.selectedAnnotationIndices]; updateAnnotationList(); state.selectedAnnotationIndices = currentSelectedIndexes; updateListSelection(); redrawAllAnnotations(); 
+                }; 
+                textarea.addEventListener('blur', save); textarea.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); textarea.removeEventListener('blur', save); updateAnnotationList();} if (e.ctrlKey && e.key === 'Enter') { e.stopPropagation(); textarea.blur(); } }); 
+            }
+            function redrawArtboardAnnotations(artboardId) {
+                const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return;
+                const artboardEl = app.workspace.querySelector(`.artboard[data-id="${artboardId}"]`); if (!artboardEl) return;
+                const displayCanvas = artboardEl.querySelector('.display-canvas');
+                const videoEl = (artboard.type === 'video') ? artboardEl.querySelector('video') : null;
+                const backupImg = (artboard.type === 'video') ? artboardEl.querySelector('.frame-backup') : null;
+                const ctx = displayCanvas.getContext('2d');
+                displayCanvas.width = artboard.width; displayCanvas.height = artboard.height;
+                artboardEl.querySelector('.interaction-canvas').width = artboard.width; artboardEl.querySelector('.interaction-canvas').height = artboard.height;
+                ctx.clearRect(0, 0, displayCanvas.width, displayCanvas.height);
+                if (videoEl && backupImg && artboard.videoFailedToLoad) {
+                    let bestMatchTime = null; let minDiff = 1 / FRAME_RATE;
+                    const currentTime = parseFloat(artboardEl.querySelector('.vid-timeline').value);
+                    if (artboard.frameBackups) { for (const timeStr in artboard.frameBackups) { const time = parseFloat(timeStr); const diff = Math.abs(currentTime - time); if (diff < minDiff) { minDiff = diff; bestMatchTime = time; } } }
+                    if (bestMatchTime !== null) { const frameKey = bestMatchTime.toFixed(5); if (backupImg.src !== artboard.frameBackups[frameKey]) { backupImg.src = artboard.frameBackups[frameKey]; } backupImg.classList.remove('hidden'); } else { backupImg.classList.add('hidden'); }
+                } else if (backupImg) { backupImg.classList.add('hidden'); }
+                state.annotations.forEach((ann, index) => {
+                    if (ann.artboardId === artboard.id) {
+                        let shouldDraw = true;
+                        if (videoEl && ann.videoTime !== undefined) { const currentTime = artboard.videoFailedToLoad ? parseFloat(artboardEl.querySelector('.vid-timeline').value) : videoEl.currentTime; if (Math.abs(currentTime - ann.videoTime) > (1 / FRAME_RATE / 2)) { shouldDraw = false; } }
+                        if(shouldDraw) { const isSelected = state.selectedAnnotationIndices.includes(index); drawShape(ctx, ann, artboard, isSelected); if (isSelected && ann.type !== 'comment' && ann.type !== 'reply') { drawHandles(ctx, ann, artboard); } }
+                    }
+                });
+                if (videoEl) {
+                    const markerCanvas = artboardEl.querySelector('.vid-timeline-markers'); const mCtx = markerCanvas.getContext('2d');
+                    const w = markerCanvas.offsetWidth; const h = markerCanvas.offsetHeight; markerCanvas.width = w; markerCanvas.height = h; mCtx.clearRect(0, 0, w, h);
+                    const markerTimes = [...new Set(state.annotations.filter(a => a.artboardId === artboardId && a.videoTime !== undefined).map(a => a.videoTime))];
+                    if(markerTimes.length > 0) { mCtx.fillStyle = '#ffc107'; const duration = isNaN(videoEl.duration) ? 100 : videoEl.duration; markerTimes.forEach(time => { const x = (time / duration) * w; mCtx.fillRect(x - 1, 0, 2, h); }); }
+                }
+            }
+            function redrawAllAnnotations() { state.artboards.forEach(artboard => redrawArtboardAnnotations(artboard.id)); }
+            function updateWorkspaceTransform() { const { offsetX, offsetY, scale } = state.view; app.workspace.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`; drawGrids(); }
             function zoomAtPoint(factor, x, y) { const oldScale = state.view.scale; const newScale = Math.max(state.view.minScale, Math.min(state.view.maxScale, oldScale * factor)); state.view.scale = newScale; state.view.offsetX = x - (x - state.view.offsetX) * (newScale / oldScale); state.view.offsetY = y - (y - state.view.offsetY) * (newScale / oldScale); updateWorkspaceTransform(); }
-            function fitArtboardToView(artboardId) { const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return; const PADDING = 40; const container = app.workspaceContainer; const scaleX = (container.offsetWidth - 2 * PADDING) / artboard.width; const scaleY = (container.offsetHeight - 2 * PADDING) / artboard.height; const newScale = Math.min(scaleX, scaleY); state.view.scale = newScale; state.view.offsetX = (container.offsetWidth - artboard.width * newScale) / 2 - artboard.x * newScale; state.view.offsetY = (container.offsetHeight - artboard.height * newScale) / 2 - artboard.y * newScale; updateWorkspaceTransform(); }
-            function fitAllArtboardsToView() { if (state.artboards.length === 0) return; const PADDING = 50; let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity; state.artboards.forEach(b => { minX = Math.min(minX, b.x); minY = Math.min(minY, b.y); maxX = Math.max(maxX, b.x + b.width); maxY = Math.max(maxY, b.y + b.height); }); const totalWidth = maxX - minX; const totalHeight = maxY - minY; if (totalWidth === 0 || totalHeight === 0) return; const container = app.workspaceContainer; const scaleX = (container.offsetWidth - 2 * PADDING) / totalWidth; const scaleY = (container.offsetHeight - 2 * PADDING) / totalHeight; const newScale = Math.min(scaleX, scaleY, 1); state.view.scale = newScale; state.view.offsetX = (container.offsetWidth - totalWidth * newScale) / 2 - minX * newScale; state.view.offsetY = (container.offsetHeight - totalHeight * newScale) / 2 - minY * newScale; updateWorkspaceTransform(); }
-            function onArtboardHeaderMouseDown(e, artboardId) { if (state.spacebarPressed || e.button === 1) { startPanning(e); return; } if (e.button !== 0) return; e.stopPropagation(); const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return; selectArtboard(artboardId, e.shiftKey); const workspaceMousePos = getWorkspaceMousePos(e); state.interaction = { mode: 'draggingArtboard', target: { artboardId }, startPos: workspaceMousePos, startOffset: { x: workspaceMousePos.x - artboard.x, y: workspaceMousePos.y - artboard.y } }; e.currentTarget.parentElement.classList.add('dragging'); }
-            function onArtboardDrag(e) { if (state.interaction.mode !== 'draggingArtboard') return; const { artboardId } = state.interaction.target; const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return; const workspaceMousePos = getWorkspaceMousePos(e); artboard.x = workspaceMousePos.x - state.interaction.startOffset.x; artboard.y = workspaceMousePos.y - state.interaction.startOffset.y; const artboardEl = document.querySelector(`.artboard[data-id="${artboardId}"]`); artboardEl.style.left = `${artboard.x}px`; artboardEl.style.top = `${artboard.y}px`; markAsChanged(); }
+            function fitArtboardToView(artboardId) { const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return; const PADDING = 40; const container = app.workspaceContainer; const artboardEl = document.querySelector(`.artboard[data-id="${artboardId}"]`); if(!artboardEl) return; const artboardHeight = artboardEl.offsetHeight; const scaleX = (container.offsetWidth - 2 * PADDING) / artboard.width; const scaleY = (container.offsetHeight - 2 * PADDING) / artboardHeight; const newScale = Math.min(scaleX, scaleY); state.view.scale = newScale; state.view.offsetX = (container.offsetWidth - artboard.width * newScale) / 2 - artboard.x * newScale; state.view.offsetY = (container.offsetHeight - artboardHeight * newScale) / 2 - artboard.y * newScale; updateWorkspaceTransform(); }
+            function fitAllArtboardsToView() { if (state.artboards.length === 0) return; const PADDING = 50; let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity; state.artboards.forEach(b => { const artboardEl = document.querySelector(`.artboard[data-id="${b.id}"]`); const height = artboardEl ? artboardEl.offsetHeight : (b.height + 30 + (b.type==='video' ? 24:0)); minX = Math.min(minX, b.x); minY = Math.min(minY, b.y); maxX = Math.max(maxX, b.x + b.width); maxY = Math.max(maxY, b.y + height); }); const totalWidth = maxX - minX; const totalHeight = maxY - minY; if (totalWidth === 0 || totalHeight === 0) return; const container = app.workspaceContainer; const scaleX = (container.offsetWidth - 2 * PADDING) / totalWidth; const scaleY = (container.offsetHeight - 2 * PADDING) / totalHeight; const newScale = Math.min(scaleX, scaleY, 1); state.view.scale = newScale; state.view.offsetX = (container.offsetWidth - totalWidth * newScale) / 2 - minX * newScale; state.view.offsetY = (container.offsetHeight - totalHeight * newScale) / 2 - minY * newScale; updateWorkspaceTransform(); }
+            function onArtboardHeaderMouseDown(e, artboardId) {
+                if (e.button !== 0 || state.spacebarPressed || e.button === 1) { startPanning(e); return; }
+                e.stopPropagation(); selectArtboard(artboardId, e.shiftKey || e.ctrlKey || e.metaKey);
+                state.interaction.mode = 'draggingArtboard'; state.interaction.target = { artboardId }; state.interaction.startPos = getWorkspaceMousePos(e); state.interaction.startData.clear();
+                state.selectedArtboardIds.forEach(id => { const board = state.artboards.find(b => b.id === id); if (board) { state.interaction.startData.set(id, { x: board.x, y: board.y }); } });
+                document.querySelectorAll('.artboard.selected').forEach(el => el.classList.add('dragging'));
+            }
+            function onArtboardDrag(e) { if (state.interaction.mode !== 'draggingArtboard') return; const currentPos = getWorkspaceMousePos(e); const dx = currentPos.x - state.interaction.startPos.x; const dy = currentPos.y - state.interaction.startPos.y; state.selectedArtboardIds.forEach(id => { const board = state.artboards.find(b => b.id === id); const startPos = state.interaction.startData.get(id); if (board && startPos) { board.x = startPos.x + dx; board.y = startPos.y + dy; const el = document.querySelector(`.artboard[data-id="${id}"]`); if (el) { el.style.left = `${board.x}px`; el.style.top = `${board.y}px`; } } }); drawGrids(); }
             function onArtboardResizeMouseDown(e, artboardId) { e.stopPropagation(); const artboard = state.artboards.find(b => b.id === artboardId); if(!artboard) return; state.interaction = { mode: 'resizingArtboard', target: { artboardId }, startPos: { x: e.clientX, y: e.clientY }, startWidth: artboard.width, startHeight: artboard.height }; document.querySelector(`.artboard[data-id="${artboardId}"]`).classList.add('dragging'); }
             function onArtboardResize(e) { if (state.interaction.mode !== 'resizingArtboard') return; const { artboardId } = state.interaction.target; const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return; const dx = e.clientX - state.interaction.startPos.x; const newWidth = state.interaction.startWidth + (dx / state.view.scale); const aspectRatio = artboard.originalWidth / artboard.originalHeight; artboard.width = Math.max(50, newWidth); artboard.height = artboard.width / aspectRatio; artboard.scale = artboard.width / artboard.originalWidth; redrawArtboard(artboardId); markAsChanged(); }
             function resetArtboardScale(artboardId) { const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return; artboard.scale = 1; artboard.width = artboard.originalWidth; artboard.height = artboard.originalHeight; redrawArtboard(artboardId); markAsChanged(); }
             const getWorkspaceMousePos = (e) => { const rect = app.workspaceContainer.getBoundingClientRect(); return { x: (e.clientX - rect.left - state.view.offsetX) / state.view.scale, y: (e.clientY - rect.top - state.view.offsetY) / state.view.scale }; };
-            const getMousePosOnArtboard = (e, artboard) => { const canvasEl = app.workspace.querySelector(`.artboard[data-id="${artboard.id}"] .interaction-canvas`); if (!canvasEl) return {x: 0, y: 0}; const rect = canvasEl.getBoundingClientRect(); return { x: (e.clientX - rect.left) / rect.width, y: (e.clientY - rect.top) / rect.height }; };
-            const findArtboardAtWorkspacePos = (pos) => state.artboards.slice().reverse().find(b => pos.x >= b.x && pos.x <= b.x + b.width && pos.y >= b.y && pos.y <= b.y + b.height) || null;
-            function startPanning(e) { e.preventDefault(); e.stopPropagation(); state.interaction.mode = 'panning'; app.workspaceContainer.classList.add('panning'); if(state.spacebarPressed) app.body.classList.add('panning'); state.interaction.startPos = { x: e.clientX - state.view.offsetX, y: e.clientY - state.view.offsetY }; }
-            const getArtboardCanvases = (artboardId) => { const el = app.workspace.querySelector(`.artboard[data-id="${artboardId}"]`); if (!el) return {}; return { displayCanvas: el.querySelector('.display-canvas'), interactionCanvas: el.querySelector('.interaction-canvas'), ctxDisplay: el.querySelector('.display-canvas').getContext('2d'), ctxInteraction: el.querySelector('.interaction-canvas').getContext('2d') }; };
-            function resizeAnnotation(index, handle, pos) { const ann = state.annotations[index]; const { p1, p2 } = ann.data; if (handle === 'p1') { ann.data.p1 = pos; return; } if (handle === 'p2') { ann.data.p2 = pos; return; } const minX = Math.min(p1.x, p2.x), minY = Math.min(p1.y, p2.y), maxX = Math.max(p1.x, p2.x), maxY = Math.max(p1.y, p2.y); let anchor = { x: 0, y: 0 }; if (handle.includes('t')) anchor.y = maxY; else anchor.y = minY; if (handle.includes('l')) anchor.x = maxX; else anchor.x = minX; ann.data.p1 = anchor; ann.data.p2 = pos; }
-            function getHitAnnotation(pos, artboardId) { let found = { index: -1, handle: null, cursor: 'default' }; const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return found; for (let i = state.annotations.length - 1; i >= 0; i--) { const ann = state.annotations[i]; if (ann.artboardId !== artboardId) continue; if (state.selectedAnnotationIndices.includes(i) && ann.type !== 'comment' && ann.type !== 'reply') { const handle = getHitHandle(pos, ann); if (handle) return { index: i, handle: handle.name, cursor: handle.cursor }; } let hit = false; if (ann.type === 'comment') { const iconSizePx = 24, offsetX = -2, offsetY = -22; const normWidth = iconSizePx / artboard.width, normHeight = iconSizePx / artboard.height; const normOffsetX = offsetX / artboard.width, normOffsetY = offsetY / artboard.height; const iconLeft = ann.data.x + normOffsetX, iconTop = ann.data.y + normOffsetY; hit = (pos.x >= iconLeft && pos.x <= iconLeft + normWidth && pos.y >= iconTop && pos.y <= iconTop + normHeight); } else if (ann.type !== 'reply') { const { p1, p2 } = ann.data; const padding = 10 / Math.min(artboard.width, artboard.height); const minX = Math.min(p1.x, p2.x) - padding, minY = Math.min(p1.y, p2.y) - padding, maxX = Math.max(p1.x, p2.x) + padding, maxY = Math.max(p1.y, p2.y) + padding; hit = (pos.x >= minX && pos.x <= maxX && pos.y >= minY && pos.y <= maxY); } if (hit) return { index: i, handle: null, cursor: 'move' }; } return found; }
+            const getMousePosOnArtboard = (e, artboard) => { const artboardEl = app.workspace.querySelector(`.artboard[data-id="${artboard.id}"]`); if (!artboardEl) return {x:0, y:0}; const contentEl = artboardEl.querySelector('.artboard-content'); const rect = contentEl.getBoundingClientRect(); return { x: (e.clientX - rect.left) / rect.width, y: (e.clientY - rect.top) / rect.height }; };
+            const getArtboardCanvases = (artboardId) => { const el = app.workspace.querySelector(`.artboard[data-id="${artboardId}"]`); if (!el) return {}; return { gridCanvas: el.querySelector('.grid-canvas'), displayCanvas: el.querySelector('.display-canvas'), interactionCanvas: el.querySelector('.interaction-canvas'), ctxDisplay: el.querySelector('.display-canvas').getContext('2d'), ctxInteraction: el.querySelector('.interaction-canvas').getContext('2d') }; };
+            function resizeAnnotation(index, handle, pos) {
+                const ann = state.annotations[index]; const { p1, p2 } = ann.data;
+                const minX = Math.min(p1.x, p2.x), minY = Math.min(p1.y, p2.y), maxX = Math.max(p1.x, p2.x), maxY = Math.max(p1.y, p2.y);
+                if (ann.type === 'image' && ann.data.imgRatio) {
+                    let anchorX, anchorY; if (handle.includes('t')) { anchorY = maxY; } else { anchorY = minY; } if (handle.includes('l')) { anchorX = maxX; } else { anchorX = minX; }
+                    const artboard = state.artboards.find(b => b.id === ann.artboardId); if(!artboard) return;
+                    const artboardRatio = artboard.width / artboard.height; const visualImgRatio = ann.data.imgRatio / artboardRatio;
+                    let newWidthNorm = Math.abs(pos.x - anchorX); let newHeightNorm = Math.abs(pos.y - anchorY);
+                    if (newWidthNorm / newHeightNorm > visualImgRatio) { newHeightNorm = newWidthNorm / visualImgRatio; } else { newWidthNorm = newHeightNorm * visualImgRatio; }
+                    const p1x = (handle.includes('l')) ? anchorX - newWidthNorm : anchorX; const p1y = (handle.includes('t')) ? anchorY - newHeightNorm : anchorY;
+                    const p2x = (handle.includes('l')) ? anchorX : anchorX + newWidthNorm; const p2y = (handle.includes('t')) ? anchorY : anchorY + newHeightNorm;
+                    ann.data.p1 = { x: p1x, y: p1y }; ann.data.p2 = { x: p2x, y: p2y };
+                } else { if (handle === 'p1') { ann.data.p1 = pos; return; } if (handle === 'p2') { ann.data.p2 = pos; return; } let anchor = { x: 0, y: 0 }; if (handle.includes('t')) anchor.y = maxY; else anchor.y = minY; if (handle.includes('l')) anchor.x = maxX; else anchor.x = minX; ann.data.p1 = anchor; ann.data.p2 = pos; }
+            }
+            function getHitAnnotation(pos, artboardId) {
+                let found = { index: -1, handle: null, cursor: 'default' }; 
+                const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return found; 
+                for (let i = state.annotations.length - 1; i >= 0; i--) { 
+                    const ann = state.annotations[i]; if (ann.artboardId !== artboardId) continue;
+                    if (artboard.type === 'video' && ann.videoTime !== undefined) { const artboardEl = document.querySelector(`.artboard[data-id="${artboardId}"]`); const videoEl = artboardEl ? artboardEl.querySelector('video') : null; const currentTime = (videoEl && !artboard.videoFailedToLoad) ? videoEl.currentTime : parseFloat(artboardEl.querySelector('.vid-timeline').value); if (Math.abs(currentTime - ann.videoTime) > (1 / FRAME_RATE / 2)) { continue; } }
+                    if (state.selectedAnnotationIndices.includes(i) && ann.type !== 'comment' && ann.type !== 'reply') { const handle = getHitHandle(pos, ann); if (handle) return { index: i, handle: handle.name, cursor: handle.cursor }; } 
+                    let hit = false; 
+                    if (ann.type === 'comment') { const iconSizePx = 24, offsetX = -2, offsetY = -22; const normWidth = iconSizePx / artboard.width, normHeight = iconSizePx / artboard.height; const normOffsetX = offsetX / artboard.width, normOffsetY = offsetY / artboard.height; const iconLeft = ann.data.x + normOffsetX, iconTop = ann.data.y + normOffsetY; hit = (pos.x >= iconLeft && pos.x <= iconLeft + normWidth && pos.y >= iconTop && pos.y <= iconTop + normHeight); } 
+                    else if (ann.type !== 'reply') { const { p1, p2 } = ann.data; const padding = 10 / Math.min(artboard.width, artboard.height); const minX = Math.min(p1.x, p2.x) - padding, minY = Math.min(p1.y, p2.y) - padding, maxX = Math.max(p1.x, p2.x) + padding, maxY = Math.max(p1.y, p2.y) + padding; hit = (pos.x >= minX && pos.x <= maxX && pos.y >= minY && pos.y <= maxY); } 
+                    if (hit) return { index: i, handle: null, cursor: 'move' }; 
+                } 
+                return found; 
+            }
             const getHandlesFor = (ann) => { if (ann.type === 'reply' || ann.type === 'comment') return []; const { p1, p2 } = ann.data; if (ann.type === 'line' || ann.type === 'arrow') return [ { name: 'p1', x: p1.x, y: p1.y, cursor: 'pointer' }, { name: 'p2', x: p2.x, y: p2.y, cursor: 'pointer' } ]; const minX = Math.min(p1.x, p2.x), minY = Math.min(p1.y, p2.y), maxX = Math.max(p1.x, p2.x), maxY = Math.max(p1.y, p2.y); return [ { name: 'tl', x: minX, y: minY, cursor: 'nwse-resize' }, { name: 'tr', x: maxX, y: minY, cursor: 'nesw-resize' }, { name: 'bl', x: minX, y: maxY, cursor: 'nesw-resize' }, { name: 'br', x: maxX, y: maxY, cursor: 'nwse-resize' } ]; };
             const getHitHandle = (pos, ann) => { const artboard = state.artboards.find(b => b.id === ann.artboardId); if (!artboard) return null; const handleSizePx = 16; const handleRadiusX = (handleSizePx / artboard.width) / 2; const handleRadiusY = (handleSizePx / artboard.height) / 2; return getHandlesFor(ann).find(h => pos.x > h.x - handleRadiusX && pos.x < h.x + handleRadiusX && pos.y > h.y - handleRadiusY && pos.y < h.y + handleRadiusY) || null; }
-            function drawShape(ctx, ann, artboard, isSelected, isPreview = false) { ctx.save(); const { type, data, color } = ann; ctx.strokeStyle = color; ctx.lineWidth = isSelected ? 4 : 2; if(isPreview) { ctx.setLineDash([6, 3]); ctx.lineWidth = 3; } const denorm = (p) => ({ x: p.x * artboard.width, y: p.y * artboard.height }); ctx.beginPath(); switch (type) { case 'comment': { const pos = denorm(data); const size = 24; ctx.fillStyle = color; const path = new Path2D("M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"); ctx.save(); ctx.translate(pos.x, pos.y); ctx.scale(size / 24, size / 24); ctx.translate(-2, -22); ctx.fill(path); ctx.restore(); if (isSelected) { ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'; ctx.beginPath(); ctx.arc(pos.x, pos.y, 12, 0, 2 * Math.PI); ctx.fill(); } break; } case 'rect': { const p1_abs = denorm(data.p1); const p2_abs = denorm(data.p2); ctx.rect(p1_abs.x, p1_abs.y, p2_abs.x - p1_abs.x, p2_abs.y - p1_abs.y); break; } case 'circle': { const p1_abs = denorm(data.p1); const p2_abs = denorm(data.p2); ctx.ellipse(p1_abs.x + (p2_abs.x-p1_abs.x)/2, p1_abs.y + (p2_abs.y-p1_abs.y)/2, Math.abs((p2_abs.x-p1_abs.x)/2), Math.abs((p2_abs.y-p1_abs.y)/2), 0, 0, 2 * Math.PI); break; } case 'line': { const p1_abs = denorm(data.p1); const p2_abs = denorm(data.p2); ctx.moveTo(p1_abs.x, p1_abs.y); ctx.lineTo(p2_abs.x, p2_abs.y); break; } case 'arrow': { const p1_abs = denorm(data.p1); const p2_abs = denorm(data.p2); const h = 15, dx = p2_abs.x - p1_abs.x, dy = p2_abs.y - p1_abs.y, a = Math.atan2(dy, dx); ctx.moveTo(p1_abs.x, p1_abs.y); ctx.lineTo(p2_abs.x, p2_abs.y); ctx.lineTo(p2_abs.x - h * Math.cos(a - Math.PI / 6), p2_abs.y - h * Math.sin(a - Math.PI / 6)); ctx.moveTo(p2_abs.x, p2_abs.y); ctx.lineTo(p2_abs.x - h * Math.cos(a + Math.PI / 6), p2_abs.y - h * Math.sin(a + Math.PI / 6)); break; } case 'image': { const p1_abs = denorm(data.p1); const p2_abs = denorm(data.p2); let img = imageAnnotationCache.get(ann.id); if (!img) { img = new Image(); img.src = data.imageData; imageAnnotationCache.set(ann.id, img); } if (img.complete) { ctx.drawImage(img, p1_abs.x, p1_abs.y, p2_abs.x - p1_abs.x, p2_abs.y - p1_abs.y); } else { img.onload = () => redrawAllAnnotations(); } ctx.rect(p1_abs.x, p1_abs.y, p2_abs.x - p1_abs.x, p2_abs.y - p1_abs.y); break; } case 'reply': break; } if (type !== 'comment' && type !== 'reply') ctx.stroke(); ctx.restore(); }
+            function drawShape(ctx, ann, artboard, isSelected, isPreview = false) { ctx.save(); const { type, data, color } = ann; ctx.strokeStyle = color || state.activeColor; ctx.lineWidth = isSelected ? 4 : 2; if(isPreview) { ctx.setLineDash([6, 3]); ctx.lineWidth = 3; } const denorm = (p) => ({ x: p.x * artboard.width, y: p.y * artboard.height }); ctx.beginPath(); switch (type) { case 'comment': { const pos = denorm(data); const size = 24; ctx.fillStyle = color || state.activeColor; const path = new Path2D("M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"); ctx.save(); ctx.translate(pos.x, pos.y); ctx.scale(size / 24, size / 24); ctx.translate(-2, -22); ctx.fill(path); ctx.restore(); if (isSelected) { ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'; ctx.beginPath(); ctx.arc(pos.x, pos.y, 12, 0, 2 * Math.PI); ctx.fill(); } break; } case 'rect': { const p1_abs = denorm(data.p1); const p2_abs = denorm(data.p2); ctx.rect(p1_abs.x, p1_abs.y, p2_abs.x - p1_abs.x, p2_abs.y - p1_abs.y); break; } case 'circle': { const p1_abs = denorm(data.p1); const p2_abs = denorm(data.p2); ctx.ellipse(p1_abs.x + (p2_abs.x-p1_abs.x)/2, p1_abs.y + (p2_abs.y-p1_abs.y)/2, Math.abs((p2_abs.x-p1_abs.x)/2), Math.abs((p2_abs.y-p1_abs.y)/2), 0, 0, 2 * Math.PI); break; } case 'line': { const p1_abs = denorm(data.p1); const p2_abs = denorm(data.p2); ctx.moveTo(p1_abs.x, p1_abs.y); ctx.lineTo(p2_abs.x, p2_abs.y); break; } case 'arrow': { const p1_abs = denorm(data.p1); const p2_abs = denorm(data.p2); const h = 15, dx = p2_abs.x - p1_abs.x, dy = p2_abs.y - p1_abs.y, a = Math.atan2(dy, dx); ctx.moveTo(p1_abs.x, p1_abs.y); ctx.lineTo(p2_abs.x, p2_abs.y); ctx.lineTo(p2_abs.x - h * Math.cos(a - Math.PI / 6), p2_abs.y - h * Math.sin(a - Math.PI / 6)); ctx.moveTo(p2_abs.x, p2_abs.y); ctx.lineTo(p2_abs.x - h * Math.cos(a + Math.PI / 6), p2_abs.y - h * Math.sin(a + Math.PI / 6)); break; } case 'image': { const p1_abs = denorm(data.p1); const p2_abs = denorm(data.p2); let img = imageAnnotationCache.get(ann.id); if (!img) { img = new Image(); img.src = data.imageData; imageAnnotationCache.set(ann.id, img); } if (img.complete && img.naturalWidth > 0) { ctx.drawImage(img, p1_abs.x, p1_abs.y, p2_abs.x - p1_abs.x, p2_abs.y - p1_abs.y); } else { img.onload = () => redrawArtboardAnnotations(ann.artboardId); } ctx.rect(p1_abs.x, p1_abs.y, p2_abs.x - p1_abs.x, p2_abs.y - p1_abs.y); break; } case 'reply': break; } if (type !== 'comment' && type !== 'reply') ctx.stroke(); ctx.restore(); }
             function drawHandles(ctx, ann, artboard) { if (ann.type === 'reply') return; ctx.save(); const handles = getHandlesFor(ann); ctx.fillStyle = 'white'; ctx.strokeStyle = '#333'; ctx.lineWidth = 1; const handleSize = 10; handles.forEach(h => { const x_abs = h.x * artboard.width; const y_abs = h.y * artboard.height; ctx.fillRect(x_abs - handleSize/2, y_abs - handleSize/2, handleSize, handleSize); ctx.strokeRect(x_abs - handleSize/2, y_abs - handleSize/2, handleSize, handleSize); }); ctx.restore(); }
-            function redrawArtboard(artboardId){ const artboard = state.artboards.find(b => b.id === artboardId); if(!artboard) return; const artboardEl = app.workspace.querySelector(`.artboard[data-id="${artboardId}"]`); if(!artboardEl) return; artboardEl.style.width = `${artboard.width}px`; artboardEl.style.height = `${artboard.height}px`; const scaleDisplay = artboard.scale !== 1 ? `<span class="artboard-info">(${Math.round(artboard.scale * 100)}%)</span>` : ''; const dimensionsDisplay = `<span class="artboard-info">(${artboard.originalWidth}x${artboard.originalHeight})</span>`; const titleContainer = artboardEl.querySelector('.artboard-title-container'); titleContainer.innerHTML = `<span class="artboard-title">${artboard.name}</span>${dimensionsDisplay}${scaleDisplay}`; redrawAllAnnotations(); }
-            function rearrangeArtboards() { if (state.artboards.length === 0) return; const { margin, maxRowWidth } = state.layout; state.layout.nextX = margin; state.layout.nextY = margin; state.layout.rowMaxHeight = 0; state.artboards.sort((a,b) => a.y - b.y || a.x - b.x).forEach(board => { if (state.layout.nextX + board.width > maxRowWidth && state.layout.nextX > margin) { state.layout.nextY += state.layout.rowMaxHeight + margin; state.layout.nextX = margin; state.layout.rowMaxHeight = 0; } board.x = state.layout.nextX; board.y = state.layout.nextY; state.layout.nextX += board.width + margin; state.layout.rowMaxHeight = Math.max(state.layout.rowMaxHeight, board.height); const boardEl = document.querySelector(`.artboard[data-id="${board.id}"]`); if(boardEl) { boardEl.style.left = `${board.x}px`; boardEl.style.top = `${board.y}px`; } }); markAsChanged(); }
+            function redrawArtboard(artboardId){ const artboard = state.artboards.find(b => b.id === artboardId); if(!artboard) return; const artboardEl = app.workspace.querySelector(`.artboard[data-id="${artboardId}"]`); if(!artboardEl) return; const controlsHeight = artboard.type === 'video' ? 24 : 0; artboardEl.style.width = `${artboard.width}px`; artboardEl.style.height = `${artboard.height + 30 + controlsHeight}px`; const dimensionsDisplay = `<span class="artboard-info">(${artboard.originalWidth}x${artboard.originalHeight})</span>`; const infoWrapper = artboardEl.querySelector('.artboard-info-wrapper'); infoWrapper.innerHTML = `${dimensionsDisplay}`; redrawAllAnnotations(); drawGrids(); }
+            function resizeAllVideosTo720p() { state.artboards.forEach(artboard => { if (artboard.type === 'video' && artboard.originalHeight > 0) { const targetHeight = 720; const aspectRatio = artboard.originalWidth / artboard.originalHeight; artboard.height = targetHeight; artboard.width = targetHeight * aspectRatio; artboard.scale = artboard.height / artboard.originalHeight; redrawArtboard(artboard.id); } }); markAsChanged(); }
+            function rearrangeArtboards() {
+                if (state.artboards.length === 0) return;
+                const { margin } = state.layout; let currentY = margin;
+                const layoutGroup = (group, startY) => {
+                    let nextX = margin; let nextY = startY; let rowMaxHeight = 0;
+                    group.sort((a,b) => a.name.localeCompare(b.name)).forEach(board => {
+                        const controlsHeight = board.type === 'video' ? 24 : 0; const boardHeight = board.height + 30 + controlsHeight;
+                        if (nextX + board.width > state.layout.maxRowWidth && nextX > margin) { nextY += rowMaxHeight + margin; nextX = margin; rowMaxHeight = 0; }
+                        board.x = nextX; board.y = nextY; nextX += board.width + margin; rowMaxHeight = Math.max(rowMaxHeight, boardHeight);
+                        const boardEl = document.querySelector(`.artboard[data-id="${board.id}"]`); if (boardEl) { boardEl.style.left = `${board.x}px`; boardEl.style.top = `${board.y}px`; }
+                    });
+                    return nextY + rowMaxHeight;
+                };
+                const videos = state.artboards.filter(b => b.type === 'video'); const images = state.artboards.filter(b => b.type === 'image'); const htmlBanners = state.artboards.filter(b => b.type === 'html');
+                if (videos.length > 0) currentY = layoutGroup(videos, currentY) + margin;
+                if (images.length > 0) currentY = layoutGroup(images, currentY) + margin;
+                if (htmlBanners.length > 0) currentY = layoutGroup(htmlBanners, currentY) + margin;
+                renderWorkspace(); markAsChanged();
+            }
             function copyAnnotations() { if (state.selectedAnnotationIndices.length === 0) return; const allIdsToCopy = new Set(); const queue = state.selectedAnnotationIndices.map(index => state.annotations[index].id); queue.forEach(id => allIdsToCopy.add(id)); const traversalQueue = [...queue]; while (traversalQueue.length > 0) { const parentId = traversalQueue.shift(); const children = state.annotations.filter(ann => ann.parentId === parentId); for (const child of children) { if (!allIdsToCopy.has(child.id)) { allIdsToCopy.add(child.id); traversalQueue.push(child.id); } } } state.clipboard = state.annotations.filter(ann => allIdsToCopy.has(ann.id)).map(ann => JSON.parse(JSON.stringify(ann))); }
             function pasteAnnotations() {
                 if (state.clipboard.length === 0) return;
-                const targetArtboardIds = state.selectedArtboardIds.length > 0 ? state.selectedArtboardIds : [state.artboards[0]?.id].filter(Boolean);
-                if (targetArtboardIds.length === 0) return;
-
+                const targetArtboardIds = state.selectedArtboardIds.length > 0 ? state.selectedArtboardIds : [state.artboards[0]?.id].filter(Boolean); if (targetArtboardIds.length === 0) return;
                 const allNewAnnotations = [];
-                const newIndices = [];
                 targetArtboardIds.forEach(targetId => {
-                    const oldIdToNewIdMap = new Map();
-                    const annotationsForThisBoard = [];
-                    state.clipboard.forEach(clipboardAnn => {
-                        const newAnn = JSON.parse(JSON.stringify(clipboardAnn));
-                        const newId = crypto.randomUUID();
-                        oldIdToNewIdMap.set(clipboardAnn.id, newId);
-                        newAnn.id = newId;
-                        newAnn.artboardId = targetId;
-                        annotationsForThisBoard.push(newAnn);
-                    });
-                    annotationsForThisBoard.forEach(newAnn => {
-                        if (newAnn.parentId && oldIdToNewIdMap.has(newAnn.parentId)) newAnn.parentId = oldIdToNewIdMap.get(newAnn.parentId);
-                        else newAnn.parentId = null;
-                    });
+                    const oldIdToNewIdMap = new Map(); const annotationsForThisBoard = []; const targetArtboard = state.artboards.find(b => b.id === targetId);
+                    state.clipboard.forEach(clipboardAnn => { const newAnn = JSON.parse(JSON.stringify(clipboardAnn)); const newId = crypto.randomUUID(); oldIdToNewIdMap.set(clipboardAnn.id, newId); newAnn.id = newId; newAnn.artboardId = targetId; if (targetArtboard.type !== 'video') { delete newAnn.videoTime; delete newAnn.frameBackup; } annotationsForThisBoard.push(newAnn); });
+                    annotationsForThisBoard.forEach(newAnn => { if (newAnn.parentId && oldIdToNewIdMap.has(newAnn.parentId)) newAnn.parentId = oldIdToNewIdMap.get(newAnn.parentId); else newAnn.parentId = null; });
                     allNewAnnotations.push(...annotationsForThisBoard);
                 });
+                if (allNewAnnotations.length === 0) return; addAnnotation(allNewAnnotations[0]);
+            }
+            
+            function createHistoryManager() {
+                const limit = 100; let undoStack = []; let redoStack = [];
+                return {
+                    execute(action) { action.do(action); undoStack.push(action); if (undoStack.length > limit) { undoStack.shift(); } redoStack = []; markAsChanged(); },
+                    undo() { if (undoStack.length === 0) return; const action = undoStack.pop(); action.undo(action); redoStack.push(action); markAsChanged(); updateAnnotationList(); renderWorkspace(); },
+                    redo() { if (redoStack.length === 0) return; const action = redoStack.pop(); action.do(action); undoStack.push(action); markAsChanged(); updateAnnotationList(); renderWorkspace(); },
+                };
+            }
+            
+            function toggleRightPanel() { state.layout.isPanelCollapsed = !state.layout.isPanelCollapsed; applyRightPanelState(); markAsChanged(); }
+            function applyRightPanelState() { app.rightPanel.classList.toggle('collapsed', state.layout.isPanelCollapsed); }
+            function changeArtboardBg(color) { state.layout.artboardBgColor = color; document.getElementById('artboard-bg-color-picker').value = color; applyArtboardBackgroundColor(); }
+            function applyArtboardBackgroundColor() { document.querySelectorAll('.artboard-content').forEach(el => el.style.backgroundColor = state.layout.artboardBgColor); }
+            function changeGridColor(color) { state.grids.color = color; document.getElementById('grid-color-picker').value = color; drawGrids(); }
+            
+            function getHitGrid(e) {
+                if (state.grids.locked) return null;
+                const mousePos = getWorkspaceMousePos(e);
+                const tolerance = 5 / state.view.scale;
 
-                if (allNewAnnotations.length === 0) return;
-                
-                const startingIndex = state.annotations.length;
-                state.annotations.push(...allNewAnnotations);
-                for (let i = 0; i < allNewAnnotations.length; i++) newIndices.push(startingIndex + i);
-                state.selectedAnnotationIndices = newIndices;
-                state.lastClickedAnnIndex = newIndices.length > 0 ? newIndices[newIndices.length - 1] : -1;
-                markAsChanged(); updateAnnotationList(); redrawAllAnnotations();
-                const lastNewItem = app.annotationList.querySelector(`li[data-id='${allNewAnnotations[allNewAnnotations.length - 1].id}']`);
-                if (lastNewItem) lastNewItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                for (const grid of state.grids.workspace) {
+                    if (grid.type === 'horizontal' && Math.abs(mousePos.y - grid.position) < tolerance) return { scope: 'workspace', grid };
+                    if (grid.type === 'vertical' && Math.abs(mousePos.x - grid.position) < tolerance) return { scope: 'workspace', grid };
+                }
+
+                for (const artboard of state.artboards) {
+                    const artboardGrids = state.grids.artboard[artboard.id] || [];
+                    const artboardRect = { x: artboard.x, y: artboard.y, width: artboard.width, height: artboard.height };
+                    if (mousePos.x > artboardRect.x && mousePos.x < artboardRect.x + artboardRect.width && mousePos.y > artboardRect.y && mousePos.y < artboardRect.y + artboardRect.height) {
+                         for (const grid of artboardGrids) {
+                            if (grid.type === 'horizontal' && Math.abs((mousePos.y - artboard.y) / artboard.height - grid.position) * artboard.height < tolerance) return { scope: 'artboard', grid, artboardId: artboard.id };
+                            if (grid.type === 'vertical' && Math.abs((mousePos.x - artboard.x) / artboard.width - grid.position) * artboard.width < tolerance) return { scope: 'artboard', grid, artboardId: artboard.id };
+                         }
+                    }
+                }
+                return null;
+            }
+            
+            function onGridDrag(e) {
+                const { scope, grid, artboardId } = state.interaction.target;
+                if (scope === 'workspace') {
+                    const pos = getWorkspaceMousePos(e);
+                    grid.position = grid.type === 'horizontal' ? pos.y : pos.x;
+                } else if (scope === 'artboard') {
+                    const artboard = state.artboards.find(b => b.id === artboardId);
+                    if (artboard) {
+                        const pos = getMousePosOnArtboard(e, artboard);
+                        grid.position = grid.type === 'horizontal' ? pos.y : pos.x;
+                    }
+                }
+                drawGrids();
+            }
+
+            function drawGrids(mouseEvent = null) {
+                drawWorkspaceGrids();
+                state.artboards.forEach(artboard => drawArtboardGrids(artboard.id, mouseEvent));
+            }
+
+            function drawWorkspaceGrids() {
+                const canvas = app.workspaceGridCanvas; const ctx = canvas.getContext('2d');
+                const { width, height } = app.workspaceContainer.getBoundingClientRect(); canvas.width = width; canvas.height = height;
+                ctx.clearRect(0, 0, width, height); if (!state.grids.visible) return;
+                ctx.strokeStyle = state.grids.locked ? 'rgba(255, 100, 100, 0.7)' : state.grids.color + '80';
+                ctx.lineWidth = 1;
+                state.grids.workspace.forEach(grid => {
+                    ctx.beginPath();
+                    if (grid.type === 'horizontal') { const y = grid.position * state.view.scale + state.view.offsetY; ctx.moveTo(0, y); ctx.lineTo(width, y); } 
+                    else { const x = grid.position * state.view.scale + state.view.offsetX; ctx.moveTo(x, 0); ctx.lineTo(x, height); }
+                    ctx.stroke();
+                });
+            }
+
+            function drawArtboardGrids(artboardId, mouseEvent) {
+                const artboard = state.artboards.find(b => b.id === artboardId);
+                const canvases = getArtboardCanvases(artboardId);
+                if (!artboard || !canvases.gridCanvas) return;
+                const canvas = canvases.gridCanvas; const ctx = canvas.getContext('2d');
+                canvas.width = artboard.width; canvas.height = artboard.height; ctx.clearRect(0, 0, artboard.width, artboard.height); if (!state.grids.visible) return;
+                ctx.strokeStyle = state.grids.locked ? 'rgba(255, 100, 100, 0.7)' : state.grids.color + '80';
+                ctx.lineWidth = 1;
+                const artboardGrids = state.grids.artboard[artboardId] || [];
+                artboardGrids.forEach(grid => {
+                    ctx.beginPath();
+                    if (grid.type === 'horizontal') { const y = grid.position * artboard.height; ctx.moveTo(0, y); ctx.lineTo(artboard.width, y); } 
+                    else { const x = grid.position * artboard.width; ctx.moveTo(x, 0); ctx.lineTo(x, artboard.height); }
+                    ctx.stroke();
+                });
+                if (mouseEvent && state.interaction.mode === 'draggingArtboardGrid' && state.interaction.target.artboardId === artboardId) {
+                    const pos = getMousePosOnArtboard(mouseEvent, artboard);
+                    ctx.strokeStyle = state.grids.color; ctx.lineWidth = 2; ctx.beginPath();
+                    if (state.interaction.target.type === 'horizontal') { const y = pos.y * artboard.height; ctx.moveTo(0, y); ctx.lineTo(artboard.width, y); } 
+                    else { const x = pos.x * artboard.width; ctx.moveTo(x, 0); ctx.lineTo(x, artboard.height); }
+                    ctx.stroke();
+                }
+            }
+            
+            function handleArtboardEdgeHover(e) {
+                if (artboardEdgeHoverTimeout) { clearTimeout(artboardEdgeHoverTimeout); artboardEdgeHoverTimeout = null; }
+                const oldHover = JSON.stringify(state.artboardEdgeHover); let newHover = null;
+                const HOVER_ZONE = 10;
+                if(state.interaction.mode === 'none' && !state.grids.locked) {
+                    for(const artboard of state.artboards) {
+                        const el = document.querySelector(`.artboard[data-id="${artboard.id}"]`); if (!el) continue;
+                        const rect = el.getBoundingClientRect();
+                        const onTop = e.clientY > rect.top - HOVER_ZONE && e.clientY < rect.top + HOVER_ZONE; const onBottom = e.clientY > rect.bottom - HOVER_ZONE && e.clientY < rect.bottom + HOVER_ZONE;
+                        const onLeft = e.clientX > rect.left - HOVER_ZONE && e.clientX < rect.left + HOVER_ZONE; const onRight = e.clientX > rect.right - HOVER_ZONE && e.clientX < rect.right + HOVER_ZONE;
+                        let edge = null;
+                        if (onTop && onLeft || onBottom && onRight || onBottom && onLeft || onTop && onRight) {} 
+                        else if (onTop) edge = 'top'; else if (onBottom) edge = 'bottom'; else if (onLeft) edge = 'left'; else if (onRight) edge = 'right';
+                        if (edge) { newHover = { artboardId: artboard.id, edge }; break; }
+                    }
+                }
+                state.artboardEdgeHover = newHover;
+                if (oldHover !== JSON.stringify(state.artboardEdgeHover)) {
+                    document.querySelectorAll('.artboard-edge-highlight').forEach(el => el.remove());
+                    if (state.artboardEdgeHover) {
+                        artboardEdgeHoverTimeout = setTimeout(() => {
+                           if (state.artboardEdgeHover) {
+                               const { artboardId, edge } = state.artboardEdgeHover;
+                               const artboardEl = document.querySelector(`.artboard[data-id="${artboardId}"]`);
+                               if (artboardEl) { const highlightEl = document.createElement('div'); highlightEl.className = `artboard-edge-highlight ${edge}`; artboardEl.appendChild(highlightEl); }
+                           }
+                        }, 1000);
+                    }
+                }
+            }
+            
+            function onToolbarDragStart(e) {
+                e.preventDefault(); e.stopPropagation(); const now = Date.now();
+                if(now - dragHandleClicks.time < 300) { dragHandleClicks.count++; } else { dragHandleClicks.count = 1; }
+                dragHandleClicks.time = now;
+                if(dragHandleClicks.count === 2) { state.toolbar.isSimple = !state.toolbar.isSimple; applyToolbarState(); markAsChanged(); return; }
+                if(dragHandleClicks.count >= 3) { state.toolbar.isDefault = true; applyToolbarState(); markAsChanged(); dragHandleClicks.count = 0; return; }
+                state.interaction.mode = 'draggingToolbar';
+                const containerRect = app.bottomControlsContainer.getBoundingClientRect();
+                state.interaction.startData.set('toolbar', { offsetX: e.clientX - containerRect.left, offsetY: e.clientY - containerRect.top });
+            }
+
+            function onToolbarDrag(e) {
+                const startData = state.interaction.startData.get('toolbar');
+                let newX = e.clientX - startData.offsetX; let newY = e.clientY - startData.offsetY;
+                const container = app.bottomControlsContainer;
+                container.style.transform = ``; container.style.left = `${newX}px`; container.style.top = `${newY}px`; container.style.bottom = '';
+                state.toolbar.x = newX; state.toolbar.y = newY; state.toolbar.isDefault = false;
+                markAsChanged();
+            }
+
+            function applyToolbarState() {
+                const {x, y, isSimple, isDefault} = state.toolbar;
+                const container = app.bottomControlsContainer;
+                if (isDefault) {
+                    container.style.left = '50%'; container.style.top = ''; container.style.bottom = '20px'; container.style.transform = 'translateX(-50%)';
+                } else {
+                    container.style.left = `${x}px`; container.style.top = `${y}px`; container.style.bottom = ''; container.style.transform = '';
+                }
+                app.bottomControls.classList.remove('vertical-layout');
+                app.bottomControls.classList.toggle('simple-mode', isSimple);
+            }
+
+            function showContextMenu(e, items) {
+                e.preventDefault(); e.stopPropagation();
+                app.contextMenu.innerHTML = ''; app.contextMenu.classList.remove('hidden');
+                items.forEach(item => {
+                    if (item.divider) { const div = document.createElement('div'); div.className = 'context-menu-divider'; app.contextMenu.appendChild(div); return; }
+                    const menuItem = document.createElement('div'); menuItem.className = 'context-menu-item';
+                    if (item.disabled) { menuItem.classList.add('disabled'); }
+                    menuItem.textContent = item.label;
+                    if (!item.disabled) { menuItem.onclick = () => { hideContextMenu(); item.action(); }; }
+                    app.contextMenu.appendChild(menuItem);
+                });
+                const menuRect = app.contextMenu.getBoundingClientRect(); let x = e.clientX; let y = e.clientY;
+                if (x + menuRect.width > window.innerWidth) { x = window.innerWidth - menuRect.width; }
+                if (y + menuRect.height > window.innerHeight) { y = window.innerHeight - menuRect.height; }
+                app.contextMenu.style.left = `${x}px`; app.contextMenu.style.top = `${y}px`;
+            }
+
+            function hideContextMenu() { app.contextMenu.classList.add('hidden'); }
+            
+            function onWorkspaceContextMenu(e) {
+                if (!e.target.closest('#workspace-container') || e.target.closest('.artboard')) return;
+                const items = [
+                    { label: 'Add Image/Video...', action: () => app.fileInput.click() }, { divider: true },
+                    { label: 'Add Horizontal Grid', action: () => { const pos = getWorkspaceMousePos(e); state.grids.workspace.push({ type: 'horizontal', position: pos.y, id: crypto.randomUUID() }); drawGrids(); markAsChanged(); } },
+                    { label: 'Add Vertical Grid', action: () => { const pos = getWorkspaceMousePos(e); state.grids.workspace.push({ type: 'vertical', position: pos.x, id: crypto.randomUUID() }); drawGrids(); markAsChanged(); } }, { divider: true },
+                    { label: state.grids.visible ? 'Hide All Grids' : 'Show All Grids', action: () => { state.grids.visible = !state.grids.visible; drawGrids(); } },
+                    { label: state.grids.locked ? 'Unlock Grids' : 'Lock Grids', action: () => { state.grids.locked = !state.grids.locked; drawGrids(); } },
+                    { label: 'Clean All Grids', action: () => { state.grids.workspace = []; Object.keys(state.grids.artboard).forEach(id => state.grids.artboard[id] = []); drawGrids(); markAsChanged(); } }, { divider: true },
+                    { label: 'Fit All Videos to 720p', action: resizeAllVideosTo720p },
+                    { label: 'Fit All Artboards to View', action: fitAllArtboardsToView },
+                    { label: 'Arrange Artboards', action: rearrangeArtboards }, { divider: true },
+                    { label: 'Undo', action: () => historyManager.undo() }, { label: 'Redo', action: () => historyManager.redo() },
+                ];
+                showContextMenu(e, items);
+            }
+            
+            function onArtboardContextMenu(e, artboardId) {
+                e.preventDefault(); e.stopPropagation();
+                if (!state.selectedArtboardIds.includes(artboardId)) { selectArtboard(artboardId, false); }
+                const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return;
+                const pos = getMousePosOnArtboard(e, artboard);
+                let items = [{ label: 'Add Comment', action: () => { addAnnotation({ type: 'comment', artboardId, data: pos, color: state.activeColor, text: '' }, true); } }];
+                if (artboard.type === 'video') { items.push({ label: 'Save Frame', action: () => saveVideoFrame(artboardId) }); }
+                items.push(
+                    { label: 'Add Horizontal Grid here', action: () => { if(!state.grids.artboard[artboardId]) state.grids.artboard[artboardId] = []; state.grids.artboard[artboardId].push({type: 'horizontal', position: pos.y, id: crypto.randomUUID()}); drawGrids(); markAsChanged(); } },
+                    { label: 'Add Vertical Grid here', action: () => { if(!state.grids.artboard[artboardId]) state.grids.artboard[artboardId] = []; state.grids.artboard[artboardId].push({type: 'vertical', position: pos.x, id: crypto.randomUUID()}); drawGrids(); markAsChanged(); } },
+                    { label: 'Clean Artboard Grids', action: () => { state.grids.artboard[artboardId] = []; drawGrids(); markAsChanged(); } },
+                    { divider: true }, { label: 'Copy File Name', action: () => navigator.clipboard.writeText(artboard.name) }
+                );
+                if (artboard.type === 'video') { items.push({ label: 'Fit to 720p', action: () => { resizeAllVideosTo720p(); } }); items.push({ label: 'Zoom to 100%', action: () => { resetArtboardScale(artboardId); }}); }
+                if (artboard.type === 'image' && artboard.name.match(/\.(png|webp|gif)$/i)) { items.push({ label: 'Change Background Color', action: () => { document.getElementById('artboard-bg-color-picker').click(); }}); }
+                items.push({ divider: true }); items.push({ label: 'Close Artboard', action: deleteSelectedArtboards });
+                showContextMenu(e, items);
+            }
+
+            function onAnnotationCanvasContextMenu(e, artboardId) {
+                const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return;
+                const pos = getMousePosOnArtboard(e, artboard); const hit = getHitAnnotation(pos, artboardId);
+                if (hit.index !== -1) {
+                    e.preventDefault(); e.stopPropagation();
+                    const ann = state.annotations[hit.index];
+                    const items = [
+                        { label: 'Copy Text', disabled: !ann.text, action: () => navigator.clipboard.writeText(ann.text) },
+                        { label: 'Reply', action: () => addAnnotation({ type: 'reply', artboardId: ann.artboardId, text: '', parentId: ann.id }, true) },
+                        { label: ann.completed ? 'Mark as Not Done' : 'Mark as Done', action: () => { ann.completed = !ann.completed; updateAnnotationList(); redrawAllAnnotations(); markAsChanged(); } },
+                        { divider: true }, { label: 'Delete', action: () => deleteAnnotationsByIndices([hit.index]) },
+                    ];
+                    showContextMenu(e, items);
+                } else { onArtboardContextMenu(e, artboardId); }
+            }
+
+            function onAnnotationListContextMenu(e) {
+                const li = e.target.closest('li[data-index]'); if (!li) return;
+                e.preventDefault(); e.stopPropagation();
+                const index = parseInt(li.dataset.index, 10); const ann = state.annotations[index]; if (!ann) return;
+                const items = [
+                    { label: 'Copy Text', disabled: !ann.text, action: () => navigator.clipboard.writeText(ann.text) },
+                    { label: 'Reply', action: () => addAnnotation({ type: 'reply', artboardId: ann.artboardId, text: '', parentId: ann.id }, true) },
+                    { label: ann.completed ? 'Mark as Not Done' : 'Mark as Done', action: () => { ann.completed = !ann.completed; li.classList.toggle('completed', ann.completed); li.querySelector('.complete-checkbox').checked = ann.completed; redrawAllAnnotations(); markAsChanged(); } },
+                    { divider: true }, { label: 'Delete', action: () => deleteAnnotationsByIndices([index]) },
+                ];
+                showContextMenu(e, items);
             }
 
             init();
