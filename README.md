@@ -4,6 +4,8 @@ Công cụ QC video và hình ảnh, hoạt động hoàn toàn trên trình duy
 
 https://tri-inbold.github.io/Media-note/
 
+https://tri-inbold.github.io/Media-note/beta
+
 
 ## Tính năng nổi bật
 
