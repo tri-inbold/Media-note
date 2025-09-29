@@ -1,10 +1,12 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Media QC v22.1</title>
+    <title>Media QC v22.2</title>
     
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
     <style>
         /* --- COMBINED AND NORMALIZED CSS --- */
         :root { 
@@ -18,7 +20,6 @@
         .glass-panel { background: var(--panel-bg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid var(--border-color); box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2); }
         body.theme-light .glass-panel { backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: 0 2px 10px rgba(0,0,0,0.07); }
         
-        /* --- NEW LAYOUT STRUCTURE --- */
         #app-container { display: flex; flex-direction: row; height: 100%; width: 100%; }
         #main-content { flex-grow: 1; position: relative; height: 100%; display: flex; flex-direction: column; }
         
@@ -30,36 +31,38 @@
             z-index: 25;
         }
 
-        /* --- Drop Zone & Workspace --- */
         #drop-zone { position: absolute; inset: 20px; border: 2px dashed rgba(173, 181, 189, 0.5); border-radius: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; font-size: 1.2em; color: var(--text-color-light); z-index: 100; transition: all 0.3s; pointer-events: auto; }
         #drop-zone p { background: var(--panel-bg); padding: 25px 35px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid var(--border-color); line-height: 1.6; }
         #drop-zone.hidden { pointer-events: none; opacity: 0; }
         body.dragging #drop-zone { border-color: var(--highlight-color); background-color: rgba(0, 170, 255, 0.1); }
         
-        #workspace-container { flex-grow: 1; background-color: var(--workspace-bg); cursor: grab; overflow: hidden; position: relative; }
+        #workspace-container { flex-grow: 1; background-color: var(--workspace-bg); cursor: default; overflow: hidden; position: relative; }
         #workspace-container.panning { cursor: grabbing; }
+        #workspace-container.hand-tool { cursor: grab; }
         body.spacebar-down, body.spacebar-down .artboard, body.spacebar-down .interaction-canvas { cursor: grab !important; }
         body.spacebar-down.panning, body.spacebar-down.panning .artboard, body.spacebar-down.panning .interaction-canvas { cursor: grabbing !important; }
         #workspace { position: absolute; transform-origin: 0 0; }
         
-        /* --- Artboard Styles --- */
         .artboard { position: absolute; background-color: var(--panel-bg); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); border: 2px solid transparent; overflow: hidden; transition: border-color 0.2s; display: flex; flex-direction: column;}
         .artboard.dragging { z-index: 10; box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
         .artboard.selected { border-color: var(--highlight-color); }
-        .artboard-header { position: relative; width: 100%; height: 30px; background-color: rgba(0,0,0,0.3); display: flex; justify-content: space-between; align-items: center; padding: 0 5px 0 10px; box-sizing: border-box; font-size: 12px; color: var(--text-color); cursor: grab; flex-shrink: 0; }
+        .artboard.video-missing { border-color: orange !important; }
+        .artboard.video-missing::after { content: 'Missing Video - Drop to Relink'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.7); color: white; padding: 10px 15px; border-radius: 8px; font-size: 14px; pointer-events: none; z-index: 100; }
+        .artboard-header { position: relative; width: 100%; height: 30px; background-color: rgba(255,255,255,0.3); display: flex; justify-content: space-between; align-items: center; padding: 0 5px 0 10px; box-sizing: border-box; font-size: 12px; color: var(--text-color); cursor: grab; flex-shrink: 0; }
         .artboard-header:active { cursor: grabbing; }
         .artboard-header-tools { display: flex; align-items: center; }
-        .artboard-title-container { flex: 1 1 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 5px; display: flex; align-items: baseline; }
+        .artboard-title-container { flex: 1 1 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 5px; display: flex; align-items: baseline; pointer-events: none; }
+        .artboard-header-tools button { pointer-events: auto; }
         .artboard-title { text-overflow: ellipsis; overflow: hidden; }
         .artboard-info { color: var(--text-color-light); font-size: 0.9em; padding-left: 8px; }
         .header-icon-btn, .artboard-close-btn { background: none; border: none; color: var(--text-color-light); cursor: pointer; font-size: 1.2em; line-height: 1; padding: 0 5px; transition: color 0.2s, background-color 0.2s; flex-shrink: 0; border-radius: 4px; display:flex; align-items:center; justify-content:center; width:22px; height:22px; }
         .header-icon-btn svg { width: 14px; height: 14px; fill: currentColor; }
         .header-icon-btn:hover, .artboard-close-btn:hover { color: #fff; background-color: rgba(255,255,255,0.1); }
         .artboard-close-btn { font-size: 1.4em; }
-        .artboard-content { position: relative; width: 100%; flex-grow: 1; background-color: #000; }
+        .artboard-content { position: relative; width: 100%; flex-grow: 1; }
         .artboard-content.transparent-guide { background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0px; }
         body.theme-dark .artboard-content.transparent-guide { background-image: linear-gradient(45deg, #444 25%, transparent 25%), linear-gradient(-45deg, #444 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #444 75%), linear-gradient(-45deg, transparent 75%, #444 75%); }
-        .artboard img, .artboard video, .artboard iframe { display: block; width: 100%; height: 100%; user-select: none; -webkit-user-drag: none; object-fit: contain; background-color: #000; position: absolute; top:0; left:0; border: none;}
+        .artboard img, .artboard video, .artboard iframe { display: block; width: 100%; height: 100%; user-select: none; -webkit-user-drag: none; object-fit: contain; background-color: transparent; position: absolute; top:0; left:0; border: none;}
         .artboard video, .artboard .frame-backup { z-index: 1; }
         .artboard canvas.guide-canvas { z-index: 2; pointer-events: none; }
         .artboard canvas.display-canvas { z-index: 3; }
@@ -67,21 +70,20 @@
         .artboard canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;}
         .artboard-resizer { position: absolute; right: 2px; bottom: 2px; width: 16px; height: 16px; cursor: se-resize; z-index: 5; color: rgba(255,255,255,0.5); }
         .artboard-resizer:hover { color: white; }
-        .artboard-video-controls { position: relative; width: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; padding: 2px 5px; box-sizing: border-box; height: 24px; z-index: 5; flex-shrink: 0; }
-        .artboard-video-controls button { background:none; border:none; color:white; cursor:pointer; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; padding:0; font-size: 1em;}
-        .artboard-video-controls button svg { width: 14px; height: 14px; fill: currentColor; }
+        .artboard-video-controls { position: relative; width: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; padding: 4px 8px; box-sizing: border-box; height: 32px; z-index: 5; flex-shrink: 0; }
+        .artboard-video-controls button { background:none; border:none; color:white; cursor:pointer; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; padding:0; font-size: 1.2em;}
+        .artboard-video-controls button svg { width: 18px; height: 18px; fill: currentColor; }
         .vid-timeline-wrapper { position: relative; flex-grow: 1; height: 100%; display: flex; align-items: center;}
-        .vid-timeline-bg { position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 100%; height: 3px; background: rgba(255,255,255,0.3); border-radius: 3px;}
+        .vid-timeline-bg { position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 100%; height: 4px; background: rgba(255,255,255,0.3); border-radius: 4px;}
         .vid-timeline-markers { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none;}
         .artboard-video-controls .vid-timeline { flex-grow:1; -webkit-appearance: none; appearance: none; height: 100%; background: transparent; cursor: pointer; position: relative; z-index: 2;}
-        .artboard-video-controls .vid-timeline::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 8px; height: 8px; background: #fff; border-radius: 50%; }
-        .time-input { background: transparent; border: none; color: white; font-size:10px; margin: 0 5px; font-variant-numeric: tabular-nums; text-align: center; padding: 2px; width: 70px; border-radius: 3px; }
+        .artboard-video-controls .vid-timeline::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 10px; height: 10px; background: #fff; border-radius: 50%; }
+        .time-input { background: transparent; border: none; color: white; font-size:12px; margin: 0 8px; font-variant-numeric: tabular-nums; text-align: center; padding: 2px; width: 75px; border-radius: 3px; }
         .time-input:focus { background: rgba(255,255,255,0.2); outline: 1px solid var(--highlight-color); }
         #time-display { width: 80px; font-size: 1em; color: var(--text-color); }
         #time-display:focus { color: var(--text-color); }
 
-        /* --- Movable Toolbar & Tools --- */
-        #toolbar-container { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 30; }
+        #toolbar-container { position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); z-index: 30; }
         #movable-controls { display: flex; gap: 10px; align-items: center; }
         #tools-panel, #help-panel { padding: 8px; border-radius: 12px; display: flex; align-items: center; }
         #tools-panel { padding: 8px 10px; gap: 4px; }
@@ -91,7 +93,7 @@
         .tool-btn { width: 28px; height: 28px; border-radius: 8px; border: none; background: transparent; color: var(--text-color-light); cursor: pointer; display: flex; justify-content: center; align-items: center; transition: all 0.2s; padding: 0; }
         .tool-btn:hover { color: var(--text-color); background-color: rgba(255,255,255,0.1); }
         body.theme-light .tool-btn:hover { background-color: rgba(0,0,0,0.05); }
-        .tool-btn.active { color: #fff; background-color: var(--highlight-color); transform: scale(1.1); }
+        .tool-btn.active { color: #fff; background-color: var(--highlight-color); }
         body.theme-light .tool-btn.active { color: #fff; }
         .tool-btn svg { width: 18px; height: 18px; fill: currentColor; }
         .divider { width: 1px; height: 20px; background: var(--border-color); margin: 0 5px; }
@@ -106,7 +108,8 @@
         #timeline-bg { position: absolute; left: 0; top: 50%; transform: translateY(-50%); height: 5px; border-radius: 5px; pointer-events: none; width: 100%; background: rgba(255, 255, 255, 0.3); }
         body.theme-light #timeline-bg { background: rgba(0,0,0,0.1); }
         #timeline-slider { position: relative; z-index: 1; flex-grow: 1; -webkit-appearance: none; appearance: none; width: 100%; height: 100%; background: transparent !important; border-radius: 5px; outline: none; }
-        #timeline-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 15px; height: 15px; background: var(--text-color); cursor: pointer; border-radius: 50%; transition: opacity 0.2s; }
+        #timeline-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 3px; height: 44px; background: #cccccc; cursor: pointer; border-radius: 0; margin-top: -1px;}
+        #timeline-slider::-moz-range-thumb { width: 3x; height: 44px; background: #cccccc; cursor: pointer; border-radius: 0;}
         #speed-controls { display: flex; background: rgba(0,0,0,0.2); border-radius: 8px; margin-left: 10px; }
         body.theme-light #speed-controls { background: rgba(0,0,0,0.05); }
         .speed-btn { background: none; border: none; color: var(--text-color-light); padding: 4px 8px; cursor: pointer; font-size: 0.9em;}
@@ -164,7 +167,7 @@
         .help-actions { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
         .help-actions button { background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 5px; padding: 4px 8px; cursor: pointer; }
         .help-actions label { display: flex; align-items: center; gap: 5px; }
-        input[type="color"] { background-color: transparent; border: none; width: 30px; height: 30px; padding: 0; border-radius: 50%; cursor: pointer; }
+        input[type="color"] { background-color: transparent; border: none; width: 17px; height: 17px; padding: 0; cursor: pointer; }
         input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
         input[type="color"]::-webkit-color-swatch { border: 1px solid var(--border-color); border-radius: 50%; }
         #change-user-btn, #theme-selector { background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 5px; padding: 2px 6px; margin-left: 10px; cursor: pointer; }
@@ -202,48 +205,22 @@
         @keyframes spin { to { transform: rotate(360deg); } }
         .artboard.loading .artboard-content > * { display: none; }
         
-        #timeline-panel {
-            display: flex;
-            flex-direction: column;
-            width: 100%;
-            padding: 10px;
-            box-sizing: border-box;
-        }
-        #master-timeline-controls {
-            width: 100%;
-        }
-        .timeline-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 0 5px;
-        }
-        .timeline-title {
-            font-weight: bold;
-            font-size: 0.9em;
-            flex-shrink: 0;
-            color: var(--text-color-light);
-            margin-right: 10px;
-        }
-        #master-timeline-ruler {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-        }
+        #timeline-panel { display: flex; flex-direction: column; width: 100%; padding: 10px; box-sizing: border-box; }
+        #master-timeline-controls { width: 100%; }
+        .timeline-header { display: flex; align-items: center; gap: 10px; padding: 0 5px; }
+        .timeline-title { font-weight: bold; font-size: 0.9em; flex-shrink: 0; color: var(--text-color-light); margin-right: 10px; }
+        #master-timeline-ruler { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
     </style>
 </head>
 <body class="theme-dark">
-    <input type="file" id="file-input" accept="video/*,image/*,.zip,.gif" style="display: none;" multiple>
+    <input type="file" id="file-input" accept="video/*,image/*,.gif" style="display: none;" multiple>
     <input type="file" id="image-tool-input" accept="image/*" style="display:none;">
     <a id="frame-download-link" class="hidden"></a>
     
     <div id="app-container">
         <div id="main-content">
             <div id="drop-zone">
-                <p>Kéo & thả Video, Hình ảnh hoặc file ZIP vào đây<br>Hoặc bấm đúp / Ctrl+D để chọn file</p>
+                <p>Drag & drop Video, Image, or GIF files here<br>Or double-click / Ctrl+D to select files</p>
             </div>
 
             <div id="workspace-container" class="hidden">
@@ -254,7 +231,11 @@
             <div id="toolbar-container" class="hidden">
                 <div id="movable-controls">
                     <div id="tools-panel" class="glass-panel">
-                        <div id="toolbar-drag-handle" title="Giữ để đổi vị trí. Nhấp đôi để chuyển chế độ. Nhấp reset vị trí."></div>
+                        <div id="toolbar-drag-handle" title="Hold to move. Double-click to toggle mode. Click to reset position."></div>
+                        <button id="select-pan-btn" class="tool-btn" data-tool="select" title="Select (V) / Pan (H)">
+                            <svg id="select-tool-icon" viewBox="0 0 24 24" style="width: 20px; height: 20px;"><path d="M13.91 12.36L17 20.854l-2.818 1.026l-3.092-8.493l-4.172 3.155l1.49-14.909l10.726 10.463l-5.225.264Z" stroke="currentColor" fill="currentColor" stroke-width="1.5"/></svg>
+                            <svg id="pan-tool-icon" class="hidden" viewBox="0 0 24 24" style="width: 20px; height: 20px;"><path d="M18 11h-5V6h3l-4-4l-4 4h3v5H6V8l-4 4l4 4v-3h5v5H8l4 4l4-4h-3v-5h5v3l4-4l-4-4z" fill="currentColor"/></svg>
+                        </button>
                         <button class="tool-btn" data-tool="comment" title="Comment (Q)"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 14v-2h12v2H6zm0-3v-2h12v2H6zm0-3v-2h12v2H6z"/></svg></button>
                         <button class="tool-btn" data-tool="rect" title="Square (W)"><svg viewBox="0 0 24 24"><path d="M3 3v18h18V3H3zm16 16H5V5h14v14z"/></svg></button>
                         <button class="tool-btn" data-tool="circle" title="Circle (E)"><svg viewBox="0 0 24 24"><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg></button>
@@ -309,77 +290,74 @@
 
         <div id="right-panel" class="hidden">
             <div id="list-header">
-                <input type="search" id="search-input" placeholder="Tìm kiếm...">
+                <input type="search" id="search-input" placeholder="Search...">
             </div>
-            <div id="list-container"><ul id="annotation-list"></ul><button id="save-btn">Lưu file HTML</button></div>
+            <div id="list-container"><ul id="annotation-list"></ul><button id="save-btn">Save HTML File</button></div>
         </div>
     </div>
 
     <div id="help-modal" class="hidden">
         <div class="modal-content glass-panel">
             <button id="modal-close-btn">&times;</button>
-            <h3>Phím tắt & Trợ giúp</h3>
+            <h3>Shortcuts & Help</h3>
             <div class="shortcuts-guide">
                 <div>
-                    <h4>Chung</h4>
+                    <h4>General</h4>
                     <ul>
-                        <li><strong>V</strong><span>Công cụ Chọn/Di chuyển</span></li>
-                        <li><strong>Q,W,E,R,T,Y</strong><span>Chọn công cụ</span></li>
-                        <li><strong>Shift + Kéo vẽ</strong><span>Vẽ hình vuông/tròn/thẳng</span></li>
-                        <li><strong>Ctrl + D</strong><span>Mở / Thêm file</span></li>
-                        <li><strong>Ctrl + W</strong><span>Đóng Artboard đã chọn</span></li>
-                        <li><strong>Ctrl + S</strong><span>Lưu file</span></li>
-                        <li><strong>Ctrl + Shift + S</strong><span>Lưu thành file mới</span></li>
-                        <li><strong>Ctrl + C / V</strong><span>Copy / Dán</span></li>
-                        <li><strong>Ctrl + Z / Shift+Z</strong><span>Undo / Redo</span></li>
-                        <li><strong>Delete</strong><span>Xóa mục đã chọn</span></li>
-                        <li><strong>Ctrl + A</strong><span>Chọn toàn bộ Comment</span></li>
-                        <li><strong>Ctrl + F</strong><span>Tìm kiếm</span></li>
-                        <li><strong>Ctrl + H</strong><span>Ẩn/Hiện Panel</span></li>
+                        <li><strong>V</strong><span>Select Tool</span></li>
+                        <li><strong>H</strong><span>Hand Tool (Pan)</span></li>
+                        <li><strong>Q,W,E,R,T,Y</strong><span>Select Drawing Tool</span></li>
+                        <li><strong>Shift + Drag</strong><span>Draw Square/Circle/Straight Line</span></li>
+                        <li><strong>Ctrl + D</strong><span>Open / Add Files</span></li>
+                        <li><strong>Ctrl + W</strong><span>Close Selected Artboard</span></li>
+                        <li><strong>Ctrl + S</strong><span>Save File</span></li>
+                        <li><strong>Ctrl + Shift + S</strong><span>Save As New File</span></li>
+                        <li><strong>Ctrl+Alt+Shift+P</strong><span>Package Project (.zip)</span></li>
+                        <li><strong>Delete</strong><span>Delete Selected Item</span></li>
+                        <li><strong>Ctrl + H</strong><span>Toggle Panel</span></li>
                     </ul>
                 </div>
                 <div>
                     <h4>Workspace & Guide</h4>
                     <ul>
-                        <li><strong>Space+Kéo</strong><span>Di chuyển (Pan)</span></li>
-                        <li><strong>Ctrl + Lăn chuột</strong><span>Phóng to / Thu nhỏ</span></li>
-                        <li><strong>Ctrl + 1</strong><span>Fit Artboard vào Viewport</span></li>
-                        <li><strong>Ctrl + 0</strong><span>Reset góc nhìn</span></li>
-                        <li><strong>Ctrl + Alt + 0</strong><span>Vừa tất cả Artboard</span></li>
-                        <li><strong>Ctrl + G</strong><span>Sắp xếp Artboard</span></li>
-                        <li><strong>Ctrl + ;</strong><span>Hiện/Ẩn Guide</span></li>
-                        <li><strong>Ctrl + '</strong><span>Khóa/Mở khóa Guide</span></li>
-                        <li><strong>Alt + Kéo Comment</strong><span>Sao chép nhanh</span></li>
+                        <li><strong>Space + Drag</strong><span>Pan Workspace</span></li>
+                        <li><strong>Ctrl + Scroll</strong><span>Zoom In / Out</span></li>
+                        <li><strong>Ctrl + 1</strong><span>Fit Artboard to View</span></li>
+                        <li><strong>Ctrl + 0</strong><span>Reset View</span></li>
+                        <li><strong>Ctrl + Alt + 0</strong><span>Fit All Artboards</span></li>
+                        <li><strong>Ctrl + G</strong><span>Arrange Artboards</span></li>
+                        <li><strong>Ctrl + ;</strong><span>Show/Hide Guides</span></li>
+                        <li><strong>Ctrl + '</strong><span>Lock/Unlock Guides</span></li>
+                        <li><strong>Alt + Drag Comment</strong><span>Quick Duplicate</span></li>
                     </ul>
                 </div>
                  <div>
                     <h4>Video</h4>
                     <ul>
-                       <li><strong>Spacebar</strong><span>Play / Pause mục đã chọn</span></li>
-                       <li><strong>Ctrl + Spacebar</strong><span>Play / Pause tất cả</span></li>
-                       <li><strong>M / Ctrl+M</strong><span>Mute chọn / Mute tất cả</span></li>
-                       <li><strong>← / →</strong><span>Từng frame</span></li>
-                       <li><strong>Shift + ← / →</strong><span>10 frames</span></li>
-                       <li><strong>Alt + ← / →</strong><span>Qua lại giữa các comment</span></li>
-                       <li><strong>↑ / ↓</strong><span>Đầu / Cuối video</span></li>
-                       <li><strong>Ctrl + Mũi tên</strong><span>Áp dụng cho mọi video</span></li>
+                       <li><strong>Spacebar</strong><span>Play / Pause Selected</span></li>
+                       <li><strong>Ctrl + Spacebar</strong><span>Play / Pause All</span></li>
+                       <li><strong>M / Ctrl+M</strong><span>Mute Selected / Mute All</span></li>
+                       <li><strong>← / →</strong><span>Previous / Next Frame</span></li>
+                       <li><strong>Shift + ← / →</strong><span>Jump 10 Frames</span></li>
+                       <li><strong>Alt + ← / →</strong><span>Jump Between Comments</span></li>
+                       <li><strong>↑ / ↓</strong><span>Go to Start / End of Video</span></li>
+                       <li><strong>Ctrl + Arrow</strong><span>Apply to All Videos</span></li>
                    </ul>
                 </div>
             </div>
             <hr>
             <div class="help-actions">
-                <span><strong>User:</strong> <span id="current-user-display"></span> <button id="change-user-btn">[Sửa]</button></span>
-                 <label>Nền Artboard: <input type="color" id="artboard-bg-color-picker" title="Artboard Background Color"></label>
-                 <label>Màu Guide: <input type="color" id="guide-color-picker" title="Guide Color"></label>
-                <span><strong>Chế độ:</strong> 
+                <span><strong>User:</strong> <span id="current-user-display"></span> <button id="change-user-btn">[Edit]</button></span>
+                 <label>Artboard background color: <input type="color" id="artboard-bg-color-picker" title="Artboard Background Color"></label>
+                 <label>Guide line color: <input type="color" id="guide-color-picker" title="Guide Color"></label>
+                <span><strong>Theme:</strong> 
                     <select id="theme-selector">
-                        <option value="system">Tự động (System)</option>
-                        <option value="light">Sáng (Light)</option>
-                        <option value="dark">Tối (Dark)</option>
+                        <option value="system">System</option>
+                        <option value="light">Light</option>
+                        <option value="dark">Dark</option>
                     </select>
                 </span>
             </div>
-            <p><strong>Contact:</strong> tri.vu.trong@inbold.com</p>
         </div>
     </div>
     
@@ -388,8 +366,6 @@
 
     <script id="app-data" type="application/json"></script>
     <script src="https://cdn.jsdelivr.net/npm/gifler@0.1.0/gifler.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script>
         window.addEventListener('load', () => {
             const app = {
@@ -434,7 +410,7 @@
 
             function resetState() {
                 state = {
-                    annotations: [], artboards: [], currentTool: null, activeColor: '#E53935',
+                    annotations: [], artboards: [], currentTool: 'select', activeColor: '#E53935',
                     pendingImageData: { data: null, width: 0, height: 0 },
                     selectedAnnotationIndices: [], selectedArtboardIds: [], lastClickedAnnIndex: -1,
                     currentFileHandle: null, hasUnsavedChanges: false,
@@ -456,6 +432,7 @@
                 promptForUser();
                 initTheme();
                 autoLoadData();
+                selectTool('select');
 
                 app.mainContent.addEventListener('dblclick', (e) => { if (e.target === app.dropZone || e.target === app.workspaceContainer) app.fileInput.click(); });
                 window.addEventListener('dragover', e => { e.preventDefault(); document.body.classList.add('dragging'); });
@@ -477,7 +454,13 @@
                 window.addEventListener('mousemove', (e) => { if (!app.toolCursorIcon.classList.contains('hidden')) { app.toolCursorIcon.style.left = `${e.clientX}px`; app.toolCursorIcon.style.top = `${e.clientY}px`; } });
                 app.workspaceContainer.addEventListener('mousemove', updateCursorOnMouseMove);
 
-                document.querySelectorAll('.tool-btn').forEach(b => b.addEventListener('click', () => selectTool(b.dataset.tool)));
+                document.querySelectorAll('.tool-btn').forEach(b => {
+                    if (b.id !== 'select-pan-btn') {
+                        b.addEventListener('click', () => selectTool(b.dataset.tool));
+                    }
+                });
+                document.getElementById('select-pan-btn').addEventListener('click', toggleSelectPanTool);
+
                 document.getElementById('active-color-btn').addEventListener('click', (e) => { e.stopPropagation(); toggleColorPalette(); });
                 document.querySelectorAll('#color-palette-popup .color-btn').forEach(b => b.addEventListener('click', (e) => { e.stopPropagation(); selectColor(b); }));
                 selectColor(document.querySelector('#color-palette-popup .color-btn[data-color="#E53935"]'));
@@ -500,11 +483,11 @@
                 
                 const artboardBgColorPicker = document.getElementById('artboard-bg-color-picker');
                 artboardBgColorPicker.addEventListener('input', (e) => changeArtboardBg(e.target.value));
-                artboardBgColorPicker.addEventListener('change', (e) => markAsChanged());
+                artboardBgColorPicker.addEventListener('change', (e) => { changeArtboardBg(e.target.value, true); });
 
                 const guideColorPicker = document.getElementById('guide-color-picker');
                 guideColorPicker.addEventListener('input', (e) => changeGuideColor(e.target.value));
-                guideColorPicker.addEventListener('change', (e) => markAsChanged());
+                guideColorPicker.addEventListener('change', (e) => { changeGuideColor(e.target.value, true); });
 
                 window.addEventListener('click', (e) => { if (!e.target.closest('#color-picker')) document.getElementById('color-palette-popup').classList.add('hidden'); hideContextMenu(); });
                 
@@ -517,6 +500,7 @@
 
                 updateSaveButtonState();
                 applyToolbarState();
+                requestAnimationFrame(masterTimelineUpdater);
             }
 
             async function autoLoadData() {
@@ -548,17 +532,17 @@
                     
                     applyToolbarState();
                     applyRightPanelState();
+                    renderWorkspace(); 
                     applyArtboardBackgroundColor();
-                    renderWorkspace();
                     updateAnnotationList();
                     updateSaveButtonState();
                     global_updateTimeline();
 
-                } catch (err) { console.error("Error auto-loading embedded data:", err); alert('Lỗi khi tải dữ liệu. Hãy chắc chắn file video (nếu có) nằm cùng thư mục với file HTML.'); }
+                } catch (err) { console.error("Error auto-loading embedded data:", err); alert('Error loading embedded data. Please ensure any video files are in the same directory as the HTML file.'); }
             }
             
             async function handleDrop(e) { e.preventDefault(); document.body.classList.remove('dragging'); if (e.dataTransfer.files.length) handleFiles(Array.from(e.dataTransfer.files)); }
-            function handleFiles(files) { if (!files || files.length === 0) return; if (state.artboards.length === 0) { app.dropZone.classList.add('hidden'); app.workspaceContainer.classList.remove('hidden'); app.toolbarContainer.classList.remove('hidden'); app.rightPanel.classList.remove('hidden'); } const imageFiles = files.filter(f => f.type.startsWith('image/') && !f.name.endsWith('.gif')); const videoFiles = files.filter(f => f.type.startsWith('video/')); const gifFiles = files.filter(f => f.name.endsWith('.gif')); const zipFiles = files.filter(f => f.name.endsWith('.zip')); imageFiles.forEach(file => { const reader = new FileReader(); reader.onload = e => addArtboard(file.name, e.target.result, 'image', {width: 0, height: 0}); reader.readAsDataURL(file); }); videoFiles.forEach(file => { const url = URL.createObjectURL(file); addArtboard(file.name, url, 'video'); if (app.timelinePanel.classList.contains('hidden')) app.timelinePanel.classList.remove('hidden'); }); gifFiles.forEach(gifToVideo); zipFiles.forEach(handleZipFile); }
+            function handleFiles(files) { if (!files || files.length === 0) return; if (state.artboards.length === 0) { app.dropZone.classList.add('hidden'); app.workspaceContainer.classList.remove('hidden'); app.toolbarContainer.classList.remove('hidden'); app.rightPanel.classList.remove('hidden'); } const imageFiles = files.filter(f => f.type.startsWith('image/') && !f.name.endsWith('.gif')); const videoFiles = files.filter(f => f.type.startsWith('video/')); const gifFiles = files.filter(f => f.name.endsWith('.gif')); imageFiles.forEach(file => { const reader = new FileReader(); reader.onload = e => addArtboard(file.name, e.target.result, 'image', {width: 0, height: 0}); reader.readAsDataURL(file); }); videoFiles.forEach(file => { const url = URL.createObjectURL(file); addArtboard(file.name, url, 'video'); if (app.timelinePanel.classList.contains('hidden')) app.timelinePanel.classList.remove('hidden'); }); gifFiles.forEach(gifToVideo); }
             async function handlePaste(e) {
                 const activeEl = document.activeElement; if (activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'INPUT') return;
                 const imageItem = Array.from(e.clipboardData.items).find(item => item.type.startsWith('image/'));
@@ -580,7 +564,14 @@
                 const activeEl = document.activeElement;
                 if (['TEXTAREA', 'INPUT'].includes(activeEl.tagName) && activeEl.id !== 'search-input') return;
 
-                if (e.key.toLowerCase() === 'v' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); selectTool(null); return; }
+                if (e.ctrlKey && e.altKey && e.shiftKey && e.key.toLowerCase() === 'p') {
+                    e.preventDefault();
+                    packageProjectAsZip();
+                    return;
+                }
+                
+                if (e.key.toLowerCase() === 'v' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); selectTool('select'); return; }
+                if (e.key.toLowerCase() === 'h' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); selectTool('pan'); return; }
                 if (e.key === ' ' && !state.spacebarPressed) { e.preventDefault(); state.spacebarPressed = true; app.body.classList.add('spacebar-down'); if (state.artboards.some(b => b.type === 'video')) { global_togglePlayPause(!e.ctrlKey); } }
                 if (e.key.toLowerCase() === 'm' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); toggleMuteForSelected(); }
                 
@@ -635,11 +626,12 @@
             function onWorkspaceMouseDown(e) {
                 hideContextMenu();
                 if (e.button === 2) return;
-                if (state.spacebarPressed || e.button === 1) { startPanning(e); return; }
+                if (state.currentTool === 'pan' || state.spacebarPressed || e.button === 1) { startPanning(e); return; }
                 
                 const hitGuide = getHitGuide(e);
                 if(hitGuide) {
                     e.preventDefault(); e.stopPropagation();
+                    if (!hitGuide.guide.id) hitGuide.guide.id = crypto.randomUUID();
                     state.interaction.mode = 'draggingGuide';
                     state.interaction.target = hitGuide;
                     state.interaction.startData.set('guide', { position: hitGuide.guide.position });
@@ -691,6 +683,17 @@
                         state.guides.artboard[artboardId].push({ type, position, id: crypto.randomUUID() });
                         markAsChanged(); drawGuides();
                     }
+                } else if (state.interaction.mode === 'draggingGuide') {
+                    const { scope, guide, artboardId } = state.interaction.target;
+                    const startData = state.interaction.startData.get('guide');
+                    if (startData && startData.position !== guide.position) {
+                        historyManager.execute({
+                            type: 'MOVE_GUIDE', guideId: guide.id, scope: scope, artboardId: artboardId,
+                            before: startData.position, after: guide.position,
+                            do: function(action) { const g = findGuide(action.guideId); if (g) g.position = action.after; drawGuides(); },
+                            undo: function(action) { const g = findGuide(action.guideId); if (g) g.position = action.before; drawGuides(); }
+                        });
+                    }
                 }
                 onCanvasMouseUp(e); state.interaction.mode = 'none'; state.interaction.target = null;
             }
@@ -706,23 +709,68 @@
             }
             function updateArtboardSelection() { document.querySelectorAll('.artboard').forEach(el => el.classList.toggle('selected', state.selectedArtboardIds.includes(el.dataset.id))); }
 
-            const selectTool = tool => {
-                state.currentTool = state.currentTool === tool ? null : tool;
-                document.querySelectorAll('.tool-btn').forEach(b => b.classList.toggle('active', b.dataset.tool === state.currentTool));
-                if (state.currentTool) { const toolBtn = document.querySelector(`.tool-btn[data-tool='${state.currentTool}']`); if (toolBtn) { app.toolCursorIcon.innerHTML = ''; app.toolCursorIcon.appendChild(toolBtn.querySelector('svg').cloneNode(true)); } } 
+            function toggleSelectPanTool() {
+                const newTool = state.currentTool === 'select' ? 'pan' : 'select';
+                selectTool(newTool);
+            }
+            
+            function selectTool(tool) {
+                state.currentTool = tool;
+                document.querySelectorAll('.tool-btn').forEach(b => {
+                    if (b.id !== 'select-pan-btn') {
+                        b.classList.toggle('active', b.dataset.tool === state.currentTool);
+                    }
+                });
+                const toggleBtn = document.getElementById('select-pan-btn');
+                const selectIcon = document.getElementById('select-tool-icon');
+                const panIcon = document.getElementById('pan-tool-icon');
+                const isSelectPan = ['select', 'pan'].includes(state.currentTool);
+                toggleBtn.classList.toggle('active', isSelectPan);
+                if (isSelectPan) {
+                    selectIcon.classList.toggle('hidden', state.currentTool === 'pan');
+                    panIcon.classList.toggle('hidden', state.currentTool === 'select');
+                }
+                app.workspaceContainer.classList.toggle('hand-tool', state.currentTool === 'pan');
+                updateCursorOnMouseMove({target: app.workspaceContainer});
             };
+
             function updateCursorOnMouseMove(e) {
                 if (state.interaction.mode !== 'none' || state.spacebarPressed) return;
+                
+                if (state.currentTool === 'pan') {
+                    app.workspaceContainer.style.cursor = 'grab';
+                    app.toolCursorIcon.classList.add('hidden');
+                    return;
+                }
                 const hitGuide = getHitGuide(e);
                 if(hitGuide) { app.workspaceContainer.style.cursor = hitGuide.guide.type === 'horizontal' ? 'row-resize' : 'col-resize'; app.toolCursorIcon.classList.add('hidden'); return; }
+                
                 const canvas = e.target;
-                if (canvas.classList.contains('interaction-canvas')) {
+                if (canvas && canvas.classList.contains('interaction-canvas')) {
                     const artboardEl = canvas.closest('.artboard');
                     if (artboardEl) {
                         const artboard = state.artboards.find(b => b.id === artboardEl.dataset.id);
-                        if (artboard) { const pos = getMousePosOnArtboard(e, artboard); const hit = getHitAnnotation(pos, artboard.id); if (canvas) { canvas.style.cursor = (hit && hit.cursor) ? hit.cursor : 'default'; } if (state.currentTool && (!hit || hit.cursor === 'default')) { app.toolCursorIcon.classList.remove('hidden'); } else { app.toolCursorIcon.classList.add('hidden'); } }
+                        if (artboard) { 
+                            const pos = getMousePosOnArtboard(e, artboard); 
+                            const hit = getHitAnnotation(pos, artboard.id); 
+                            canvas.style.cursor = (hit && hit.cursor) ? hit.cursor : 'default'; 
+                            const isDrawingTool = state.currentTool && !['select', 'pan'].includes(state.currentTool);
+                            if (isDrawingTool && (!hit || hit.cursor === 'default')) { 
+                                app.toolCursorIcon.classList.remove('hidden');
+                                const toolBtn = document.querySelector(`.tool-btn[data-tool='${state.currentTool}']`);
+                                if (toolBtn) {
+                                    app.toolCursorIcon.innerHTML = '';
+                                    app.toolCursorIcon.appendChild(toolBtn.querySelector('svg').cloneNode(true));
+                                }
+                            } else { 
+                                app.toolCursorIcon.classList.add('hidden'); 
+                            } 
+                        }
                     }
-                } else { app.workspaceContainer.style.cursor = 'grab'; app.toolCursorIcon.classList.add('hidden'); }
+                } else { 
+                    app.workspaceContainer.style.cursor = state.currentTool === 'pan' ? 'grab' : 'default'; 
+                    app.toolCursorIcon.classList.add('hidden');
+                }
             }
 
             function addArtboard(name, src, type, size = {width:0, height:0}, options = {}) {
@@ -747,7 +795,17 @@
 
                 const createArtboardObject = (id, name, src, type, size, isLoading) => {
                     const artboard = { id, name, type, src, x: 50, y: 50, width: size.width, height: size.height, originalWidth: size.width, originalHeight: size.height, scale: 1, isLoading };
-                    if (type === 'video') { artboard.frameBackups = {}; artboard.videoFailedToLoad = false; }
+                    if (type === 'video') { 
+                        artboard.frameBackups = {}; 
+                        artboard.videoFailedToLoad = false;
+                        if (!isLoading && artboard.originalHeight > 0) {
+                            const targetHeight = 720;
+                            const aspectRatio = artboard.originalWidth / artboard.originalHeight;
+                            artboard.height = targetHeight;
+                            artboard.width = targetHeight * aspectRatio;
+                            artboard.scale = artboard.height / artboard.originalHeight;
+                        }
+                    }
                     state.guides.artboard[artboard.id] = [];
                     state.artboards.push(artboard);
                     rearrangeArtboards();
@@ -763,7 +821,7 @@
                 state.artboards.forEach(artboard => {
                     const artboardEl = document.createElement('div'); artboardEl.className = 'artboard'; artboardEl.dataset.id = artboard.id;
                     artboardEl.classList.toggle('loading', !!artboard.isLoading);
-                    const controlsHeight = artboard.type === 'video' ? 24 : 0;
+                    const controlsHeight = artboard.type === 'video' ? 32 : 0;
                     artboardEl.style.cssText = `left: ${artboard.x}px; top: ${artboard.y}px; width: ${artboard.width}px; height: ${artboard.height + 30 + controlsHeight}px;`;
                     artboardEl.classList.toggle('selected', state.selectedArtboardIds.includes(artboard.id));
                     let contentHTML = ''; let videoControlsHTML = '';
@@ -776,7 +834,7 @@
                         if(artboard.type === 'video') videoControlsHTML = `<div class="artboard-video-controls"><button class="vid-play-btn" title="Play/Pause">▶</button><button class="vid-mute-btn" title="Mute/Unmute">${MUTE_ICON_SVG}</button><input type="text" class="time-input vid-time" value="00:00:00:00"><div class="vid-timeline-wrapper"><div class="vid-timeline-bg"></div><canvas class="vid-timeline-markers"></canvas><input type="range" class="vid-timeline" value="0" step="0.01"></div></div>`;
                     }
                     const dimensionsDisplay = `<span class="artboard-info">(${artboard.originalWidth}x${artboard.originalHeight})</span>`;
-                    const headerToolsHTML = `<div class="artboard-header-tools"><button class="header-icon-btn fit-view-btn" title="Fit to View (Ctrl+1)"><svg viewBox="0 0 24 24"><path d="M15 3h6v6l-2-2-4 4-2-2 4-4-2-2zM9 21H3v-6l2 2 4-4 2 2-4 4 2 2z"/></svg></button><button class="artboard-close-btn" title="Xóa Artboard (Delete)">&times;</button></div>`;
+                    const headerToolsHTML = `<div class="artboard-header-tools"><button class="header-icon-btn fit-view-btn" title="Fit to View (Ctrl+1)"><svg viewBox="0 0 24 24"><path d="M15 3h6v6l-2-2-4 4-2-2 4-4-2-2zM9 21H3v-6l2 2 4-4 2 2-4 4 2 2z"/></svg></button><button class="artboard-close-btn" title="Close Artboard (Ctrl+W)">&times;</button></div>`;
                     let transparencyToggleHTML = ''; if (transparentFileTypes.some(ext => artboard.name.toLowerCase().endsWith(ext))) { transparencyToggleHTML = `<button class="header-icon-btn transparency-btn" title="Toggle Transparency Guide"><svg viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M0 0h8v8H0V0zm8 8h8v8H8V8z" clip-rule="evenodd"></path></svg></button>`; }
                     artboardEl.innerHTML = `
                         <div class="artboard-header"><div class="artboard-title-container" title="${artboard.name} ${artboard.originalWidth}x${artboard.originalHeight}">${transparencyToggleHTML}<span class="artboard-title">${artboard.name}</span><span class="artboard-info-wrapper">${dimensionsDisplay}</span></div>${headerToolsHTML}</div>
@@ -784,10 +842,26 @@
                         ${videoControlsHTML}
                         <div class="artboard-resizer" title="Resize (Double-click to reset)"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10.0002 12.0001L12.0002 10.0001" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M6.00009 16.0001L16.0001 6.00009" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M14.0002 12.0001L12.0002 14.0001" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>`;
                     app.workspace.appendChild(artboardEl);
-                    artboardEl.querySelector('.artboard-content').style.backgroundColor = state.layout.artboardBgColor;
                     artboardEl.addEventListener('mousedown', e => { if(e.target === artboardEl) selectArtboard(artboard.id, e.shiftKey || e.ctrlKey || e.metaKey); });
                     artboardEl.addEventListener('contextmenu', e => onArtboardContextMenu(e, artboard.id));
-                    const transparencyBtn = artboardEl.querySelector('.transparency-btn'); if(transparencyBtn) { transparencyBtn.addEventListener('click', (e) => { e.stopPropagation(); artboardEl.querySelector('.artboard-content').classList.toggle('transparent-guide'); }); }
+                    
+                    const contentEl = artboardEl.querySelector('.artboard-content');
+                    if(contentEl && !contentEl.classList.contains('transparent-guide')) {
+                        contentEl.style.backgroundColor = state.layout.artboardBgColor;
+                    }
+
+                    const transparencyBtn = artboardEl.querySelector('.transparency-btn'); 
+                    if(transparencyBtn && contentEl) { 
+                        transparencyBtn.addEventListener('click', (e) => { 
+                            e.stopPropagation();
+                            contentEl.classList.toggle('transparent-guide');
+                            if(contentEl.classList.contains('transparent-guide')) {
+                                contentEl.style.backgroundColor = '';
+                            } else {
+                                contentEl.style.backgroundColor = state.layout.artboardBgColor;
+                            }
+                        }); 
+                    }
                     artboardEl.querySelector('.artboard-header').addEventListener('mousedown', e => onArtboardHeaderMouseDown(e, artboard.id));
                     artboardEl.querySelector('.fit-view-btn').addEventListener('click', () => fitArtboardToView(artboard.id));
                     artboardEl.querySelector('.artboard-close-btn').addEventListener('click', () => deleteSelectedArtboards());
@@ -804,12 +878,59 @@
                 redrawAllAnnotations(); 
                 drawGuides();
             }
-            
+
+            function handleVideoRelink(e, artboardId) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const file = e.dataTransfer.files[0];
+                if (!file || !file.type.startsWith('video/')) return;
+                
+                const artboard = state.artboards.find(b => b.id === artboardId);
+                if (!artboard) return;
+
+                const relink = () => {
+                    const artboardEl = document.querySelector(`.artboard[data-id="${artboardId}"]`);
+                    const videoEl = artboardEl.querySelector('video');
+                    
+                    const url = URL.createObjectURL(file);
+                    artboard.src = url;
+                    artboard.name = file.name;
+                    artboard.videoFailedToLoad = false;
+                    
+                    videoEl.src = url;
+                    videoEl.load();
+                    videoEl.classList.remove('hidden');
+                    
+                    artboardEl.classList.remove('video-missing');
+                    
+                    renderWorkspace();
+                    markAsChanged();
+                };
+
+                if (file.name !== artboard.name) {
+                    if (confirm(`Relink with "${file.name}"? This will replace the original reference to "${artboard.name}".`)) {
+                        relink();
+                    }
+                } else {
+                    relink();
+                }
+            }
+
             function initVideoArtboardControls(artboardEl, artboard) {
                 const video = artboardEl.querySelector('video');
                 if(!video) return;
                 artboard.videoFailedToLoad = false;
-                video.onerror = () => { artboard.videoFailedToLoad = true; video.classList.add('hidden'); redrawArtboardAnnotations(artboard.id); };
+                
+                video.onerror = () => { 
+                    artboard.videoFailedToLoad = true; 
+                    artboardEl.classList.add('video-missing');
+                    artboardEl.addEventListener('dragover', e => e.preventDefault());
+                    artboardEl.addEventListener('drop', e => handleVideoRelink(e, artboard.id));
+                    video.classList.add('hidden'); 
+                    redrawArtboardAnnotations(artboard.id); 
+                };
+
                 const playBtn = artboardEl.querySelector('.vid-play-btn'); const muteBtn = artboardEl.querySelector('.vid-mute-btn'); const timeInput = artboardEl.querySelector('.vid-time'); const timeline = artboardEl.querySelector('.vid-timeline');
                 video.muted = state.isGlobalMuted; muteBtn.innerHTML = video.muted ? MUTE_ICON_SVG : UNMUTE_ICON_SVG;
                 playBtn.addEventListener('click', e => { e.stopPropagation(); video.paused ? video.play() : video.pause(); });
@@ -821,7 +942,7 @@
                 timeline.addEventListener('input', e => { e.stopPropagation(); video.currentTime = parseFloat(timeline.value); redrawArtboardAnnotations(artboard.id); });
                 initTimeInput(timeInput, () => video.currentTime, (newTime) => {video.currentTime = newTime; redrawArtboardAnnotations(artboard.id);}, () => video.duration);
             }
-
+            
             async function captureFrame(videoEl) { const canvas = document.createElement('canvas'); canvas.width = videoEl.videoWidth; canvas.height = videoEl.videoHeight; const ctx = canvas.getContext('2d'); ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height); return canvas.toDataURL('image/webp', 0.5); }
             async function saveVideoFrame(artboardId) {
                 const artboard = state.artboards.find(b => b.id === artboardId);
@@ -838,7 +959,7 @@
                 if (state.selectedArtboardIds.length === 0) return;
                  const artboardsToRemove = state.artboards.filter(b => state.selectedArtboardIds.includes(b.id));
                  const annotationsOnArtboards = state.annotations.filter(a => state.selectedArtboardIds.includes(a.artboardId));
-                if ((artboardsToRemove.length > 0 || annotationsOnArtboards.length > 0) && !confirm(`Xóa ${artboardsToRemove.length} artboard(s) và ${annotationsOnArtboards.length} comment trên đó?`)) return;
+                if ((artboardsToRemove.length > 0 || annotationsOnArtboards.length > 0) && !confirm(`Delete ${artboardsToRemove.length} artboard(s) and ${annotationsOnArtboards.length} comments on them?`)) return;
                 historyManager.execute({ type: 'DELETE_ARTBOARDS', artboards: JSON.parse(JSON.stringify(artboardsToRemove)), annotations: JSON.parse(JSON.stringify(annotationsOnArtboards)),
                     do: () => { artboardsToRemove.forEach(board => { if(board.type === 'video' && board.src.startsWith('blob:')) URL.revokeObjectURL(board.src); delete state.guides.artboard[board.id]; }); state.artboards = state.artboards.filter(b => !state.selectedArtboardIds.includes(b.id)); state.annotations = state.annotations.filter(a => !state.selectedArtboardIds.includes(a.artboardId)); state.selectedArtboardIds = []; rearrangeArtboards(); updateAnnotationList(); global_updateTimeline(); },
                     undo: (action) => { state.artboards.push(...action.artboards); state.annotations.push(...action.annotations); action.artboards.forEach(b => state.guides.artboard[b.id] = state.guides.artboard[b.id] || [] ); state.selectedArtboardIds = action.artboards.map(b => b.id); rearrangeArtboards(); updateAnnotationList(); global_updateTimeline(); }
@@ -886,7 +1007,7 @@
                 const li = document.createElement('li'); li.dataset.id = ann.id; li.dataset.index = index;
                 li.classList.toggle('selected', state.selectedAnnotationIndices.includes(index)); li.classList.toggle('completed', ann.completed); li.classList.toggle('reply-item', !!ann.parentId);
                 const contentHtml = ann.text ? `<p class="content">${ann.text.replace(/\n/g, '<br>')}</p>` : '';
-                const headerToolsHtml = `<button class="icon-btn" title="Xóa"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button><button class="icon-btn" title="Sao chép Text"><svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg></button><button class="icon-btn" title="Trả lời"><svg viewBox="0 0 24 24"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg></button><input type="checkbox" class="complete-checkbox" ${ann.completed ? 'checked' : ''}>`;
+                const headerToolsHtml = `<button class="icon-btn" title="Delete"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button><button class="icon-btn" title="Copy Text"><svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg></button><button class="icon-btn" title="Reply"><svg viewBox="0 0 24 24"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg></button><input type="checkbox" class="complete-checkbox" ${ann.completed ? 'checked' : ''}>`;
                 const typeDisplay = ann.type === 'reply' ? 'reply' : (ann.type === 'comment' ? 'cmt' : ann.type);
                 const userDisplay = ann.user ? ` - <strong>${ann.user}</strong>` : ''; let timeInfo = ann.videoTime !== undefined ? ` @${formatTime(ann.videoTime)}` : '';
                 li.innerHTML = `<div class="header"><span class="time">${index + 1}${userDisplay} - ${typeDisplay}${timeInfo}</span><div class="header-tools">${headerToolsHtml}</div></div>${contentHtml}`;
@@ -909,9 +1030,9 @@
                 });
                 li.addEventListener('dblclick', () => makeListItemEditable(li, index));
                 li.querySelector('.complete-checkbox').addEventListener('click', e => { e.stopPropagation(); ann.completed = e.target.checked; li.classList.toggle('completed', ann.completed); markAsChanged(); redrawAllAnnotations(); });
-                li.querySelector('.icon-btn[title="Xóa"]').addEventListener('click', e => { e.stopPropagation(); deleteAnnotationsByIndices([index]); });
-                li.querySelector('.icon-btn[title="Sao chép Text"]').addEventListener('click', e => { e.stopPropagation(); if (ann.text) navigator.clipboard.writeText(ann.text); });
-                li.querySelector('.icon-btn[title="Trả lời"]').addEventListener('click', e => { e.stopPropagation(); addAnnotation({ type: 'reply', artboardId: ann.artboardId, text: '', parentId: ann.id }, true); });
+                li.querySelector('.icon-btn[title="Delete"]').addEventListener('click', e => { e.stopPropagation(); deleteAnnotationsByIndices([index]); });
+                li.querySelector('.icon-btn[title="Copy Text"]').addEventListener('click', e => { e.stopPropagation(); if (ann.text) navigator.clipboard.writeText(ann.text); });
+                li.querySelector('.icon-btn[title="Reply"]').addEventListener('click', e => { e.stopPropagation(); addAnnotation({ type: 'reply', artboardId: ann.artboardId, text: '', parentId: ann.id }, true); });
                 return li;
             }
 
@@ -935,19 +1056,22 @@
                     groupAnnotations.filter(a => !a.parentId || !annotationMap.has(a.parentId)).forEach(ann => renderThread(ann, 0));
                     header.addEventListener('click', () => { header.classList.toggle('collapsed'); annotationItems.forEach(item => item.classList.toggle('hidden')); });
                 };
-                state.artboards.forEach(board => renderGroup(board.id, board.name)); renderGroup('workspace', 'Chưa gán');
+                state.artboards.forEach(board => renderGroup(board.id, board.name)); renderGroup('workspace', 'Ungrouped');
                 app.annotationList.scrollTop = listScrollTop;
             }
 
             function onCanvasMouseDown(e, artboardId) {
                 if (e.button === 2) return;
-                if (state.spacebarPressed || e.button === 1) { startPanning(e); return; }
+                if (state.currentTool === 'pan' || state.spacebarPressed || e.button === 1) { startPanning(e); return; }
                 e.stopPropagation();
+                
                 const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return;
                 selectArtboard(artboardId, e.shiftKey || e.ctrlKey || e.metaKey);
                 if (state.interaction.mode !== 'none') return; 
+                
                 const pos = getMousePosOnArtboard(e, artboard); state.interaction.startPos = pos;
                 const hit = getHitAnnotation(pos, artboardId);
+                
                 if (hit.handle) {
                     state.interaction.mode = 'resizing'; state.interaction.target = { index: hit.index, handle: hit.handle, artboardId };
                     const ann = state.annotations[hit.index]; state.interaction.startData.set(ann.id, JSON.parse(JSON.stringify(ann.data)));
@@ -961,7 +1085,7 @@
                     if (e.altKey) { copyAnnotations(); pasteAnnotations(); return; }
                     state.interaction.mode = 'dragging'; state.interaction.target = { artboardId }; state.interaction.startData.clear();
                     state.selectedAnnotationIndices.forEach(index => { const ann = state.annotations[index]; state.interaction.startData.set(ann.id, JSON.parse(JSON.stringify(ann.data))); });
-                } else if (state.currentTool) {
+                } else if (state.currentTool && state.currentTool !== 'select' && state.currentTool !== 'pan') {
                     if (state.currentTool === 'comment') { addAnnotation({ type: 'comment', artboardId, data: pos, color: state.activeColor, text: '' }, true); }
                     else if (state.currentTool === 'image') { state.interaction.mode = 'placingImage'; state.interaction.target = { artboardId }; app.imageToolInput.click(); }
                     else { state.interaction.mode = 'drawing'; state.interaction.target = { artboardId }; }
@@ -1047,25 +1171,26 @@
                 canvas.height = height;
 
                 const duration = parseFloat(app.timelineSlider.max) || 100;
+                const isLightTheme = app.body.classList.contains('theme-light');
 
                 ctx.clearRect(0, 0, width, height);
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                ctx.strokeStyle = isLightTheme ? 'rgba(0, 0, 0, 0.3)' : 'rgba(255, 255, 255, 0.4)';
+                ctx.fillStyle = isLightTheme ? 'rgba(0, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.6)';
                 ctx.font = '10px sans-serif';
                 ctx.textBaseline = 'top';
 
-                const intervals = [1, 5, 10, 30, 60, 300, 600]; // seconds
+                const intervals = [1, 5, 10, 30, 60, 300, 600];
                 let majorTickSpacing = 1;
                 for (const interval of intervals) {
-                    if (duration / interval < (width / 80)) { // Aim for ticks every ~80px
-                        majorTickSpacing = interval;
+                    majorTickSpacing = interval;
+                    if (duration / interval < (width / 80)) { 
                         break;
                     }
                 }
 
                 for (let i = 0; i <= duration; i += majorTickSpacing / 5) {
                     const x = (i / duration) * width;
-                    const isMajorTick = i % majorTickSpacing < (majorTickSpacing / 5);
+                    const isMajorTick = (i % majorTickSpacing) < (majorTickSpacing / 10);
 
                     ctx.beginPath();
                     ctx.moveTo(x, height);
@@ -1079,50 +1204,53 @@
                 }
             }
             
+            function masterTimelineUpdater() {
+                const videos = Array.from(document.querySelectorAll('#workspace video'));
+                const playingVideos = videos.filter(v => !v.paused);
+                let videoToFollow = null;
+
+                if (playingVideos.length > 0) {
+                    videoToFollow = playingVideos[0];
+                } else if (state.selectedArtboardIds.length > 0) {
+                    const selectedVideo = document.querySelector(`.artboard[data-id="${state.selectedArtboardIds[0]}"] video`);
+                    if (selectedVideo) videoToFollow = selectedVideo;
+                } 
+                
+                if (!videoToFollow && videos.length > 0) {
+                    videoToFollow = videos[0];
+                }
+
+                if (videoToFollow) {
+                    if(!app.timelineSlider.matches(':active')) {
+                        app.timelineSlider.value = videoToFollow.currentTime;
+                    }
+                    if (document.activeElement !== app.timeDisplay) {
+                        app.timeDisplay.value = formatTimeHHMMSSFF(videoToFollow.currentTime, videoToFollow.duration);
+                    }
+                }
+                requestAnimationFrame(masterTimelineUpdater);
+            }
+
             function global_updateTimeline() { 
                 let maxDuration = 0; 
-                let primaryVideo = null; 
                 const videos = Array.from(document.querySelectorAll('#workspace video')); 
-                
                 if (videos.length === 0) { 
                     app.timelinePanel.classList.add('hidden'); 
                     return; 
                 } 
                 app.timelinePanel.classList.remove('hidden');
-
-                let firstDuration = -1; 
-                state.areVideosInSync = true; 
                 videos.forEach(v => { 
-                    if (isFinite(v.duration)) { 
-                        if (firstDuration === -1) firstDuration = v.duration; 
-                        else if (Math.abs(firstDuration - v.duration) > 0.1) state.areVideosInSync = false; 
-                        if (v.duration > maxDuration) { 
-                            maxDuration = v.duration; 
-                            primaryVideo = v; 
-                        } 
+                    if (isFinite(v.duration) && v.duration > maxDuration) { 
+                        maxDuration = v.duration; 
                     } 
                 }); 
                 app.timelineSlider.max = maxDuration > 0 ? maxDuration : 100; 
-                
                 if (app.timelineSlider.oninput) {
                     app.timelineSlider.oninput = null;
                 }
-                
                 app.timelineSlider.oninput = () => {
                     global_seekTo(parseFloat(app.timelineSlider.value));
                 };
-
-                if(primaryVideo && !primaryVideo.timeUpdateAttached) { 
-                    primaryVideo.addEventListener('timeupdate', () => { 
-                        if(!app.timelineSlider.matches(':active')) { 
-                            app.timelineSlider.value = primaryVideo.currentTime; 
-                        } 
-                        if (document.activeElement !== app.timeDisplay) { 
-                            app.timeDisplay.value = formatTimeHHMMSSFF(primaryVideo.currentTime, primaryVideo.duration); 
-                        } 
-                    }); 
-                    primaryVideo.timeUpdateAttached = true; 
-                }
                 drawMasterRuler();
             }
             const formatTime = (secs) => { if (isNaN(secs)) return '00:00'; const s = Math.floor(secs % 60); const m = Math.floor((secs / 60) % 60); return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; };
@@ -1142,20 +1270,20 @@
                 inputEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); inputEl.blur(); } else if (e.key === 'Escape') { inputEl.value = originalValue; inputEl.blur(); } });
             }
 
-            function promptForUser() { let user = localStorage.getItem('qcToolUser'); if (!user || user.trim() === '') { user = prompt('Vui lòng nhập tên của bạn (tối đa 16 ký tự):', user || ''); user = user ? user.substring(0, 16) : "Anonymous"; } state.currentUser = user.trim(); localStorage.setItem('qcToolUser', state.currentUser); updateUserDisplay(); }
-            function changeUser() { let user = prompt('Nhập tên mới (tối đa 16 ký tự):', state.currentUser); if (user && user.trim() !== '') { state.currentUser = user.trim().substring(0, 16); localStorage.setItem('qcToolUser', state.currentUser); updateUserDisplay(); } }
+            function promptForUser() { let user = localStorage.getItem('qcToolUser'); if (!user || user.trim() === '') { user = prompt('Please enter your name (max 16 characters):', user || ''); user = user ? user.substring(0, 16) : "Anonymous"; } state.currentUser = user.trim(); localStorage.setItem('qcToolUser', state.currentUser); updateUserDisplay(); }
+            function changeUser() { let user = prompt('Enter new name (max 16 characters):', state.currentUser); if (user && user.trim() !== '') { state.currentUser = user.trim().substring(0, 16); localStorage.setItem('qcToolUser', state.currentUser); updateUserDisplay(); } }
             function updateUserDisplay() { document.getElementById('current-user-display').textContent = state.currentUser; }
-            function applyTheme(theme) { app.body.classList.remove('theme-light', 'theme-dark'); if (theme === 'light') app.body.classList.add('theme-light'); else if (theme === 'dark') app.body.classList.add('theme-dark'); else { if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) app.body.classList.add('theme-light'); else app.body.classList.add('theme-dark'); } }
+            function applyTheme(theme) { app.body.classList.remove('theme-light', 'theme-dark'); if (theme === 'light') app.body.classList.add('theme-light'); else if (theme === 'dark') app.body.classList.add('theme-dark'); else { if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) app.body.classList.add('theme-light'); else app.body.classList.add('theme-dark'); } drawMasterRuler(); }
             function setTheme(theme) { applyTheme(theme); localStorage.setItem('qcToolTheme', theme); document.getElementById('theme-selector').value = theme; }
-            function initTheme() { const savedTheme = localStorage.getItem('qcToolTheme') || 'system'; setTheme(savedTheme); window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => { const currentSetting = localStorage.getItem('qcToolTheme') || 'system'; if (currentSetting === 'system') applyTheme('system'); }); document.getElementById('theme-selector').addEventListener('change', e => setTheme(e.target.value)); }
+            function initTheme() { const savedTheme = localStorage.getItem('qcToolTheme') || 'dark'; setTheme(savedTheme); window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => { const currentSetting = localStorage.getItem('qcToolTheme') || 'system'; if (currentSetting === 'system') applyTheme('system'); }); document.getElementById('theme-selector').addEventListener('change', e => setTheme(e.target.value)); }
             function initPanelResize(e) { e.preventDefault(); const startX = e.clientX; const startWidth = app.rightPanel.offsetWidth; const doResize = (e) => { const newWidth = startWidth - (e.clientX - startX); if (newWidth > 250 && newWidth < 800) { app.rightPanel.style.flexBasis = newWidth + 'px'; } }; const stopResize = () => { window.removeEventListener('mousemove', doResize); window.removeEventListener('mouseup', stopResize); }; window.addEventListener('mousemove', doResize); window.addEventListener('mouseup', stopResize); }
             const selectColor = btn => { state.activeColor = btn.dataset.color; document.getElementById('active-color-btn').style.backgroundColor = state.activeColor; document.getElementById('color-palette-popup').classList.add('hidden'); };
             const toggleColorPalette = () => document.getElementById('color-palette-popup').classList.toggle('hidden');
             function markAsChanged() { if (!state.hasUnsavedChanges) { state.hasUnsavedChanges = true; updateSaveButtonState(); } triggerAutoSave(); }
-            function updateSaveButtonState() { const count = state.annotations.length; const countText = count > 0 ? ` (${count} cmt)` : ''; if(app.saveBtn.classList.contains('saving')) return; if (state.hasUnsavedChanges) { app.saveBtn.textContent = `Chưa lưu${countText}`; app.saveBtn.classList.add('unsaved'); } else { app.saveBtn.classList.remove('unsaved'); app.saveBtn.textContent = state.currentFileHandle ? `Đã lưu${countText}` : `Lưu file HTML${countText}`; } }
+            function updateSaveButtonState() { const count = state.annotations.length; const countText = count > 0 ? ` (${count} cmt)` : ''; if(app.saveBtn.classList.contains('saving')) return; if (state.hasUnsavedChanges) { app.saveBtn.textContent = `Unsaved${countText}`; app.saveBtn.classList.add('unsaved'); } else { app.saveBtn.classList.remove('unsaved'); app.saveBtn.textContent = state.currentFileHandle ? `Saved${countText}` : `Save HTML File${countText}`; } }
             
-            async function saveStateSilently() { if (!state.currentFileHandle) return; const htmlContent = await generateAnnotatedHTML(); try { const writable = await state.currentFileHandle.createWritable(); await writable.write(htmlContent); await writable.close(); state.hasUnsavedChanges = false; app.saveBtn.classList.remove('saving'); updateSaveButtonState(); } catch (err) { console.error('Auto-save failed:', err); app.saveBtn.classList.remove('saving', 'unsaved'); app.saveBtn.textContent = 'Lỗi Lưu'; } }
-            function triggerAutoSave() { clearTimeout(autoSaveTimeout); if (!state.currentFileHandle) return; autoSaveTimeout = setTimeout(() => { app.saveBtn.classList.remove('unsaved'); app.saveBtn.classList.add('saving'); app.saveBtn.textContent = 'Đang lưu...'; saveStateSilently(); }, 2000); }
+            async function saveStateSilently() { if (!state.currentFileHandle) return; const htmlContent = await generateAnnotatedHTML(); try { const writable = await state.currentFileHandle.createWritable(); await writable.write(htmlContent); await writable.close(); state.hasUnsavedChanges = false; app.saveBtn.classList.remove('saving'); updateSaveButtonState(); } catch (err) { console.error('Auto-save failed:', err); app.saveBtn.classList.remove('saving', 'unsaved'); app.saveBtn.textContent = 'Save Error'; } }
+            function triggerAutoSave() { clearTimeout(autoSaveTimeout); if (!state.currentFileHandle) return; autoSaveTimeout = setTimeout(() => { app.saveBtn.classList.remove('unsaved'); app.saveBtn.classList.add('saving'); app.saveBtn.textContent = 'Saving...'; saveStateSilently(); }, 2000); }
 
             async function generateAnnotatedHTML() {
                 const dataToSave = {
@@ -1247,9 +1375,9 @@
                 state.view.offsetY = (container.offsetHeight - artboardHeight * newScale) / 2 - artboard.y * newScale;
                 updateWorkspaceTransform();
             }
-            function fitAllArtboardsToView() { if (state.artboards.length === 0) return; const PADDING = 50; let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity; state.artboards.forEach(b => { const artboardEl = document.querySelector(`.artboard[data-id="${b.id}"]`); const height = artboardEl ? artboardEl.offsetHeight : (b.height + 30 + (b.type==='video' ? 24:0)); minX = Math.min(minX, b.x); minY = Math.min(minY, b.y); maxX = Math.max(maxX, b.x + b.width); maxY = Math.max(maxY, b.y + height); }); const totalWidth = maxX - minX; const totalHeight = maxY - minY; if (totalWidth === 0 || totalHeight === 0) return; const container = app.workspaceContainer; const scaleX = (container.offsetWidth - 2 * PADDING) / totalWidth; const scaleY = (container.offsetHeight - 2 * PADDING) / totalHeight; const newScale = Math.min(scaleX, scaleY, 1); state.view.scale = newScale; state.view.offsetX = (container.offsetWidth - totalWidth * newScale) / 2 - minX * newScale; state.view.offsetY = (container.offsetHeight - totalHeight * newScale) / 2 - minY * newScale; updateWorkspaceTransform(); }
+            function fitAllArtboardsToView() { if (state.artboards.length === 0) return; const PADDING = 50; let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity; state.artboards.forEach(b => { const artboardEl = document.querySelector(`.artboard[data-id="${b.id}"]`); const height = artboardEl ? artboardEl.offsetHeight : (b.height + 30 + (b.type==='video' ? 32:0)); minX = Math.min(minX, b.x); minY = Math.min(minY, b.y); maxX = Math.max(maxX, b.x + b.width); maxY = Math.max(maxY, b.y + height); }); const totalWidth = maxX - minX; const totalHeight = maxY - minY; if (totalWidth === 0 || totalHeight === 0) return; const container = app.workspaceContainer; const scaleX = (container.offsetWidth - 2 * PADDING) / totalWidth; const scaleY = (container.offsetHeight - 2 * PADDING) / totalHeight; const newScale = Math.min(scaleX, scaleY, 1); state.view.scale = newScale; state.view.offsetX = (container.offsetWidth - totalWidth * newScale) / 2 - minX * newScale; state.view.offsetY = (container.offsetHeight - totalHeight * newScale) / 2 - minY * newScale; updateWorkspaceTransform(); }
             function onArtboardHeaderMouseDown(e, artboardId) {
-                if (e.button !== 0 || state.spacebarPressed || e.button === 1) { return; }
+                if (state.currentTool === 'pan' || e.button !== 0 || state.spacebarPressed || e.button === 1) { return; }
                 e.stopPropagation(); selectArtboard(artboardId, e.shiftKey || e.ctrlKey || e.metaKey);
                 state.interaction.mode = 'draggingArtboard'; state.interaction.target = { artboardId }; state.interaction.startPos = getWorkspaceMousePos(e); state.interaction.startData.clear();
                 state.selectedArtboardIds.forEach(id => { const board = state.artboards.find(b => b.id === id); if (board) { state.interaction.startData.set(id, { x: board.x, y: board.y }); } });
@@ -1278,6 +1406,8 @@
             }
             function getHitAnnotation(pos, artboardId) {
                 let found = { index: -1, handle: null, cursor: 'default' }; 
+                if (state.currentTool !== 'select') return found;
+
                 const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return found; 
                 for (let i = state.annotations.length - 1; i >= 0; i--) { 
                     const ann = state.annotations[i]; if (ann.artboardId !== artboardId) continue;
@@ -1294,7 +1424,7 @@
             const getHitHandle = (pos, ann) => { const artboard = state.artboards.find(b => b.id === ann.artboardId); if (!artboard) return null; const handleSizePx = 16; const handleRadiusX = (handleSizePx / artboard.width) / 2; const handleRadiusY = (handleSizePx / artboard.height) / 2; return getHandlesFor(ann).find(h => pos.x > h.x - handleRadiusX && pos.x < h.x + handleRadiusX && pos.y > h.y - handleRadiusY && pos.y < h.y + handleRadiusY) || null; }
             function drawShape(ctx, ann, artboard, isSelected, isPreview = false) { ctx.save(); const { type, data, color } = ann; ctx.strokeStyle = color || state.activeColor; ctx.lineWidth = isSelected ? 4 : 2; if(isPreview) { ctx.setLineDash([6, 3]); ctx.lineWidth = 3; } const denorm = (p) => ({ x: p.x * artboard.width, y: p.y * artboard.height }); ctx.beginPath(); switch (type) { case 'comment': { const pos = denorm(data); const size = 24; ctx.fillStyle = color || state.activeColor; const path = new Path2D("M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"); ctx.save(); ctx.translate(pos.x, pos.y); ctx.scale(size / 24, size / 24); ctx.translate(-2, -22); ctx.fill(path); ctx.restore(); if (isSelected) { ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'; ctx.beginPath(); ctx.arc(pos.x, pos.y, 12, 0, 2 * Math.PI); ctx.fill(); } break; } case 'rect': { const p1_abs = denorm(data.p1); const p2_abs = denorm(data.p2); ctx.rect(p1_abs.x, p1_abs.y, p2_abs.x - p1_abs.x, p2_abs.y - p1_abs.y); break; } case 'circle': { const p1_abs = denorm(data.p1); const p2_abs = denorm(data.p2); ctx.ellipse(p1_abs.x + (p2_abs.x-p1_abs.x)/2, p1_abs.y + (p2_abs.y-p1_abs.y)/2, Math.abs((p2_abs.x-p1_abs.x)/2), Math.abs((p2_abs.y-p1_abs.y)/2), 0, 0, 2 * Math.PI); break; } case 'line': { const p1_abs = denorm(data.p1); const p2_abs = denorm(data.p2); ctx.moveTo(p1_abs.x, p1_abs.y); ctx.lineTo(p2_abs.x, p2_abs.y); break; } case 'arrow': { const p1_abs = denorm(data.p1); const p2_abs = denorm(data.p2); const h = 15, dx = p2_abs.x - p1_abs.x, dy = p2_abs.y - p1_abs.y, a = Math.atan2(dy, dx); ctx.moveTo(p1_abs.x, p1_abs.y); ctx.lineTo(p2_abs.x, p2_abs.y); ctx.lineTo(p2_abs.x - h * Math.cos(a - Math.PI / 6), p2_abs.y - h * Math.sin(a - Math.PI / 6)); ctx.moveTo(p2_abs.x, p2_abs.y); ctx.lineTo(p2_abs.x - h * Math.cos(a + Math.PI / 6), p2_abs.y - h * Math.sin(a + Math.PI / 6)); break; } case 'image': { const p1_abs = denorm(data.p1); const p2_abs = denorm(data.p2); let img = imageAnnotationCache.get(ann.id); if (!img) { img = new Image(); img.src = data.imageData; imageAnnotationCache.set(ann.id, img); } if (img.complete && img.naturalWidth > 0) { ctx.drawImage(img, p1_abs.x, p1_abs.y, p2_abs.x - p1_abs.x, p2_abs.y - p1_abs.y); } else { img.onload = () => redrawArtboardAnnotations(ann.artboardId); } ctx.rect(p1_abs.x, p1_abs.y, p2_abs.x - p1_abs.x, p2_abs.y - p1_abs.y); break; } case 'reply': break; } if (type !== 'comment' && type !== 'reply') ctx.stroke(); ctx.restore(); }
             function drawHandles(ctx, ann, artboard) { if (ann.type === 'reply') return; ctx.save(); const handles = getHandlesFor(ann); ctx.fillStyle = 'white'; ctx.strokeStyle = '#333'; ctx.lineWidth = 1; const handleSize = 10; handles.forEach(h => { const x_abs = h.x * artboard.width; const y_abs = h.y * artboard.height; ctx.fillRect(x_abs - handleSize/2, y_abs - handleSize/2, handleSize, handleSize); ctx.strokeRect(x_abs - handleSize/2, y_abs - handleSize/2, handleSize, handleSize); }); ctx.restore(); }
-            function redrawArtboard(artboardId){ const artboard = state.artboards.find(b => b.id === artboardId); if(!artboard) return; const artboardEl = app.workspace.querySelector(`.artboard[data-id="${artboardId}"]`); if(!artboardEl) return; const controlsHeight = artboard.type === 'video' ? 24 : 0; artboardEl.style.width = `${artboard.width}px`; artboardEl.style.height = `${artboard.height + 30 + controlsHeight}px`; const dimensionsDisplay = `<span class="artboard-info">(${artboard.originalWidth}x${artboard.originalHeight})</span>`; const infoWrapper = artboardEl.querySelector('.artboard-info-wrapper'); infoWrapper.innerHTML = `${dimensionsDisplay}`; redrawAllAnnotations(); drawGuides(); }
+            function redrawArtboard(artboardId){ const artboard = state.artboards.find(b => b.id === artboardId); if(!artboard) return; const artboardEl = app.workspace.querySelector(`.artboard[data-id="${artboardId}"]`); if(!artboardEl) return; const controlsHeight = artboard.type === 'video' ? 32 : 0; artboardEl.style.width = `${artboard.width}px`; artboardEl.style.height = `${artboard.height + 30 + controlsHeight}px`; const dimensionsDisplay = `<span class="artboard-info">(${artboard.originalWidth}x${artboard.originalHeight})</span>`; const infoWrapper = artboardEl.querySelector('.artboard-info-wrapper'); infoWrapper.innerHTML = `${dimensionsDisplay}`; redrawAllAnnotations(); drawGuides(); }
             function resizeAllVideosTo720p() { state.artboards.forEach(artboard => { if (artboard.type === 'video' && artboard.originalHeight > 0) { const targetHeight = 720; const aspectRatio = artboard.originalWidth / artboard.originalHeight; artboard.height = targetHeight; artboard.width = targetHeight * aspectRatio; artboard.scale = artboard.height / artboard.originalHeight; redrawArtboard(artboard.id); } }); markAsChanged(); }
             function rearrangeArtboards() {
                 if (state.artboards.length === 0) return;
@@ -1302,17 +1432,16 @@
                 const layoutGroup = (group, startY) => {
                     let nextX = margin; let nextY = startY; let rowMaxHeight = 0;
                     group.sort((a,b) => a.name.localeCompare(b.name)).forEach(board => {
-                        const controlsHeight = board.type === 'video' ? 24 : 0; const boardHeight = board.height + 30 + controlsHeight;
+                        const controlsHeight = board.type === 'video' ? 32 : 0; const boardHeight = board.height + 30 + controlsHeight;
                         if (nextX + board.width > state.layout.maxRowWidth && nextX > margin) { nextY += rowMaxHeight + margin; nextX = margin; rowMaxHeight = 0; }
                         board.x = nextX; board.y = nextY; nextX += board.width + margin; rowMaxHeight = Math.max(rowMaxHeight, boardHeight);
                         const boardEl = document.querySelector(`.artboard[data-id="${board.id}"]`); if (boardEl) { boardEl.style.left = `${board.x}px`; boardEl.style.top = `${board.y}px`; }
                     });
                     return nextY + rowMaxHeight;
                 };
-                const videos = state.artboards.filter(b => b.type === 'video'); const images = state.artboards.filter(b => b.type === 'image'); const htmlBanners = state.artboards.filter(b => b.type === 'html');
+                const videos = state.artboards.filter(b => b.type === 'video'); const images = state.artboards.filter(b => b.type === 'image');
                 if (videos.length > 0) currentY = layoutGroup(videos, currentY) + margin;
                 if (images.length > 0) currentY = layoutGroup(images, currentY) + margin;
-                if (htmlBanners.length > 0) currentY = layoutGroup(htmlBanners, currentY) + margin;
                 renderWorkspace(); markAsChanged();
             }
             function copyAnnotations() { if (state.selectedAnnotationIndices.length === 0) return; const allIdsToCopy = new Set(); const queue = state.selectedAnnotationIndices.map(index => state.annotations[index].id); queue.forEach(id => allIdsToCopy.add(id)); const traversalQueue = [...queue]; while (traversalQueue.length > 0) { const parentId = traversalQueue.shift(); const children = state.annotations.filter(ann => ann.parentId === parentId); for (const child of children) { if (!allIdsToCopy.has(child.id)) { allIdsToCopy.add(child.id); traversalQueue.push(child.id); } } } state.clipboard = state.annotations.filter(ann => allIdsToCopy.has(ann.id)).map(ann => JSON.parse(JSON.stringify(ann))); }
@@ -1404,10 +1533,34 @@
             
             function toggleRightPanel() { state.layout.isPanelCollapsed = !state.layout.isPanelCollapsed; applyRightPanelState(); markAsChanged(); }
             function applyRightPanelState() { app.rightPanel.classList.toggle('collapsed', state.layout.isPanelCollapsed); }
-            function changeArtboardBg(color) { state.layout.artboardBgColor = color; document.getElementById('artboard-bg-color-picker').value = color; applyArtboardBackgroundColor(); }
-            function applyArtboardBackgroundColor() { document.querySelectorAll('.artboard-content').forEach(el => el.style.backgroundColor = state.layout.artboardBgColor); }
-            function changeGuideColor(color) { state.guides.color = color; document.getElementById('guide-color-picker').value = color; drawGuides(); }
+            function changeArtboardBg(color, final = false) { 
+                state.layout.artboardBgColor = color; 
+                document.getElementById('artboard-bg-color-picker').value = color; 
+                applyArtboardBackgroundColor(); 
+                if (final) markAsChanged();
+            }
+            function applyArtboardBackgroundColor() { 
+                document.querySelectorAll('.artboard-content:not(.transparent-guide)').forEach(el => {
+                    el.style.backgroundColor = state.layout.artboardBgColor;
+                });
+            }
+            function changeGuideColor(color, final = false) { 
+                state.guides.color = color; 
+                document.getElementById('guide-color-picker').value = color; 
+                drawGuides(); 
+                if (final) markAsChanged();
+            }
             
+            function findGuide(guideId) {
+                let guide = state.guides.workspace.find(g => g.id === guideId);
+                if (guide) return guide;
+                for (const artboardId in state.guides.artboard) {
+                    guide = state.guides.artboard[artboardId].find(g => g.id === guideId);
+                    if (guide) return guide;
+                }
+                return null;
+            }
+
             function getHitGuide(e) {
                 if (state.guides.locked) return null;
                 const mousePos = getWorkspaceMousePos(e);
@@ -1419,30 +1572,33 @@
                 }
 
                 for (const artboard of state.artboards) {
-                    const artboardGuides = state.guides.artboard[artboard.id] || [];
                     const artboardEl = document.querySelector(`.artboard[data-id="${artboard.id}"]`);
                     if (!artboardEl) continue;
-                    const rect = artboardEl.getBoundingClientRect();
-                    const mouseClientPos = { x: e.clientX, y: e.clientY };
 
-                    if (mouseClientPos.x > rect.left && mouseClientPos.x < rect.right && mouseClientPos.y > rect.top && mouseClientPos.y < rect.bottom) {
-                         for (const guide of artboardGuides) {
-                            if (guide.type === 'horizontal') {
-                                const guideY = rect.top + guide.position * artboard.height * state.view.scale;
-                                if (Math.abs(mouseClientPos.y - guideY) < 5) return { scope: 'artboard', guide, artboardId: artboard.id };
+                    const rect = artboardEl.querySelector('.artboard-content').getBoundingClientRect();
+                    const isMouseOver = e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
+
+                    if (isMouseOver) {
+                        const artboardGuides = state.guides.artboard[artboard.id] || [];
+                        const pos = getMousePosOnArtboard(e, artboard);
+                        const toleranceY = 5 / (artboard.height * state.view.scale); 
+                        const toleranceX = 5 / (artboard.width * state.view.scale);
+
+                        for (const guide of artboardGuides) {
+                            if (guide.type === 'horizontal' && Math.abs(pos.y - guide.position) < toleranceY) {
+                                return { scope: 'artboard', guide, artboardId: artboard.id };
                             }
-                            if (guide.type === 'vertical') {
-                                const guideX = rect.left + guide.position * artboard.width * state.view.scale;
-                                if (Math.abs(mouseClientPos.x - guideX) < 5) return { scope: 'artboard', guide, artboardId: artboard.id };
+                            if (guide.type === 'vertical' && Math.abs(pos.x - guide.position) < toleranceX) {
+                                return { scope: 'artboard', guide, artboardId: artboard.id };
                             }
-                         }
+                        }
                     }
                 }
                 return null;
             }
             
             function onGuideDrag(e) {
-                if(state.guides.locked) return;
+                if(state.guides.locked || state.interaction.mode !== 'draggingGuide') return;
                 const { scope, guide, artboardId } = state.interaction.target;
                 if (scope === 'workspace') {
                     const pos = getWorkspaceMousePos(e);
@@ -1557,7 +1713,7 @@
                 const {x, y, isSimple, isDefault} = state.toolbar;
                 const container = app.toolbarContainer;
                 if (isDefault) {
-                    container.style.left = '50%'; container.style.top = ''; container.style.bottom = '20px'; container.style.transform = 'translateX(-50%)';
+                    container.style.left = '50%'; container.style.top = ''; container.style.bottom = '70px'; container.style.transform = 'translateX(-50%)';
                 } else {
                     container.style.left = `${x}px`; container.style.top = `${y}px`; container.style.bottom = ''; container.style.transform = '';
                 }
@@ -1651,7 +1807,8 @@
             async function gifToVideo(file) {
                 const artboardId = crypto.randomUUID();
                 try {
-                    addArtboard(file.name, null, 'video', { width: 300, height: 225 }, { isLoading: true, id: artboardId });
+                    const newName = file.name.replace(/\.gif$/i, '.webm');
+                    addArtboard(newName, null, 'video', { width: 300, height: 225 }, { isLoading: true, id: artboardId });
                     
                     const fileBuffer = await file.arrayBuffer();
                     const canvas = document.createElement('canvas');
@@ -1708,148 +1865,85 @@
                     });
                 } catch (err) {
                     console.error("Failed to convert GIF:", err);
-                    alert("Lỗi khi chuyển đổi file GIF.");
+                    alert("Error converting GIF file.");
                     state.artboards = state.artboards.filter(b => b.id !== artboardId);
                     renderWorkspace();
                 }
             }
-
-
-             async function handleZipFile(file) {
-                try {
-                    const jszip = new JSZip();
-                    const zip = await jszip.loadAsync(file);
-                    const indexHtmlFile = zip.file("index.html");
-
-                    if (!indexHtmlFile) {
-                        alert("index.html not found in the ZIP file.");
-                        return;
-                    }
-
-                    let htmlContent = await indexHtmlFile.async("string");
-                    const assetPromises = [];
-
-                    zip.forEach((relativePath, zipEntry) => {
-                        if (!zipEntry.dir && zipEntry.name !== "index.html") {
-                            const promise = zipEntry.async("blob").then(blob => ({
-                                path: relativePath,
-                                url: URL.createObjectURL(blob)
-                            }));
-                            assetPromises.push(promise);
-                        }
-                    });
-
-                    const assets = await Promise.all(assetPromises);
-                    for (const asset of assets) {
-                        htmlContent = htmlContent.replaceAll(`"${asset.path}"`, `"${asset.url}"`).replaceAll(`'${asset.path}'`, `'${asset.url}'`);
-                    }
-
-                    htmlToVideo({ name: file.name, htmlContent });
-
-                } catch (err) {
-                    console.error("Failed to process ZIP file:", err);
-                    alert("Lỗi khi xử lý file ZIP.");
+            
+            function dataURLtoBlob(dataurl) {
+                let arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
+                    bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+                while(n--){
+                    u8arr[n] = bstr.charCodeAt(n);
                 }
+                return new Blob([u8arr], {type:mime});
             }
 
-            async function htmlToVideo({ name, htmlContent, width = 300, height = 250 }) {
-                const artboardId = crypto.randomUUID();
-                addArtboard(name, null, 'video', { width, height }, { isLoading: true, id: artboardId });
-                
-                const iframe = document.createElement('iframe');
-                iframe.style.width = `${width}px`;
-                iframe.style.height = `${height}px`;
-                iframe.style.border = 'none';
-                iframe.style.position = 'fixed';
-                iframe.style.left = '-9999px';
-                
-                document.body.appendChild(iframe);
+            async function packageProjectAsZip() {
+                if (!window.JSZip) {
+                    alert("Packaging library could not be loaded. Please check your internet connection.");
+                    return;
+                }
+
+                const originalSaveText = app.saveBtn.textContent;
+                app.saveBtn.textContent = "Packaging...";
+                app.saveBtn.classList.add('saving');
 
                 try {
-                    const doc = iframe.contentDocument;
-                    doc.open();
-                    doc.write(htmlContent);
-                    doc.close();
+                    const zip = new JSZip();
+                    const htmlContent = await generateAnnotatedHTML();
+                    zip.file("Unified_QC.html", htmlContent);
 
-                    await new Promise(resolve => iframe.onload = resolve);
-                    
-                    const animations = iframe.contentDocument.getAnimations({ subtree: true });
-                    await Promise.all(animations.map(anim => {
-                        anim.pause();
-                        anim.currentTime = 0;
-                        return anim.ready;
-                    }));
+                    const mediaFolder = zip.folder("media");
+                    const fetchPromises = [];
 
-                    const captureCanvas = document.createElement('canvas');
-                    captureCanvas.width = width;
-                    captureCanvas.height = height;
-                    const captureCtx = captureCanvas.getContext('2d');
+                    for (const artboard of state.artboards) {
+                        if (!artboard.src) continue;
 
-                    const stream = captureCanvas.captureStream();
-                    const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
-                    const chunks = [];
+                        const isBlobUrl = artboard.src.startsWith('blob:');
+                        const isDataUrl = artboard.src.startsWith('data:');
 
-                    mediaRecorder.ondataavailable = e => {
-                        if (e.data.size > 0) chunks.push(e.data);
-                    };
-
-                    mediaRecorder.onstop = () => {
-                        const blob = new Blob(chunks, { type: 'video/webm' });
-                        const url = URL.createObjectURL(blob);
-                        
-                        let artboard = state.artboards.find(b => b.id === artboardId);
-                        if (artboard) {
-                            artboard.isLoading = false;
-                            artboard.src = url;
-                            renderWorkspace();
-                            if (app.timelinePanel.classList.contains('hidden')) {
-                                app.timelinePanel.classList.remove('hidden');
+                        if (isBlobUrl) {
+                            const promise = fetch(artboard.src)
+                                .then(res => res.blob())
+                                .then(blob => {
+                                    mediaFolder.file(artboard.name, blob);
+                                })
+                                .catch(err => console.error(`Failed to fetch blob for ${artboard.name}:`, err));
+                            fetchPromises.push(promise);
+                        } else if (isDataUrl) {
+                            try {
+                                const blob = dataURLtoBlob(artboard.src);
+                                mediaFolder.file(artboard.name, blob);
+                            } catch (err) {
+                                console.error(`Failed to convert data URL for ${artboard.name}:`, err);
                             }
                         }
-                        document.body.removeChild(iframe);
-                    };
-
-                    mediaRecorder.start();
-                    
-                    const totalFrames = FRAME_RATE * 5; // 5 seconds duration
-                    const interval = 1000 / FRAME_RATE;
-
-                    for (let i = 0; i < totalFrames; i++) {
-                        const time = i * interval;
-                        animations.forEach(anim => anim.currentTime = time);
-                        
-                        await new Promise(r => requestAnimationFrame(r)); // Wait for styles to apply
-                        
-                        const canvas = await html2canvas(iframe.contentDocument.body, { useCORS: true, allowTaint: true });
-                        captureCtx.clearRect(0, 0, width, height);
-                        captureCtx.drawImage(canvas, 0, 0, width, height);
-                        if (stream.getVideoTracks()[0].requestFrame) {
-                           stream.getVideoTracks()[0].requestFrame();
-                        }
                     }
 
-                    if (mediaRecorder.state === "recording") {
-                        mediaRecorder.stop();
-                    }
+                    await Promise.all(fetchPromises);
+
+                    const zipBlob = await zip.generateAsync({ type: "blob" });
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(zipBlob);
+                    a.download = "Unified_QC_Package.zip";
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(a.href);
 
                 } catch (err) {
-                     console.error("Failed to convert HTML to video:", err);
-                     alert("Lỗi khi chuyển đổi HTML banner.");
-                     let artboardIndex = state.artboards.findIndex(b => b.id === artboardId);
-                     if (artboardIndex > -1) {
-                        state.artboards.splice(artboardIndex, 1);
-                        renderWorkspace();
-                     }
-                     if (document.body.contains(iframe)) {
-                        document.body.removeChild(iframe);
-                     }
+                    console.error("Failed to create zip package:", err);
+                    alert("An error occurred while creating the package.");
+                } finally {
+                    app.saveBtn.textContent = originalSaveText;
+                    app.saveBtn.classList.remove('saving');
                 }
             }
-
-
+            
             init();
         });
     </script>
 </body>
-
 </html>
