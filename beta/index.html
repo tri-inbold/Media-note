@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Media QC v21.1</title>
+    <title>Media QC v22.1</title>
     
     <style>
         /* --- COMBINED AND NORMALIZED CSS --- */
@@ -15,11 +15,22 @@
         }
         body, html { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--workspace-bg); color: var(--text-color); overflow: hidden; height: 100vh; width: 100vw; }
         .hidden { display: none !important; }
-        .glass-panel { background: var(--panel-bg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid var(--border-color); box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2); transition: transform 0.4s ease, opacity 0.4s ease; }
+        .glass-panel { background: var(--panel-bg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid var(--border-color); box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2); }
         body.theme-light .glass-panel { backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: 0 2px 10px rgba(0,0,0,0.07); }
-        #app-container { display: flex; height: 100%; width: 100%; }
+        
+        /* --- NEW LAYOUT STRUCTURE --- */
+        #app-container { display: flex; flex-direction: row; height: 100%; width: 100%; }
         #main-content { flex-grow: 1; position: relative; height: 100%; display: flex; flex-direction: column; }
         
+        #timeline-panel {
+            flex-shrink: 0;
+            background: var(--bg-color);
+            border-top: 1px solid var(--border-color);
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
+            z-index: 25;
+        }
+
+        /* --- Drop Zone & Workspace --- */
         #drop-zone { position: absolute; inset: 20px; border: 2px dashed rgba(173, 181, 189, 0.5); border-radius: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; font-size: 1.2em; color: var(--text-color-light); z-index: 100; transition: all 0.3s; pointer-events: auto; }
         #drop-zone p { background: var(--panel-bg); padding: 25px 35px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid var(--border-color); line-height: 1.6; }
         #drop-zone.hidden { pointer-events: none; opacity: 0; }
@@ -30,6 +41,8 @@
         body.spacebar-down, body.spacebar-down .artboard, body.spacebar-down .interaction-canvas { cursor: grab !important; }
         body.spacebar-down.panning, body.spacebar-down.panning .artboard, body.spacebar-down.panning .interaction-canvas { cursor: grabbing !important; }
         #workspace { position: absolute; transform-origin: 0 0; }
+        
+        /* --- Artboard Styles --- */
         .artboard { position: absolute; background-color: var(--panel-bg); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); border: 2px solid transparent; overflow: hidden; transition: border-color 0.2s; display: flex; flex-direction: column;}
         .artboard.dragging { z-index: 10; box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
         .artboard.selected { border-color: var(--highlight-color); }
@@ -44,11 +57,11 @@
         .header-icon-btn:hover, .artboard-close-btn:hover { color: #fff; background-color: rgba(255,255,255,0.1); }
         .artboard-close-btn { font-size: 1.4em; }
         .artboard-content { position: relative; width: 100%; flex-grow: 1; background-color: #000; }
-        .artboard-content.transparent-grid { background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0px; }
-        body.theme-dark .artboard-content.transparent-grid { background-image: linear-gradient(45deg, #444 25%, transparent 25%), linear-gradient(-45deg, #444 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #444 75%), linear-gradient(-45deg, transparent 75%, #444 75%); }
+        .artboard-content.transparent-guide { background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0px; }
+        body.theme-dark .artboard-content.transparent-guide { background-image: linear-gradient(45deg, #444 25%, transparent 25%), linear-gradient(-45deg, #444 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #444 75%), linear-gradient(-45deg, transparent 75%, #444 75%); }
         .artboard img, .artboard video, .artboard iframe { display: block; width: 100%; height: 100%; user-select: none; -webkit-user-drag: none; object-fit: contain; background-color: #000; position: absolute; top:0; left:0; border: none;}
         .artboard video, .artboard .frame-backup { z-index: 1; }
-        .artboard canvas.grid-canvas { z-index: 2; pointer-events: none; }
+        .artboard canvas.guide-canvas { z-index: 2; pointer-events: none; }
         .artboard canvas.display-canvas { z-index: 3; }
         .artboard canvas.interaction-canvas { pointer-events: auto; z-index: 4; }
         .artboard canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;}
@@ -67,14 +80,13 @@
         #time-display { width: 80px; font-size: 1em; color: var(--text-color); }
         #time-display:focus { color: var(--text-color); }
 
-        #bottom-controls-container { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 20; }
-        #bottom-controls { display: flex; gap: 10px; align-items: center; }
-        #tools-panel, #timeline-panel, #help-panel { padding: 8px; border-radius: 12px; display: flex; align-items: center; }
+        /* --- Movable Toolbar & Tools --- */
+        #toolbar-container { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 30; }
+        #movable-controls { display: flex; gap: 10px; align-items: center; }
+        #tools-panel, #help-panel { padding: 8px; border-radius: 12px; display: flex; align-items: center; }
         #tools-panel { padding: 8px 10px; gap: 4px; }
-        #timeline-panel { position: relative; gap: 10px; flex-grow: 1; width: 650px; }
-        #timeline-panel.out-of-sync #timeline-slider::-webkit-slider-thumb, #timeline-panel.out-of-sync #time-display { opacity: 0.3; transition: opacity 0.3s; pointer-events: none; }
-        #timeline-panel:hover #timeline-slider::-webkit-slider-thumb, #timeline-panel:hover #time-display { opacity: 1; pointer-events: auto;}
         #help-panel { padding: 0; background: none; border: none; }
+        #help-btn { background: var(--panel-bg); border: 1px solid var(--border-color); color: var(--text-color); cursor: pointer; display: flex; align-items: center; justify-content: center; height: 38px; padding: 0 12px; border-radius: 8px; font-weight: bold; font-size: 1.2em; }
         .playback-controls { display: flex; align-items: center; gap: 4px; }
         .tool-btn { width: 28px; height: 28px; border-radius: 8px; border: none; background: transparent; color: var(--text-color-light); cursor: pointer; display: flex; justify-content: center; align-items: center; transition: all 0.2s; padding: 0; }
         .tool-btn:hover { color: var(--text-color); background-color: rgba(255,255,255,0.1); }
@@ -90,20 +102,19 @@
         .color-btn:hover { transform: scale(1.2); }
         #play-pause-btn, #mute-btn { background: none; border: none; color: var(--text-color); cursor: pointer; padding: 5px; display: flex; align-items: center; }
         #play-pause-btn svg, #mute-btn svg { width: 20px; height: 20px; fill: currentColor; }
-        #help-btn { background: var(--panel-bg); border: 1px solid var(--border-color); color: var(--text-color); cursor: pointer; display: flex; align-items: center; justify-content: center; height: 38px; padding: 0 12px; border-radius: 8px; font-weight: bold; font-size: 1.2em; }
-        #timeline-wrapper { position: relative; flex-grow: 1; display: flex; align-items: center; }
+        #timeline-wrapper { position: relative; flex-grow: 1; display: flex; align-items: center; height: 25px; }
         #timeline-bg { position: absolute; left: 0; top: 50%; transform: translateY(-50%); height: 5px; border-radius: 5px; pointer-events: none; width: 100%; background: rgba(255, 255, 255, 0.3); }
         body.theme-light #timeline-bg { background: rgba(0,0,0,0.1); }
-        #timeline-slider { position: relative; z-index: 1; flex-grow: 1; -webkit-appearance: none; appearance: none; width: 100%; height: 5px; background: transparent !important; border-radius: 5px; outline: none; }
+        #timeline-slider { position: relative; z-index: 1; flex-grow: 1; -webkit-appearance: none; appearance: none; width: 100%; height: 100%; background: transparent !important; border-radius: 5px; outline: none; }
         #timeline-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 15px; height: 15px; background: var(--text-color); cursor: pointer; border-radius: 50%; transition: opacity 0.2s; }
-        #speed-controls { display: flex; background: rgba(0,0,0,0.2); border-radius: 8px; }
+        #speed-controls { display: flex; background: rgba(0,0,0,0.2); border-radius: 8px; margin-left: 10px; }
         body.theme-light #speed-controls { background: rgba(0,0,0,0.05); }
         .speed-btn { background: none; border: none; color: var(--text-color-light); padding: 4px 8px; cursor: pointer; font-size: 0.9em;}
         .speed-btn.active { color: #fff; background: var(--highlight-color); border-radius: 8px; }
         body.theme-light .speed-btn.active { color: #fff; }
 
-        #right-panel { flex: 0 0 340px; margin: 10px; margin-left: 0; display: flex; flex-direction: column; z-index: 20; border-radius: 15px; overflow: hidden; background: var(--workspace-bg); border: 1px solid var(--border-color); flex-shrink: 0; box-shadow: 0 2px 10px rgba(0,0,0,0.07); transition: all 0.3s ease; }
-        #right-panel.collapsed { flex-basis: 0 !important; min-width: 0 !important; margin-left: 0; border: none; }
+        #right-panel { flex: 0 0 340px; display: flex; flex-direction: column; z-index: 20; background: var(--bg-color); border-left: 1px solid var(--border-color); flex-shrink: 0; transition: all 0.3s ease; }
+        #right-panel.collapsed { flex-basis: 0 !important; min-width: 0 !important; border: none; }
         #right-panel.collapsed > * { display: none; }
         #list-header { padding: 10px; border-bottom: 1px solid var(--border-color); }
         #search-input { width: 100%; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-color); padding: 8px; box-sizing: border-box; }
@@ -135,14 +146,14 @@
         .complete-checkbox { appearance: none; width: 16px; height: 16px; border: 2px solid var(--checkbox-border); border-radius: 50%; cursor: pointer; transition: all 0.2s; }
         .complete-checkbox:checked { background-color: #28a745; border-color: #28a745; }
         .complete-checkbox:checked::after { content: '\2713'; display: block; text-align: center; color: #fff; font-weight: bold; font-size: 11px; line-height: 13px; }
-        #panel-resizer { width: 5px; cursor: col-resize; flex-shrink: 0; background-color: transparent; transition: background-color 0.2s ease; align-self: stretch; margin: 10px 0; }
+        #panel-resizer { width: 5px; cursor: col-resize; flex-shrink: 0; background-color: transparent; transition: background-color 0.2s ease; align-self: stretch; }
         #panel-resizer:hover { background-color: var(--highlight-color); }
         #right-panel.collapsed + #panel-resizer { display: none; }
 
         #help-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; display: flex; justify-content: center; align-items: center; }
         body.theme-light #help-modal { background: rgba(0,0,0,0.4); }
         #help-modal .modal-content { position: relative; padding: 20px 30px; width: 975px; border-radius: 15px; max-height: 80vh; overflow-y: auto; }
-        #help-modal .shortcuts-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px 25px; }
+        #help-modal .shortcuts-guide { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px 25px; }
         #help-modal ul { list-style: none; padding-left: 0; margin-top: 5px; }
         #help-modal li { margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 0.85em; }
         #help-modal h3 { margin-top: 0; }
@@ -163,8 +174,6 @@
         
         #tool-cursor-icon { position: fixed; pointer-events: none; z-index: 9999; transform: translate(12px, 12px); display: flex; align-items: center; justify-content: center; }
         #tool-cursor-icon svg { width: 14px; height: 14px; fill: #ffffff; filter: drop-shadow(0 0 1.5px rgba(0,0,0,0.9)); display: block; }
-
-        /* --- NEW STYLES FOR CONTEXT MENU, GRIDS, DRAGGABLE UI --- */
         #context-menu { position: fixed; z-index: 1000; min-width: 180px; padding: 5px 0; border-radius: 8px; font-size: 14px; }
         .context-menu-item { padding: 8px 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
         .context-menu-item:hover { background-color: var(--highlight-color); color: #fff; }
@@ -172,7 +181,7 @@
         .context-menu-item.disabled:hover { background-color: transparent; }
         .context-menu-divider { height: 1px; background-color: var(--border-color); margin: 5px 0; }
         
-        #workspace-grid-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 15; }
+        #workspace-guide-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 15; }
         .artboard-edge-highlight { position: absolute; background-color: var(--highlight-color); opacity: 0.8; pointer-events: none; z-index: 10; }
         .artboard-edge-highlight.top, .artboard-edge-highlight.bottom { width: 100%; height: 4px; left: 0; }
         .artboard-edge-highlight.left, .artboard-edge-highlight.right { width: 4px; height: 100%; top: 0; }
@@ -183,32 +192,67 @@
         #toolbar-drag-handle:active { cursor: grabbing; }
         #toolbar-drag-handle:active::before { opacity: 1; }
         
-        #bottom-controls.simple-mode #timeline-panel,
-        #bottom-controls.simple-mode #help-panel,
-        #bottom-controls.simple-mode #tools-panel .tool-btn:not([data-tool="comment"]):not([data-tool="rect"]):not([data-tool="line"]),
-        #bottom-controls.simple-mode #tools-panel .divider,
-        #bottom-controls.simple-mode #tools-panel #color-picker { display: none; }
-        #bottom-controls.simple-mode #tools-panel { flex-direction: row; }
+        #movable-controls.simple-mode #tools-panel .tool-btn:not([data-tool="comment"]):not([data-tool="rect"]):not([data-tool="line"]),
+        #movable-controls.simple-mode #tools-panel .divider,
+        #movable-controls.simple-mode #tools-panel #color-picker { display: none; }
+
+        .artboard.loading .artboard-content::after {
+            content: ''; position: absolute; top: 50%; left: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; border: 4px solid var(--border-color); border-top-color: var(--highlight-color); border-radius: 50%; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .artboard.loading .artboard-content > * { display: none; }
+        
+        #timeline-panel {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        #master-timeline-controls {
+            width: 100%;
+        }
+        .timeline-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0 5px;
+        }
+        .timeline-title {
+            font-weight: bold;
+            font-size: 0.9em;
+            flex-shrink: 0;
+            color: var(--text-color-light);
+            margin-right: 10px;
+        }
+        #master-timeline-ruler {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body class="theme-dark">
-    <input type="file" id="file-input" accept="video/*,image/*,.html" style="display: none;" multiple>
+    <input type="file" id="file-input" accept="video/*,image/*,.zip,.gif" style="display: none;" multiple>
     <input type="file" id="image-tool-input" accept="image/*" style="display:none;">
     <a id="frame-download-link" class="hidden"></a>
     
     <div id="app-container">
         <div id="main-content">
             <div id="drop-zone">
-                <p>Kéo & thả Video, Hình ảnh hoặc file HTML vào đây<br>Hoặc bấm đúp / Ctrl+D để chọn file</p>
+                <p>Kéo & thả Video, Hình ảnh hoặc file ZIP vào đây<br>Hoặc bấm đúp / Ctrl+D để chọn file</p>
             </div>
 
             <div id="workspace-container" class="hidden">
                 <div id="workspace"></div>
-                <canvas id="workspace-grid-canvas"></canvas>
+                <canvas id="workspace-guide-canvas"></canvas>
             </div>
-            
-            <div id="bottom-controls-container" class="hidden">
-                <div id="bottom-controls">
+
+            <div id="toolbar-container" class="hidden">
+                <div id="movable-controls">
                     <div id="tools-panel" class="glass-panel">
                         <div id="toolbar-drag-handle" title="Giữ để đổi vị trí. Nhấp đôi để chuyển chế độ. Nhấp reset vị trí."></div>
                         <button class="tool-btn" data-tool="comment" title="Comment (Q)"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 14v-2h12v2H6zm0-3v-2h12v2H6zm0-3v-2h12v2H6z"/></svg></button>
@@ -231,22 +275,31 @@
                             </div>
                         </div>
                     </div>
-        
-                    <div id="timeline-panel" class="glass-panel hidden">
+                     <div id="help-panel">
+                        <button id="help-btn" title="Help & Shortcuts">?</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="timeline-panel" class="hidden">
+                <div id="master-timeline-controls">
+                    <div class="timeline-header">
+                        <span class="timeline-title">Master Timeline</span>
                         <div class="playback-controls">
                             <button id="play-pause-btn" title="Play/Pause (Spacebar/Ctrl+Spacebar)"><svg id="play-icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><svg id="pause-icon" class="hidden" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg></button>
                             <button id="mute-btn" title="Mute/Unmute (M/Ctrl+M)"><svg id="unmute-icon" class="hidden" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg><svg id="mute-icon" viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L7 9H3v6h4l5 5v-8.27l-5.73-5.73z"/></svg></button>
+                            <div id="speed-controls">
+                                <button class="speed-btn" data-speed="0.5">0.5x</button>
+                                <button class="speed-btn active" data-speed="1">1x</button>
+                                <button class="speed-btn" data-speed="2">2x</button>
+                            </div>
                         </div>
                         <input type="text" id="time-display" class="time-input" value="00:00:00:00">
                         <div id="timeline-wrapper">
                             <div id="timeline-bg"></div>
+                            <canvas id="master-timeline-ruler"></canvas>
                             <input type="range" id="timeline-slider" value="0" step="0.01">
                         </div>
-                        <div id="speed-controls"><button class="speed-btn" data-speed="0.5">0.5x</button><button class="speed-btn active" data-speed="1">1x</button><button class="speed-btn" data-speed="2">2x</button></div>
-                    </div>
-        
-                    <div id="help-panel" class="glass-panel">
-                        <button id="help-btn" title="Help & Shortcuts">?</button>
                     </div>
                 </div>
             </div>
@@ -266,7 +319,7 @@
         <div class="modal-content glass-panel">
             <button id="modal-close-btn">&times;</button>
             <h3>Phím tắt & Trợ giúp</h3>
-            <div class="shortcuts-grid">
+            <div class="shortcuts-guide">
                 <div>
                     <h4>Chung</h4>
                     <ul>
@@ -286,16 +339,16 @@
                     </ul>
                 </div>
                 <div>
-                    <h4>Workspace & Grid</h4>
+                    <h4>Workspace & Guide</h4>
                     <ul>
                         <li><strong>Space+Kéo</strong><span>Di chuyển (Pan)</span></li>
                         <li><strong>Ctrl + Lăn chuột</strong><span>Phóng to / Thu nhỏ</span></li>
-                        <li><strong>Ctrl + 1</strong><span>Xem 100% / Fit Artboard</span></li>
+                        <li><strong>Ctrl + 1</strong><span>Fit Artboard vào Viewport</span></li>
                         <li><strong>Ctrl + 0</strong><span>Reset góc nhìn</span></li>
                         <li><strong>Ctrl + Alt + 0</strong><span>Vừa tất cả Artboard</span></li>
                         <li><strong>Ctrl + G</strong><span>Sắp xếp Artboard</span></li>
-                        <li><strong>Ctrl + ;</strong><span>Hiện/Ẩn Grid</span></li>
-                        <li><strong>Ctrl + '</strong><span>Khóa/Mở khóa Grid</span></li>
+                        <li><strong>Ctrl + ;</strong><span>Hiện/Ẩn Guide</span></li>
+                        <li><strong>Ctrl + '</strong><span>Khóa/Mở khóa Guide</span></li>
                         <li><strong>Alt + Kéo Comment</strong><span>Sao chép nhanh</span></li>
                     </ul>
                 </div>
@@ -317,7 +370,7 @@
             <div class="help-actions">
                 <span><strong>User:</strong> <span id="current-user-display"></span> <button id="change-user-btn">[Sửa]</button></span>
                  <label>Nền Artboard: <input type="color" id="artboard-bg-color-picker" title="Artboard Background Color"></label>
-                 <label>Màu Grid: <input type="color" id="grid-color-picker" title="Grid Color"></label>
+                 <label>Màu Guide: <input type="color" id="guide-color-picker" title="Guide Color"></label>
                 <span><strong>Chế độ:</strong> 
                     <select id="theme-selector">
                         <option value="system">Tự động (System)</option>
@@ -334,9 +387,11 @@
     <div id="context-menu" class="hidden glass-panel"></div>
 
     <script id="app-data" type="application/json"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/gifler@0.1.0/gifler.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        window.addEventListener('load', () => {
             const app = {
                 body: document.body,
                 fileInput: document.getElementById('file-input'),
@@ -346,9 +401,9 @@
                 mainContent: document.getElementById('main-content'),
                 workspaceContainer: document.getElementById('workspace-container'),
                 workspace: document.getElementById('workspace'),
-                workspaceGridCanvas: document.getElementById('workspace-grid-canvas'),
-                bottomControlsContainer: document.getElementById('bottom-controls-container'),
-                bottomControls: document.getElementById('bottom-controls'),
+                workspaceGuideCanvas: document.getElementById('workspace-guide-canvas'),
+                toolbarContainer: document.getElementById('toolbar-container'),
+                movableControls: document.getElementById('movable-controls'),
                 rightPanel: document.getElementById('right-panel'),
                 panelResizer: document.getElementById('panel-resizer'),
                 annotationList: document.getElementById('annotation-list'),
@@ -363,6 +418,7 @@
                 pauseIcon: document.getElementById('pause-icon'),
                 toolCursorIcon: document.getElementById('tool-cursor-icon'),
                 contextMenu: document.getElementById('context-menu'),
+                masterTimelineRuler: document.getElementById('master-timeline-ruler'),
             };
 
             const FRAME_RATE = 30;
@@ -387,7 +443,7 @@
                     view: { scale: 1, offsetX: 0, offsetY: 0, minScale: 0.1, maxScale: 10 },
                     layout: { nextX: 50, nextY: 50, rowMaxHeight: 0, margin: 50, maxRowWidth: 4000, isPanelCollapsed: false, artboardBgColor: '#000000' },
                     spacebarPressed: false, isGlobalMuted: true, areVideosInSync: true,
-                    grids: { visible: true, locked: false, color: '#00FFFF', workspace: [], artboard: {} },
+                    guides: { visible: true, locked: false, color: '#00FFFF', workspace: [], artboard: {} },
                     artboardEdgeHover: null,
                     toolbar: { x: 0, y: 0, isSimple: false, isDefault: true }
                 };
@@ -435,7 +491,7 @@
                 app.playPauseBtn.addEventListener('click', () => global_togglePlayPause(false));
                 document.getElementById('mute-btn').addEventListener('click', global_toggleMute);
                 document.querySelectorAll('.speed-btn').forEach(btn => btn.addEventListener('click', () => global_setPlaybackSpeed(parseFloat(btn.dataset.speed))));
-                app.timelineSlider.addEventListener('input', () => global_seekTo(parseFloat(app.timelineSlider.value)));
+                
                 initTimeInput(app.timeDisplay, () => app.timelineSlider.valueAsNumber, global_seekTo);
 
                 document.getElementById('help-btn').addEventListener('click', () => document.getElementById('help-modal').classList.remove('hidden'));
@@ -446,9 +502,9 @@
                 artboardBgColorPicker.addEventListener('input', (e) => changeArtboardBg(e.target.value));
                 artboardBgColorPicker.addEventListener('change', (e) => markAsChanged());
 
-                const gridColorPicker = document.getElementById('grid-color-picker');
-                gridColorPicker.addEventListener('input', (e) => changeGridColor(e.target.value));
-                gridColorPicker.addEventListener('change', (e) => markAsChanged());
+                const guideColorPicker = document.getElementById('guide-color-picker');
+                guideColorPicker.addEventListener('input', (e) => changeGuideColor(e.target.value));
+                guideColorPicker.addEventListener('change', (e) => markAsChanged());
 
                 window.addEventListener('click', (e) => { if (!e.target.closest('#color-picker')) document.getElementById('color-palette-popup').classList.add('hidden'); hideContextMenu(); });
                 
@@ -457,7 +513,10 @@
 
                 document.getElementById('toolbar-drag-handle').addEventListener('mousedown', onToolbarDragStart);
 
+                new ResizeObserver(drawMasterRuler).observe(app.timelinePanel);
+
                 updateSaveButtonState();
+                applyToolbarState();
             }
 
             async function autoLoadData() {
@@ -471,17 +530,17 @@
                     promptForUser();
                     app.dropZone.classList.add('hidden');
                     app.workspaceContainer.classList.remove('hidden');
-                    app.bottomControlsContainer.classList.remove('hidden');
+                    app.toolbarContainer.classList.remove('hidden');
                     app.rightPanel.classList.remove('hidden');
                     
                     state.annotations = data.annotations || [];
                     state.artboards = data.artboards || [];
                     if(data.layout) Object.assign(state.layout, data.layout);
-                    if(data.grids) Object.assign(state.grids, data.grids);
+                    if(data.guides) Object.assign(state.guides, data.guides);
                     if(data.toolbar) Object.assign(state.toolbar, data.toolbar);
 
                     document.getElementById('artboard-bg-color-picker').value = state.layout.artboardBgColor;
-                    document.getElementById('grid-color-picker').value = state.grids.color;
+                    document.getElementById('guide-color-picker').value = state.guides.color;
 
                     if (state.artboards.some(b => b.type === 'video')) {
                         app.timelinePanel.classList.remove('hidden');
@@ -498,8 +557,8 @@
                 } catch (err) { console.error("Error auto-loading embedded data:", err); alert('Lỗi khi tải dữ liệu. Hãy chắc chắn file video (nếu có) nằm cùng thư mục với file HTML.'); }
             }
             
-            async function handleDrop(e) { e.preventDefault(); document.body.classList.remove('dragging'); if (e.dataTransfer.files.length) handleFiles(Array.from(e.target.files)); }
-            function handleFiles(files) { if (!files || files.length === 0) return; if (state.artboards.length === 0) { app.dropZone.classList.add('hidden'); app.workspaceContainer.classList.remove('hidden'); app.bottomControlsContainer.classList.remove('hidden'); app.rightPanel.classList.remove('hidden'); } const imageFiles = files.filter(f => f.type.startsWith('image/')); const videoFiles = files.filter(f => f.type.startsWith('video/')); const htmlFiles = files.filter(f => f.type === 'text/html'); imageFiles.forEach(file => { const reader = new FileReader(); reader.onload = e => addArtboard(file.name, e.target.result, 'image', {width: 0, height: 0}); reader.readAsDataURL(file); }); videoFiles.forEach(file => { const url = URL.createObjectURL(file); addArtboard(file.name, url, 'video'); if (app.timelinePanel.classList.contains('hidden')) app.timelinePanel.classList.remove('hidden'); }); htmlFiles.forEach(file => { const reader = new FileReader(); reader.onload = e => addArtboard(file.name, e.target.result, 'html', {width: 300, height: 250}); reader.readAsText(file); }); }
+            async function handleDrop(e) { e.preventDefault(); document.body.classList.remove('dragging'); if (e.dataTransfer.files.length) handleFiles(Array.from(e.dataTransfer.files)); }
+            function handleFiles(files) { if (!files || files.length === 0) return; if (state.artboards.length === 0) { app.dropZone.classList.add('hidden'); app.workspaceContainer.classList.remove('hidden'); app.toolbarContainer.classList.remove('hidden'); app.rightPanel.classList.remove('hidden'); } const imageFiles = files.filter(f => f.type.startsWith('image/') && !f.name.endsWith('.gif')); const videoFiles = files.filter(f => f.type.startsWith('video/')); const gifFiles = files.filter(f => f.name.endsWith('.gif')); const zipFiles = files.filter(f => f.name.endsWith('.zip')); imageFiles.forEach(file => { const reader = new FileReader(); reader.onload = e => addArtboard(file.name, e.target.result, 'image', {width: 0, height: 0}); reader.readAsDataURL(file); }); videoFiles.forEach(file => { const url = URL.createObjectURL(file); addArtboard(file.name, url, 'video'); if (app.timelinePanel.classList.contains('hidden')) app.timelinePanel.classList.remove('hidden'); }); gifFiles.forEach(gifToVideo); zipFiles.forEach(handleZipFile); }
             async function handlePaste(e) {
                 const activeEl = document.activeElement; if (activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'INPUT') return;
                 const imageItem = Array.from(e.clipboardData.items).find(item => item.type.startsWith('image/'));
@@ -544,8 +603,8 @@
                         case 'g': e.preventDefault(); if (e.shiftKey) { resizeAllVideosTo720p(); } else { rearrangeArtboards(); } return;
                         case '1': e.preventDefault(); if(state.selectedArtboardIds.length === 1) { fitArtboardToView(state.selectedArtboardIds[0]); } else { state.view.scale = 1; updateWorkspaceTransform(); } return;
                         case '0': if (e.altKey) { e.preventDefault(); fitAllArtboardsToView(); } else { e.preventDefault(); state.view = { ...state.view, scale: 1, offsetX: 0, offsetY: 0 }; updateWorkspaceTransform(); } return;
-                        case ';': e.preventDefault(); state.grids.visible = !state.grids.visible; drawGrids(); return;
-                        case "'": e.preventDefault(); state.grids.locked = !state.grids.locked; drawGrids(); return;
+                        case ';': e.preventDefault(); state.guides.visible = !state.guides.visible; drawGuides(); return;
+                        case "'": e.preventDefault(); state.guides.locked = !state.guides.locked; drawGuides(); return;
                     }
                 }
 
@@ -578,18 +637,18 @@
                 if (e.button === 2) return;
                 if (state.spacebarPressed || e.button === 1) { startPanning(e); return; }
                 
-                const hitGrid = getHitGrid(e);
-                if(hitGrid) {
+                const hitGuide = getHitGuide(e);
+                if(hitGuide) {
                     e.preventDefault(); e.stopPropagation();
-                    state.interaction.mode = 'draggingGrid';
-                    state.interaction.target = hitGrid;
-                    state.interaction.startData.set('grid', { position: hitGrid.grid.position });
+                    state.interaction.mode = 'draggingGuide';
+                    state.interaction.target = hitGuide;
+                    state.interaction.startData.set('guide', { position: hitGuide.guide.position });
                     return;
                 }
                 
-                if (state.artboardEdgeHover && !state.grids.locked) {
+                if (state.artboardEdgeHover && !state.guides.locked) {
                     e.preventDefault(); e.stopPropagation();
-                    state.interaction.mode = 'draggingArtboardGrid';
+                    state.interaction.mode = 'draggingArtboardGuide';
                     state.interaction.target = { artboardId: state.artboardEdgeHover.artboardId, type: ['left', 'right'].includes(state.artboardEdgeHover.edge) ? 'vertical' : 'horizontal' };
                     return;
                 }
@@ -599,12 +658,14 @@
             }
             function onWindowMouseMove(e) { 
                 switch(state.interaction.mode) { 
-                    case 'panning': { const dx = e.clientX - state.interaction.startPos.x; const dy = e.clientY - state.interaction.startPos.y; state.view.offsetX = state.interaction.startWorkspacePos.x + dx; state.view.offsetY = state.interaction.startWorkspacePos.y + dy; updateWorkspaceTransform(); break; }
+                    case 'panning': { 
+                        const dx = e.clientX - state.interaction.startPos.x; const dy = e.clientY - state.interaction.startPos.y; state.view.offsetX = state.interaction.startWorkspacePos.x + dx; state.view.offsetY = state.interaction.startWorkspacePos.y + dy; updateWorkspaceTransform(); break; 
+                    }
                     case 'draggingToolbar': onToolbarDrag(e); break;
                     case 'draggingArtboard': onArtboardDrag(e); break; 
                     case 'resizingArtboard': onArtboardResize(e); break; 
-                    case 'draggingArtboardGrid': drawGrids(e); break;
-                    case 'draggingGrid': onGridDrag(e); break;
+                    case 'draggingArtboardGuide': drawGuides(e); break;
+                    case 'draggingGuide': onGuideDrag(e); break;
                     default: onCanvasMouseMove(e); break; 
                 } 
                 handleArtboardEdgeHover(e);
@@ -621,19 +682,22 @@
                             undo: (action) => { action.before.forEach(s => { const board = state.artboards.find(b=>b.id===s.id); if(board) Object.assign(board, {x:s.x, y:s.y}); }); renderWorkspace(); }
                         });
                      }
-                } else if (state.interaction.mode === 'draggingArtboardGrid') {
+                } else if (state.interaction.mode === 'draggingArtboardGuide') {
                     const { artboardId, type } = state.interaction.target;
                     const artboard = state.artboards.find(b => b.id === artboardId);
                     if (artboard) {
                         const pos = getMousePosOnArtboard(e, artboard); const position = type === 'vertical' ? pos.x : pos.y;
-                        if (!state.grids.artboard[artboardId]) { state.grids.artboard[artboardId] = []; }
-                        state.grids.artboard[artboardId].push({ type, position, id: crypto.randomUUID() });
-                        markAsChanged(); drawGrids();
+                        if (!state.guides.artboard[artboardId]) { state.guides.artboard[artboardId] = []; }
+                        state.guides.artboard[artboardId].push({ type, position, id: crypto.randomUUID() });
+                        markAsChanged(); drawGuides();
                     }
                 }
                 onCanvasMouseUp(e); state.interaction.mode = 'none'; state.interaction.target = null;
             }
-            function onWorkspaceWheel(e) { e.preventDefault(); const rect = app.workspaceContainer.getBoundingClientRect(); zoomAtPoint(e.deltaY < 0 ? 1.1 : 1/1.1, e.clientX - rect.left, e.clientY - rect.top); }
+            function onWorkspaceWheel(e) {
+                e.preventDefault(); 
+                const rect = app.workspaceContainer.getBoundingClientRect(); zoomAtPoint(e.deltaY < 0 ? 1.1 : 1/1.1, e.clientX - rect.left, e.clientY - rect.top); 
+            }
             
             function selectArtboard(artboardId, isShift) {
                 if (isShift) { const index = state.selectedArtboardIds.indexOf(artboardId); if (index > -1) state.selectedArtboardIds.splice(index, 1); else state.selectedArtboardIds.push(artboardId); } 
@@ -649,8 +713,8 @@
             };
             function updateCursorOnMouseMove(e) {
                 if (state.interaction.mode !== 'none' || state.spacebarPressed) return;
-                const hitGrid = getHitGrid(e);
-                if(hitGrid) { app.workspaceContainer.style.cursor = hitGrid.grid.type === 'horizontal' ? 'row-resize' : 'col-resize'; app.toolCursorIcon.classList.add('hidden'); return; }
+                const hitGuide = getHitGuide(e);
+                if(hitGuide) { app.workspaceContainer.style.cursor = hitGuide.guide.type === 'horizontal' ? 'row-resize' : 'col-resize'; app.toolCursorIcon.classList.add('hidden'); return; }
                 const canvas = e.target;
                 if (canvas.classList.contains('interaction-canvas')) {
                     const artboardEl = canvas.closest('.artboard');
@@ -661,56 +725,69 @@
                 } else { app.workspaceContainer.style.cursor = 'grab'; app.toolCursorIcon.classList.add('hidden'); }
             }
 
-            function addArtboard(name, src, type, size = {width:0, height:0}) {
-                const mediaElement = (type === 'image') ? new Image() : (type === 'video') ? document.createElement('video') : null;
+            function addArtboard(name, src, type, size = {width:0, height:0}, options = {}) {
+                const { isLoading = false, id = crypto.randomUUID() } = options;
                 const onMediaReady = () => {
-                    let mediaWidth, mediaHeight;
-                    if (type === 'image') { mediaWidth = mediaElement.naturalWidth; mediaHeight = mediaElement.naturalHeight; }
-                    else if (type === 'video') { mediaWidth = mediaElement.videoWidth; mediaHeight = mediaElement.videoHeight; }
-                    else { mediaWidth = size.width; mediaHeight = size.height; }
-
-                    const { margin } = state.layout;
-                    const artboard = { id: crypto.randomUUID(), name, type, src, x: margin, y: margin, width: mediaWidth, height: mediaHeight, originalWidth: mediaWidth, originalHeight: mediaHeight, scale: 1, };
-                    if (type === 'html') { artboard.htmlContent = src; }
-                    if (type === 'video') { artboard.frameBackups = {}; artboard.videoFailedToLoad = false; }
-                    state.grids.artboard[artboard.id] = [];
-                    historyManager.execute({ type: 'ADD_ARTBOARD', artboard: artboard,
-                        do: () => { state.artboards.push(artboard); rearrangeArtboards(); if (type === 'video') global_updateTimeline(); },
-                        undo: () => { state.artboards = state.artboards.filter(b => b.id !== artboard.id); delete state.grids.artboard[artboard.id]; rearrangeArtboards(); if (type === 'video') global_updateTimeline(); }
-                    });
-                    updateAnnotationList();
+                    if (type === 'image' && !isLoading) {
+                        const mediaElement = new Image();
+                        mediaElement.onload = () => {
+                           createArtboardObject(id, name, src, type, { width: mediaElement.naturalWidth, height: mediaElement.naturalHeight }, isLoading);
+                        };
+                        mediaElement.src = src;
+                    } else if (type === 'video' && !isLoading) {
+                         const mediaElement = document.createElement('video');
+                         mediaElement.onloadedmetadata = () => {
+                            createArtboardObject(id, name, src, type, { width: mediaElement.videoWidth, height: mediaElement.videoHeight }, isLoading);
+                         };
+                         mediaElement.src = src;
+                    } else {
+                        createArtboardObject(id, name, src, type, size, isLoading);
+                    }
                 };
-                if (type === 'html') { onMediaReady(); } 
-                else { if (type === 'image') { mediaElement.onload = onMediaReady; } else if (type === 'video') { mediaElement.onloadedmetadata = onMediaReady; } mediaElement.src = src; }
+
+                const createArtboardObject = (id, name, src, type, size, isLoading) => {
+                    const artboard = { id, name, type, src, x: 50, y: 50, width: size.width, height: size.height, originalWidth: size.width, originalHeight: size.height, scale: 1, isLoading };
+                    if (type === 'video') { artboard.frameBackups = {}; artboard.videoFailedToLoad = false; }
+                    state.guides.artboard[artboard.id] = [];
+                    state.artboards.push(artboard);
+                    rearrangeArtboards();
+                    if (type === 'video' && !isLoading) {
+                        global_updateTimeline();
+                    }
+                };
+                onMediaReady();
             }
 
             function renderWorkspace() {
                 app.workspace.innerHTML = ''; const transparentFileTypes = ['.png', '.webp', '.webm', '.gif', '.tiff'];
                 state.artboards.forEach(artboard => {
                     const artboardEl = document.createElement('div'); artboardEl.className = 'artboard'; artboardEl.dataset.id = artboard.id;
+                    artboardEl.classList.toggle('loading', !!artboard.isLoading);
                     const controlsHeight = artboard.type === 'video' ? 24 : 0;
                     artboardEl.style.cssText = `left: ${artboard.x}px; top: ${artboard.y}px; width: ${artboard.width}px; height: ${artboard.height + 30 + controlsHeight}px;`;
                     artboardEl.classList.toggle('selected', state.selectedArtboardIds.includes(artboard.id));
-                    let contentHTML = ''; const artboardSrc = artboard.src || artboard.name; 
-                    switch(artboard.type) {
-                        case 'image': contentHTML = `<img src="${artboardSrc}" alt="${artboard.name}">`; break;
-                        case 'video': contentHTML = `<video src="${artboardSrc}" playsinline loop></video><img class="frame-backup hidden" alt="Backup Frame">`; break;
-                        case 'html': contentHTML = `<iframe srcdoc="${artboard.htmlContent.replace(/"/g, '&quot;')}"></iframe>`; break;
+                    let contentHTML = ''; let videoControlsHTML = '';
+                    if (!artboard.isLoading) {
+                        const artboardSrc = artboard.src || artboard.name; 
+                        switch(artboard.type) {
+                            case 'image': contentHTML = `<img src="${artboardSrc}" alt="${artboard.name}">`; break;
+                            case 'video': contentHTML = `<video src="${artboardSrc}" playsinline loop></video><img class="frame-backup hidden" alt="Backup Frame">`; break;
+                        }
+                        if(artboard.type === 'video') videoControlsHTML = `<div class="artboard-video-controls"><button class="vid-play-btn" title="Play/Pause">▶</button><button class="vid-mute-btn" title="Mute/Unmute">${MUTE_ICON_SVG}</button><input type="text" class="time-input vid-time" value="00:00:00:00"><div class="vid-timeline-wrapper"><div class="vid-timeline-bg"></div><canvas class="vid-timeline-markers"></canvas><input type="range" class="vid-timeline" value="0" step="0.01"></div></div>`;
                     }
-                    let videoControlsHTML = artboard.type === 'video' ? `<div class="artboard-video-controls"><button class="vid-play-btn" title="Play/Pause">▶</button><button class="vid-mute-btn" title="Mute/Unmute">${MUTE_ICON_SVG}</button><input type="text" class="time-input vid-time" value="00:00:00:00"><div class="vid-timeline-wrapper"><div class="vid-timeline-bg"></div><canvas class="vid-timeline-markers"></canvas><input type="range" class="vid-timeline" value="0" step="0.01"></div></div>` : '';
                     const dimensionsDisplay = `<span class="artboard-info">(${artboard.originalWidth}x${artboard.originalHeight})</span>`;
                     const headerToolsHTML = `<div class="artboard-header-tools"><button class="header-icon-btn fit-view-btn" title="Fit to View (Ctrl+1)"><svg viewBox="0 0 24 24"><path d="M15 3h6v6l-2-2-4 4-2-2 4-4-2-2zM9 21H3v-6l2 2 4-4 2 2-4 4 2 2z"/></svg></button><button class="artboard-close-btn" title="Xóa Artboard (Delete)">&times;</button></div>`;
-                    let transparencyToggleHTML = ''; if (transparentFileTypes.some(ext => artboard.name.toLowerCase().endsWith(ext))) { transparencyToggleHTML = `<button class="header-icon-btn transparency-btn" title="Toggle Transparency Grid"><svg viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M0 0h8v8H0V0zm8 8h8v8H8V8z" clip-rule="evenodd"></path></svg></button>`; }
+                    let transparencyToggleHTML = ''; if (transparentFileTypes.some(ext => artboard.name.toLowerCase().endsWith(ext))) { transparencyToggleHTML = `<button class="header-icon-btn transparency-btn" title="Toggle Transparency Guide"><svg viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M0 0h8v8H0V0zm8 8h8v8H8V8z" clip-rule="evenodd"></path></svg></button>`; }
                     artboardEl.innerHTML = `
                         <div class="artboard-header"><div class="artboard-title-container" title="${artboard.name} ${artboard.originalWidth}x${artboard.originalHeight}">${transparencyToggleHTML}<span class="artboard-title">${artboard.name}</span><span class="artboard-info-wrapper">${dimensionsDisplay}</span></div>${headerToolsHTML}</div>
-                        <div class="artboard-content">${contentHTML}<canvas class="grid-canvas"></canvas><canvas class="display-canvas"></canvas><canvas class="interaction-canvas"></canvas></div>
+                        <div class="artboard-content">${contentHTML}<canvas class="guide-canvas"></canvas><canvas class="display-canvas"></canvas><canvas class="interaction-canvas"></canvas></div>
                         ${videoControlsHTML}
                         <div class="artboard-resizer" title="Resize (Double-click to reset)"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10.0002 12.0001L12.0002 10.0001" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M6.00009 16.0001L16.0001 6.00009" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M14.0002 12.0001L12.0002 14.0001" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>`;
                     app.workspace.appendChild(artboardEl);
                     artboardEl.querySelector('.artboard-content').style.backgroundColor = state.layout.artboardBgColor;
                     artboardEl.addEventListener('mousedown', e => { if(e.target === artboardEl) selectArtboard(artboard.id, e.shiftKey || e.ctrlKey || e.metaKey); });
                     artboardEl.addEventListener('contextmenu', e => onArtboardContextMenu(e, artboard.id));
-                    const transparencyBtn = artboardEl.querySelector('.transparency-btn'); if(transparencyBtn) { transparencyBtn.addEventListener('click', (e) => { e.stopPropagation(); artboardEl.querySelector('.artboard-content').classList.toggle('transparent-grid'); }); }
+                    const transparencyBtn = artboardEl.querySelector('.transparency-btn'); if(transparencyBtn) { transparencyBtn.addEventListener('click', (e) => { e.stopPropagation(); artboardEl.querySelector('.artboard-content').classList.toggle('transparent-guide'); }); }
                     artboardEl.querySelector('.artboard-header').addEventListener('mousedown', e => onArtboardHeaderMouseDown(e, artboard.id));
                     artboardEl.querySelector('.fit-view-btn').addEventListener('click', () => fitArtboardToView(artboard.id));
                     artboardEl.querySelector('.artboard-close-btn').addEventListener('click', () => deleteSelectedArtboards());
@@ -720,22 +797,29 @@
                     interactionCanvas.addEventListener('mousedown', e => onCanvasMouseDown(e, artboard.id));
                     interactionCanvas.addEventListener('dblclick', e => onCanvasDblClick(e, artboard.id));
                     interactionCanvas.addEventListener('contextmenu', e => onAnnotationCanvasContextMenu(e, artboard.id));
-                    if (artboard.type === 'video') {
-                        const video = artboardEl.querySelector('video'); artboard.videoFailedToLoad = false;
-                        video.onerror = () => { artboard.videoFailedToLoad = true; video.classList.add('hidden'); redrawArtboardAnnotations(artboard.id); };
-                        const playBtn = artboardEl.querySelector('.vid-play-btn'); const muteBtn = artboardEl.querySelector('.vid-mute-btn'); const timeInput = artboardEl.querySelector('.vid-time'); const timeline = artboardEl.querySelector('.vid-timeline');
-                        video.muted = state.isGlobalMuted; muteBtn.innerHTML = video.muted ? MUTE_ICON_SVG : UNMUTE_ICON_SVG;
-                        playBtn.addEventListener('click', e => { e.stopPropagation(); video.paused ? video.play() : video.pause(); });
-                        muteBtn.addEventListener('click', e => { e.stopPropagation(); video.muted = !video.muted; muteBtn.innerHTML = video.muted ? MUTE_ICON_SVG : UNMUTE_ICON_SVG; });
-                        video.addEventListener('play', () => { playBtn.textContent = '❚❚'; global_updatePlayButtonState(); });
-                        video.addEventListener('pause', () => { playBtn.textContent = '▶'; global_updatePlayButtonState(); });
-                        video.addEventListener('loadedmetadata', () => { timeline.max = video.duration; global_updateTimeline(); });
-                        video.addEventListener('timeupdate', () => { if (!timeline.matches(':active')) timeline.value = video.currentTime; if (document.activeElement !== timeInput) { timeInput.value = formatTimeHHMMSSFF(video.currentTime, video.duration); } redrawArtboardAnnotations(artboard.id); });
-                        timeline.addEventListener('input', e => { e.stopPropagation(); video.currentTime = parseFloat(timeline.value); redrawArtboardAnnotations(artboard.id); });
-                        initTimeInput(timeInput, () => video.currentTime, (newTime) => {video.currentTime = newTime; redrawArtboardAnnotations(artboard.id);}, () => video.duration);
+                    if (artboard.type === 'video' && !artboard.isLoading) {
+                        initVideoArtboardControls(artboardEl, artboard);
                     }
                 });
-                redrawAllAnnotations(); drawGrids();
+                redrawAllAnnotations(); 
+                drawGuides();
+            }
+            
+            function initVideoArtboardControls(artboardEl, artboard) {
+                const video = artboardEl.querySelector('video');
+                if(!video) return;
+                artboard.videoFailedToLoad = false;
+                video.onerror = () => { artboard.videoFailedToLoad = true; video.classList.add('hidden'); redrawArtboardAnnotations(artboard.id); };
+                const playBtn = artboardEl.querySelector('.vid-play-btn'); const muteBtn = artboardEl.querySelector('.vid-mute-btn'); const timeInput = artboardEl.querySelector('.vid-time'); const timeline = artboardEl.querySelector('.vid-timeline');
+                video.muted = state.isGlobalMuted; muteBtn.innerHTML = video.muted ? MUTE_ICON_SVG : UNMUTE_ICON_SVG;
+                playBtn.addEventListener('click', e => { e.stopPropagation(); video.paused ? video.play() : video.pause(); });
+                muteBtn.addEventListener('click', e => { e.stopPropagation(); video.muted = !video.muted; muteBtn.innerHTML = video.muted ? MUTE_ICON_SVG : UNMUTE_ICON_SVG; });
+                video.addEventListener('play', () => { playBtn.textContent = '❚❚'; global_updatePlayButtonState(); });
+                video.addEventListener('pause', () => { playBtn.textContent = '▶'; global_updatePlayButtonState(); });
+                video.addEventListener('loadedmetadata', () => { timeline.max = video.duration; global_updateTimeline(); });
+                video.addEventListener('timeupdate', () => { if (!timeline.matches(':active')) timeline.value = video.currentTime; if (document.activeElement !== timeInput) { timeInput.value = formatTimeHHMMSSFF(video.currentTime, video.duration); } redrawArtboardAnnotations(artboard.id); });
+                timeline.addEventListener('input', e => { e.stopPropagation(); video.currentTime = parseFloat(timeline.value); redrawArtboardAnnotations(artboard.id); });
+                initTimeInput(timeInput, () => video.currentTime, (newTime) => {video.currentTime = newTime; redrawArtboardAnnotations(artboard.id);}, () => video.duration);
             }
 
             async function captureFrame(videoEl) { const canvas = document.createElement('canvas'); canvas.width = videoEl.videoWidth; canvas.height = videoEl.videoHeight; const ctx = canvas.getContext('2d'); ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height); return canvas.toDataURL('image/webp', 0.5); }
@@ -756,8 +840,8 @@
                  const annotationsOnArtboards = state.annotations.filter(a => state.selectedArtboardIds.includes(a.artboardId));
                 if ((artboardsToRemove.length > 0 || annotationsOnArtboards.length > 0) && !confirm(`Xóa ${artboardsToRemove.length} artboard(s) và ${annotationsOnArtboards.length} comment trên đó?`)) return;
                 historyManager.execute({ type: 'DELETE_ARTBOARDS', artboards: JSON.parse(JSON.stringify(artboardsToRemove)), annotations: JSON.parse(JSON.stringify(annotationsOnArtboards)),
-                    do: () => { artboardsToRemove.forEach(board => { if(board.type === 'video' && board.src.startsWith('blob:')) URL.revokeObjectURL(board.src); delete state.grids.artboard[board.id]; }); state.artboards = state.artboards.filter(b => !state.selectedArtboardIds.includes(b.id)); state.annotations = state.annotations.filter(a => !state.selectedArtboardIds.includes(a.artboardId)); state.selectedArtboardIds = []; rearrangeArtboards(); updateAnnotationList(); },
-                    undo: (action) => { state.artboards.push(...action.artboards); state.annotations.push(...action.annotations); action.artboards.forEach(b => state.grids.artboard[b.id] = state.grids.artboard[b.id] || [] ); state.selectedArtboardIds = action.artboards.map(b => b.id); rearrangeArtboards(); updateAnnotationList(); }
+                    do: () => { artboardsToRemove.forEach(board => { if(board.type === 'video' && board.src.startsWith('blob:')) URL.revokeObjectURL(board.src); delete state.guides.artboard[board.id]; }); state.artboards = state.artboards.filter(b => !state.selectedArtboardIds.includes(b.id)); state.annotations = state.annotations.filter(a => !state.selectedArtboardIds.includes(a.artboardId)); state.selectedArtboardIds = []; rearrangeArtboards(); updateAnnotationList(); global_updateTimeline(); },
+                    undo: (action) => { state.artboards.push(...action.artboards); state.annotations.push(...action.annotations); action.artboards.forEach(b => state.guides.artboard[b.id] = state.guides.artboard[b.id] || [] ); state.selectedArtboardIds = action.artboards.map(b => b.id); rearrangeArtboards(); updateAnnotationList(); global_updateTimeline(); }
                 });
             }
             
@@ -953,16 +1037,93 @@
                 else { const prevMarkers = markerTimes.filter(t => t < currentTime - 0.01); if (prevMarkers.length > 0) { nextTime = prevMarkers[prevMarkers.length - 1]; } else { nextTime = markerTimes[markerTimes.length - 1]; } }
                 video.currentTime = nextTime; video.pause();
             }
+            function drawMasterRuler() {
+                const canvas = app.masterTimelineRuler;
+                if (!canvas.offsetParent) return;
+                const ctx = canvas.getContext('2d');
+                const width = canvas.offsetWidth;
+                const height = canvas.offsetHeight;
+                canvas.width = width;
+                canvas.height = height;
+
+                const duration = parseFloat(app.timelineSlider.max) || 100;
+
+                ctx.clearRect(0, 0, width, height);
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                ctx.font = '10px sans-serif';
+                ctx.textBaseline = 'top';
+
+                const intervals = [1, 5, 10, 30, 60, 300, 600]; // seconds
+                let majorTickSpacing = 1;
+                for (const interval of intervals) {
+                    if (duration / interval < (width / 80)) { // Aim for ticks every ~80px
+                        majorTickSpacing = interval;
+                        break;
+                    }
+                }
+
+                for (let i = 0; i <= duration; i += majorTickSpacing / 5) {
+                    const x = (i / duration) * width;
+                    const isMajorTick = i % majorTickSpacing < (majorTickSpacing / 5);
+
+                    ctx.beginPath();
+                    ctx.moveTo(x, height);
+                    ctx.lineTo(x, isMajorTick ? height * 0.5 : height * 0.75);
+                    ctx.stroke();
+
+                    if (isMajorTick) {
+                        ctx.textAlign = 'left';
+                        ctx.fillText(formatTime(i), x + 3, 2);
+                    }
+                }
+            }
+            
             function global_updateTimeline() { 
-                let maxDuration = 0; let primaryVideo = null; const videos = Array.from(document.querySelectorAll('#workspace video')); 
-                if (videos.length === 0) { app.timelinePanel.classList.add('hidden'); return; } 
-                let firstDuration = -1; state.areVideosInSync = true; 
-                videos.forEach(v => { if (isFinite(v.duration)) { if (firstDuration === -1) firstDuration = v.duration; else if (Math.abs(firstDuration - v.duration) > 0.1) state.areVideosInSync = false; if (v.duration > maxDuration) { maxDuration = v.duration; primaryVideo = v; } } }); 
-                app.timelineSlider.max = maxDuration > 0 ? maxDuration : 100; app.timelinePanel.classList.toggle('out-of-sync', !state.areVideosInSync);
+                let maxDuration = 0; 
+                let primaryVideo = null; 
+                const videos = Array.from(document.querySelectorAll('#workspace video')); 
+                
+                if (videos.length === 0) { 
+                    app.timelinePanel.classList.add('hidden'); 
+                    return; 
+                } 
+                app.timelinePanel.classList.remove('hidden');
+
+                let firstDuration = -1; 
+                state.areVideosInSync = true; 
+                videos.forEach(v => { 
+                    if (isFinite(v.duration)) { 
+                        if (firstDuration === -1) firstDuration = v.duration; 
+                        else if (Math.abs(firstDuration - v.duration) > 0.1) state.areVideosInSync = false; 
+                        if (v.duration > maxDuration) { 
+                            maxDuration = v.duration; 
+                            primaryVideo = v; 
+                        } 
+                    } 
+                }); 
+                app.timelineSlider.max = maxDuration > 0 ? maxDuration : 100; 
+                
+                if (app.timelineSlider.oninput) {
+                    app.timelineSlider.oninput = null;
+                }
+                
+                app.timelineSlider.oninput = () => {
+                    global_seekTo(parseFloat(app.timelineSlider.value));
+                };
+
                 if(primaryVideo && !primaryVideo.timeUpdateAttached) { 
-                    primaryVideo.addEventListener('timeupdate', () => { if(!app.timelineSlider.matches(':active')) { app.timelineSlider.value = primaryVideo.currentTime; } if (document.activeElement !== app.timeDisplay) { app.timeDisplay.value = formatTimeHHMMSSFF(primaryVideo.currentTime, primaryVideo.duration); } }); 
+                    primaryVideo.addEventListener('timeupdate', () => { 
+                        if(!app.timelineSlider.matches(':active')) { 
+                            app.timelineSlider.value = primaryVideo.currentTime; 
+                        } 
+                        if (document.activeElement !== app.timeDisplay) { 
+                            app.timeDisplay.value = formatTimeHHMMSSFF(primaryVideo.currentTime, primaryVideo.duration); 
+                        } 
+                    }); 
                     primaryVideo.timeUpdateAttached = true; 
                 }
+                drawMasterRuler();
             }
             const formatTime = (secs) => { if (isNaN(secs)) return '00:00'; const s = Math.floor(secs % 60); const m = Math.floor((secs / 60) % 60); return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; };
             const formatTimeHHMMSSFF = (seconds, duration = 0) => {
@@ -999,7 +1160,7 @@
             async function generateAnnotatedHTML() {
                 const dataToSave = {
                     artboards: state.artboards.map(board => { const { id, name, type, htmlContent, x, y, width, height, originalWidth, originalHeight, scale, frameBackups, src } = board; const artboardData = { id, name, type, x, y, width, height, originalWidth, originalHeight, scale }; if (htmlContent) artboardData.htmlContent = htmlContent; if (frameBackups) artboardData.frameBackups = frameBackups; if (src) { if (src.startsWith('data:')) { artboardData.src = src; } else if (src.startsWith('blob:')) { artboardData.src = name; } else { artboardData.src = src; } }  else { artboardData.src = name; } return artboardData; }),
-                    annotations: state.annotations, layout: state.layout, grids: state.grids, toolbar: state.toolbar,
+                    annotations: state.annotations, layout: state.layout, guides: state.guides, toolbar: state.toolbar,
                 };
                 const dataStr = JSON.stringify(dataToSave, null, 2);
                 const docClone = document.cloneNode(true); docClone.getElementById('app-data').textContent = '\n' + dataStr + '\n';
@@ -1068,24 +1229,39 @@
                 }
             }
             function redrawAllAnnotations() { state.artboards.forEach(artboard => redrawArtboardAnnotations(artboard.id)); }
-            function updateWorkspaceTransform() { const { offsetX, offsetY, scale } = state.view; app.workspace.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`; drawGrids(); }
+            function updateWorkspaceTransform() { const { offsetX, offsetY, scale } = state.view; app.workspace.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`; drawGuides(); }
             function zoomAtPoint(factor, x, y) { const oldScale = state.view.scale; const newScale = Math.max(state.view.minScale, Math.min(state.view.maxScale, oldScale * factor)); state.view.scale = newScale; state.view.offsetX = x - (x - state.view.offsetX) * (newScale / oldScale); state.view.offsetY = y - (y - state.view.offsetY) * (newScale / oldScale); updateWorkspaceTransform(); }
-            function fitArtboardToView(artboardId) { const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return; const PADDING = 40; const container = app.workspaceContainer; const artboardEl = document.querySelector(`.artboard[data-id="${artboardId}"]`); if(!artboardEl) return; const artboardHeight = artboardEl.offsetHeight; const scaleX = (container.offsetWidth - 2 * PADDING) / artboard.width; const scaleY = (container.offsetHeight - 2 * PADDING) / artboardHeight; const newScale = Math.min(scaleX, scaleY); state.view.scale = newScale; state.view.offsetX = (container.offsetWidth - artboard.width * newScale) / 2 - artboard.x * newScale; state.view.offsetY = (container.offsetHeight - artboardHeight * newScale) / 2 - artboard.y * newScale; updateWorkspaceTransform(); }
+            function fitArtboardToView(artboardId) {
+                const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return;
+                const PADDING = 40;
+                const container = app.workspaceContainer;
+                const artboardEl = document.querySelector(`.artboard[data-id="${artboardId}"]`); if(!artboardEl) return;
+                const artboardHeight = artboardEl.offsetHeight;
+                const availableWidth = container.offsetWidth - 2 * PADDING;
+                const availableHeight = container.offsetHeight - 2 * PADDING;
+                const scaleX = availableWidth / artboard.width;
+                const scaleY = availableHeight / artboardHeight;
+                const newScale = Math.min(scaleX, scaleY);
+                state.view.scale = newScale;
+                state.view.offsetX = (container.offsetWidth - artboard.width * newScale) / 2 - artboard.x * newScale;
+                state.view.offsetY = (container.offsetHeight - artboardHeight * newScale) / 2 - artboard.y * newScale;
+                updateWorkspaceTransform();
+            }
             function fitAllArtboardsToView() { if (state.artboards.length === 0) return; const PADDING = 50; let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity; state.artboards.forEach(b => { const artboardEl = document.querySelector(`.artboard[data-id="${b.id}"]`); const height = artboardEl ? artboardEl.offsetHeight : (b.height + 30 + (b.type==='video' ? 24:0)); minX = Math.min(minX, b.x); minY = Math.min(minY, b.y); maxX = Math.max(maxX, b.x + b.width); maxY = Math.max(maxY, b.y + height); }); const totalWidth = maxX - minX; const totalHeight = maxY - minY; if (totalWidth === 0 || totalHeight === 0) return; const container = app.workspaceContainer; const scaleX = (container.offsetWidth - 2 * PADDING) / totalWidth; const scaleY = (container.offsetHeight - 2 * PADDING) / totalHeight; const newScale = Math.min(scaleX, scaleY, 1); state.view.scale = newScale; state.view.offsetX = (container.offsetWidth - totalWidth * newScale) / 2 - minX * newScale; state.view.offsetY = (container.offsetHeight - totalHeight * newScale) / 2 - minY * newScale; updateWorkspaceTransform(); }
             function onArtboardHeaderMouseDown(e, artboardId) {
-                if (e.button !== 0 || state.spacebarPressed || e.button === 1) { startPanning(e); return; }
+                if (e.button !== 0 || state.spacebarPressed || e.button === 1) { return; }
                 e.stopPropagation(); selectArtboard(artboardId, e.shiftKey || e.ctrlKey || e.metaKey);
                 state.interaction.mode = 'draggingArtboard'; state.interaction.target = { artboardId }; state.interaction.startPos = getWorkspaceMousePos(e); state.interaction.startData.clear();
                 state.selectedArtboardIds.forEach(id => { const board = state.artboards.find(b => b.id === id); if (board) { state.interaction.startData.set(id, { x: board.x, y: board.y }); } });
                 document.querySelectorAll('.artboard.selected').forEach(el => el.classList.add('dragging'));
             }
-            function onArtboardDrag(e) { if (state.interaction.mode !== 'draggingArtboard') return; const currentPos = getWorkspaceMousePos(e); const dx = currentPos.x - state.interaction.startPos.x; const dy = currentPos.y - state.interaction.startPos.y; state.selectedArtboardIds.forEach(id => { const board = state.artboards.find(b => b.id === id); const startPos = state.interaction.startData.get(id); if (board && startPos) { board.x = startPos.x + dx; board.y = startPos.y + dy; const el = document.querySelector(`.artboard[data-id="${id}"]`); if (el) { el.style.left = `${board.x}px`; el.style.top = `${board.y}px`; } } }); drawGrids(); }
+            function onArtboardDrag(e) { if (state.interaction.mode !== 'draggingArtboard') return; const currentPos = getWorkspaceMousePos(e); const dx = currentPos.x - state.interaction.startPos.x; const dy = currentPos.y - state.interaction.startPos.y; state.selectedArtboardIds.forEach(id => { const board = state.artboards.find(b => b.id === id); const startPos = state.interaction.startData.get(id); if (board && startPos) { board.x = startPos.x + dx; board.y = startPos.y + dy; const el = document.querySelector(`.artboard[data-id="${id}"]`); if (el) { el.style.left = `${board.x}px`; el.style.top = `${board.y}px`; } } }); drawGuides(); }
             function onArtboardResizeMouseDown(e, artboardId) { e.stopPropagation(); const artboard = state.artboards.find(b => b.id === artboardId); if(!artboard) return; state.interaction = { mode: 'resizingArtboard', target: { artboardId }, startPos: { x: e.clientX, y: e.clientY }, startWidth: artboard.width, startHeight: artboard.height }; document.querySelector(`.artboard[data-id="${artboardId}"]`).classList.add('dragging'); }
             function onArtboardResize(e) { if (state.interaction.mode !== 'resizingArtboard') return; const { artboardId } = state.interaction.target; const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return; const dx = e.clientX - state.interaction.startPos.x; const newWidth = state.interaction.startWidth + (dx / state.view.scale); const aspectRatio = artboard.originalWidth / artboard.originalHeight; artboard.width = Math.max(50, newWidth); artboard.height = artboard.width / aspectRatio; artboard.scale = artboard.width / artboard.originalWidth; redrawArtboard(artboardId); markAsChanged(); }
             function resetArtboardScale(artboardId) { const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return; artboard.scale = 1; artboard.width = artboard.originalWidth; artboard.height = artboard.originalHeight; redrawArtboard(artboardId); markAsChanged(); }
             const getWorkspaceMousePos = (e) => { const rect = app.workspaceContainer.getBoundingClientRect(); return { x: (e.clientX - rect.left - state.view.offsetX) / state.view.scale, y: (e.clientY - rect.top - state.view.offsetY) / state.view.scale }; };
             const getMousePosOnArtboard = (e, artboard) => { const artboardEl = app.workspace.querySelector(`.artboard[data-id="${artboard.id}"]`); if (!artboardEl) return {x:0, y:0}; const contentEl = artboardEl.querySelector('.artboard-content'); const rect = contentEl.getBoundingClientRect(); return { x: (e.clientX - rect.left) / rect.width, y: (e.clientY - rect.top) / rect.height }; };
-            const getArtboardCanvases = (artboardId) => { const el = app.workspace.querySelector(`.artboard[data-id="${artboardId}"]`); if (!el) return {}; return { gridCanvas: el.querySelector('.grid-canvas'), displayCanvas: el.querySelector('.display-canvas'), interactionCanvas: el.querySelector('.interaction-canvas'), ctxDisplay: el.querySelector('.display-canvas').getContext('2d'), ctxInteraction: el.querySelector('.interaction-canvas').getContext('2d') }; };
+            const getArtboardCanvases = (artboardId) => { const el = app.workspace.querySelector(`.artboard[data-id="${artboardId}"]`); if (!el) return {}; return { guideCanvas: el.querySelector('.guide-canvas'), displayCanvas: el.querySelector('.display-canvas'), interactionCanvas: el.querySelector('.interaction-canvas'), ctxDisplay: el.querySelector('.display-canvas').getContext('2d'), ctxInteraction: el.querySelector('.interaction-canvas').getContext('2d') }; };
             function resizeAnnotation(index, handle, pos) {
                 const ann = state.annotations[index]; const { p1, p2 } = ann.data;
                 const minX = Math.min(p1.x, p2.x), minY = Math.min(p1.y, p2.y), maxX = Math.max(p1.x, p2.x), maxY = Math.max(p1.y, p2.y);
@@ -1118,7 +1294,7 @@
             const getHitHandle = (pos, ann) => { const artboard = state.artboards.find(b => b.id === ann.artboardId); if (!artboard) return null; const handleSizePx = 16; const handleRadiusX = (handleSizePx / artboard.width) / 2; const handleRadiusY = (handleSizePx / artboard.height) / 2; return getHandlesFor(ann).find(h => pos.x > h.x - handleRadiusX && pos.x < h.x + handleRadiusX && pos.y > h.y - handleRadiusY && pos.y < h.y + handleRadiusY) || null; }
             function drawShape(ctx, ann, artboard, isSelected, isPreview = false) { ctx.save(); const { type, data, color } = ann; ctx.strokeStyle = color || state.activeColor; ctx.lineWidth = isSelected ? 4 : 2; if(isPreview) { ctx.setLineDash([6, 3]); ctx.lineWidth = 3; } const denorm = (p) => ({ x: p.x * artboard.width, y: p.y * artboard.height }); ctx.beginPath(); switch (type) { case 'comment': { const pos = denorm(data); const size = 24; ctx.fillStyle = color || state.activeColor; const path = new Path2D("M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"); ctx.save(); ctx.translate(pos.x, pos.y); ctx.scale(size / 24, size / 24); ctx.translate(-2, -22); ctx.fill(path); ctx.restore(); if (isSelected) { ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'; ctx.beginPath(); ctx.arc(pos.x, pos.y, 12, 0, 2 * Math.PI); ctx.fill(); } break; } case 'rect': { const p1_abs = denorm(data.p1); const p2_abs = denorm(data.p2); ctx.rect(p1_abs.x, p1_abs.y, p2_abs.x - p1_abs.x, p2_abs.y - p1_abs.y); break; } case 'circle': { const p1_abs = denorm(data.p1); const p2_abs = denorm(data.p2); ctx.ellipse(p1_abs.x + (p2_abs.x-p1_abs.x)/2, p1_abs.y + (p2_abs.y-p1_abs.y)/2, Math.abs((p2_abs.x-p1_abs.x)/2), Math.abs((p2_abs.y-p1_abs.y)/2), 0, 0, 2 * Math.PI); break; } case 'line': { const p1_abs = denorm(data.p1); const p2_abs = denorm(data.p2); ctx.moveTo(p1_abs.x, p1_abs.y); ctx.lineTo(p2_abs.x, p2_abs.y); break; } case 'arrow': { const p1_abs = denorm(data.p1); const p2_abs = denorm(data.p2); const h = 15, dx = p2_abs.x - p1_abs.x, dy = p2_abs.y - p1_abs.y, a = Math.atan2(dy, dx); ctx.moveTo(p1_abs.x, p1_abs.y); ctx.lineTo(p2_abs.x, p2_abs.y); ctx.lineTo(p2_abs.x - h * Math.cos(a - Math.PI / 6), p2_abs.y - h * Math.sin(a - Math.PI / 6)); ctx.moveTo(p2_abs.x, p2_abs.y); ctx.lineTo(p2_abs.x - h * Math.cos(a + Math.PI / 6), p2_abs.y - h * Math.sin(a + Math.PI / 6)); break; } case 'image': { const p1_abs = denorm(data.p1); const p2_abs = denorm(data.p2); let img = imageAnnotationCache.get(ann.id); if (!img) { img = new Image(); img.src = data.imageData; imageAnnotationCache.set(ann.id, img); } if (img.complete && img.naturalWidth > 0) { ctx.drawImage(img, p1_abs.x, p1_abs.y, p2_abs.x - p1_abs.x, p2_abs.y - p1_abs.y); } else { img.onload = () => redrawArtboardAnnotations(ann.artboardId); } ctx.rect(p1_abs.x, p1_abs.y, p2_abs.x - p1_abs.x, p2_abs.y - p1_abs.y); break; } case 'reply': break; } if (type !== 'comment' && type !== 'reply') ctx.stroke(); ctx.restore(); }
             function drawHandles(ctx, ann, artboard) { if (ann.type === 'reply') return; ctx.save(); const handles = getHandlesFor(ann); ctx.fillStyle = 'white'; ctx.strokeStyle = '#333'; ctx.lineWidth = 1; const handleSize = 10; handles.forEach(h => { const x_abs = h.x * artboard.width; const y_abs = h.y * artboard.height; ctx.fillRect(x_abs - handleSize/2, y_abs - handleSize/2, handleSize, handleSize); ctx.strokeRect(x_abs - handleSize/2, y_abs - handleSize/2, handleSize, handleSize); }); ctx.restore(); }
-            function redrawArtboard(artboardId){ const artboard = state.artboards.find(b => b.id === artboardId); if(!artboard) return; const artboardEl = app.workspace.querySelector(`.artboard[data-id="${artboardId}"]`); if(!artboardEl) return; const controlsHeight = artboard.type === 'video' ? 24 : 0; artboardEl.style.width = `${artboard.width}px`; artboardEl.style.height = `${artboard.height + 30 + controlsHeight}px`; const dimensionsDisplay = `<span class="artboard-info">(${artboard.originalWidth}x${artboard.originalHeight})</span>`; const infoWrapper = artboardEl.querySelector('.artboard-info-wrapper'); infoWrapper.innerHTML = `${dimensionsDisplay}`; redrawAllAnnotations(); drawGrids(); }
+            function redrawArtboard(artboardId){ const artboard = state.artboards.find(b => b.id === artboardId); if(!artboard) return; const artboardEl = app.workspace.querySelector(`.artboard[data-id="${artboardId}"]`); if(!artboardEl) return; const controlsHeight = artboard.type === 'video' ? 24 : 0; artboardEl.style.width = `${artboard.width}px`; artboardEl.style.height = `${artboard.height + 30 + controlsHeight}px`; const dimensionsDisplay = `<span class="artboard-info">(${artboard.originalWidth}x${artboard.originalHeight})</span>`; const infoWrapper = artboardEl.querySelector('.artboard-info-wrapper'); infoWrapper.innerHTML = `${dimensionsDisplay}`; redrawAllAnnotations(); drawGuides(); }
             function resizeAllVideosTo720p() { state.artboards.forEach(artboard => { if (artboard.type === 'video' && artboard.originalHeight > 0) { const targetHeight = 720; const aspectRatio = artboard.originalWidth / artboard.originalHeight; artboard.height = targetHeight; artboard.width = targetHeight * aspectRatio; artboard.scale = artboard.height / artboard.originalHeight; redrawArtboard(artboard.id); } }); markAsChanged(); }
             function rearrangeArtboards() {
                 if (state.artboards.length === 0) return;
@@ -1142,23 +1318,87 @@
             function copyAnnotations() { if (state.selectedAnnotationIndices.length === 0) return; const allIdsToCopy = new Set(); const queue = state.selectedAnnotationIndices.map(index => state.annotations[index].id); queue.forEach(id => allIdsToCopy.add(id)); const traversalQueue = [...queue]; while (traversalQueue.length > 0) { const parentId = traversalQueue.shift(); const children = state.annotations.filter(ann => ann.parentId === parentId); for (const child of children) { if (!allIdsToCopy.has(child.id)) { allIdsToCopy.add(child.id); traversalQueue.push(child.id); } } } state.clipboard = state.annotations.filter(ann => allIdsToCopy.has(ann.id)).map(ann => JSON.parse(JSON.stringify(ann))); }
             function pasteAnnotations() {
                 if (state.clipboard.length === 0) return;
-                const targetArtboardIds = state.selectedArtboardIds.length > 0 ? state.selectedArtboardIds : [state.artboards[0]?.id].filter(Boolean); if (targetArtboardIds.length === 0) return;
+                const targetArtboardIds = state.selectedArtboardIds.length > 0 ? state.selectedArtboardIds : [state.artboards.length > 0 ? state.artboards[0].id : null].filter(Boolean);
+                if (targetArtboardIds.length === 0) return;
+                
                 const allNewAnnotations = [];
                 targetArtboardIds.forEach(targetId => {
-                    const oldIdToNewIdMap = new Map(); const annotationsForThisBoard = []; const targetArtboard = state.artboards.find(b => b.id === targetId);
-                    state.clipboard.forEach(clipboardAnn => { const newAnn = JSON.parse(JSON.stringify(clipboardAnn)); const newId = crypto.randomUUID(); oldIdToNewIdMap.set(clipboardAnn.id, newId); newAnn.id = newId; newAnn.artboardId = targetId; if (targetArtboard.type !== 'video') { delete newAnn.videoTime; delete newAnn.frameBackup; } annotationsForThisBoard.push(newAnn); });
-                    annotationsForThisBoard.forEach(newAnn => { if (newAnn.parentId && oldIdToNewIdMap.has(newAnn.parentId)) newAnn.parentId = oldIdToNewIdMap.get(newAnn.parentId); else newAnn.parentId = null; });
+                    const oldIdToNewIdMap = new Map();
+                    const annotationsForThisBoard = [];
+                    const targetArtboard = state.artboards.find(b => b.id === targetId);
+                    
+                    state.clipboard.forEach(clipboardAnn => {
+                        const newAnn = JSON.parse(JSON.stringify(clipboardAnn));
+                        const newId = crypto.randomUUID();
+                        oldIdToNewIdMap.set(clipboardAnn.id, newId);
+                        newAnn.id = newId;
+                        newAnn.artboardId = targetId;
+                        if (targetArtboard && targetArtboard.type !== 'video') {
+                            delete newAnn.videoTime;
+                            delete newAnn.frameBackup;
+                        }
+                        annotationsForThisBoard.push(newAnn);
+                    });
+
+                    annotationsForThisBoard.forEach(newAnn => {
+                        if (newAnn.parentId && oldIdToNewIdMap.has(newAnn.parentId)) {
+                            newAnn.parentId = oldIdToNewIdMap.get(newAnn.parentId);
+                        } else {
+                            newAnn.parentId = null;
+                        }
+                    });
                     allNewAnnotations.push(...annotationsForThisBoard);
                 });
-                if (allNewAnnotations.length === 0) return; addAnnotation(allNewAnnotations[0]);
+
+                if (allNewAnnotations.length === 0) return;
+                
+                historyManager.execute({
+                    type: 'ADD_ANNOTATIONS',
+                    annotations: allNewAnnotations,
+                    do: (action) => {
+                        state.annotations.push(...action.annotations);
+                        state.selectedAnnotationIndices = action.annotations.map(ann => state.annotations.indexOf(ann));
+                        updateAnnotationList();
+                        redrawAllAnnotations();
+                    },
+                    undo: (action) => {
+                        const idsToRemove = new Set(action.annotations.map(a => a.id));
+                        state.annotations = state.annotations.filter(a => !idsToRemove.has(a.id));
+                        state.selectedAnnotationIndices = [];
+                        updateAnnotationList();
+                        redrawAllAnnotations();
+                    }
+                });
             }
             
             function createHistoryManager() {
                 const limit = 100; let undoStack = []; let redoStack = [];
                 return {
-                    execute(action) { action.do(action); undoStack.push(action); if (undoStack.length > limit) { undoStack.shift(); } redoStack = []; markAsChanged(); },
-                    undo() { if (undoStack.length === 0) return; const action = undoStack.pop(); action.undo(action); redoStack.push(action); markAsChanged(); updateAnnotationList(); renderWorkspace(); },
-                    redo() { if (redoStack.length === 0) return; const action = redoStack.pop(); action.do(action); undoStack.push(action); markAsChanged(); updateAnnotationList(); renderWorkspace(); },
+                    execute(action) {
+                        action.do(action);
+                        undoStack.push(action);
+                        if (undoStack.length > limit) { undoStack.shift(); }
+                        redoStack = [];
+                        markAsChanged();
+                    },
+                    undo() {
+                        if (undoStack.length === 0) return;
+                        const action = undoStack.pop();
+                        action.undo(action);
+                        redoStack.push(action);
+                        markAsChanged();
+                        updateAnnotationList();
+                        renderWorkspace();
+                    },
+                    redo() {
+                        if (redoStack.length === 0) return;
+                        const action = redoStack.pop();
+                        action.do(action);
+                        undoStack.push(action);
+                        markAsChanged();
+                        updateAnnotationList();
+                        renderWorkspace();
+                    },
                 };
             }
             
@@ -1166,83 +1406,94 @@
             function applyRightPanelState() { app.rightPanel.classList.toggle('collapsed', state.layout.isPanelCollapsed); }
             function changeArtboardBg(color) { state.layout.artboardBgColor = color; document.getElementById('artboard-bg-color-picker').value = color; applyArtboardBackgroundColor(); }
             function applyArtboardBackgroundColor() { document.querySelectorAll('.artboard-content').forEach(el => el.style.backgroundColor = state.layout.artboardBgColor); }
-            function changeGridColor(color) { state.grids.color = color; document.getElementById('grid-color-picker').value = color; drawGrids(); }
+            function changeGuideColor(color) { state.guides.color = color; document.getElementById('guide-color-picker').value = color; drawGuides(); }
             
-            function getHitGrid(e) {
-                if (state.grids.locked) return null;
+            function getHitGuide(e) {
+                if (state.guides.locked) return null;
                 const mousePos = getWorkspaceMousePos(e);
                 const tolerance = 5 / state.view.scale;
 
-                for (const grid of state.grids.workspace) {
-                    if (grid.type === 'horizontal' && Math.abs(mousePos.y - grid.position) < tolerance) return { scope: 'workspace', grid };
-                    if (grid.type === 'vertical' && Math.abs(mousePos.x - grid.position) < tolerance) return { scope: 'workspace', grid };
+                for (const guide of state.guides.workspace) {
+                    if (guide.type === 'horizontal' && Math.abs(mousePos.y - guide.position) < tolerance) return { scope: 'workspace', guide };
+                    if (guide.type === 'vertical' && Math.abs(mousePos.x - guide.position) < tolerance) return { scope: 'workspace', guide };
                 }
 
                 for (const artboard of state.artboards) {
-                    const artboardGrids = state.grids.artboard[artboard.id] || [];
-                    const artboardRect = { x: artboard.x, y: artboard.y, width: artboard.width, height: artboard.height };
-                    if (mousePos.x > artboardRect.x && mousePos.x < artboardRect.x + artboardRect.width && mousePos.y > artboardRect.y && mousePos.y < artboardRect.y + artboardRect.height) {
-                         for (const grid of artboardGrids) {
-                            if (grid.type === 'horizontal' && Math.abs((mousePos.y - artboard.y) / artboard.height - grid.position) * artboard.height < tolerance) return { scope: 'artboard', grid, artboardId: artboard.id };
-                            if (grid.type === 'vertical' && Math.abs((mousePos.x - artboard.x) / artboard.width - grid.position) * artboard.width < tolerance) return { scope: 'artboard', grid, artboardId: artboard.id };
+                    const artboardGuides = state.guides.artboard[artboard.id] || [];
+                    const artboardEl = document.querySelector(`.artboard[data-id="${artboard.id}"]`);
+                    if (!artboardEl) continue;
+                    const rect = artboardEl.getBoundingClientRect();
+                    const mouseClientPos = { x: e.clientX, y: e.clientY };
+
+                    if (mouseClientPos.x > rect.left && mouseClientPos.x < rect.right && mouseClientPos.y > rect.top && mouseClientPos.y < rect.bottom) {
+                         for (const guide of artboardGuides) {
+                            if (guide.type === 'horizontal') {
+                                const guideY = rect.top + guide.position * artboard.height * state.view.scale;
+                                if (Math.abs(mouseClientPos.y - guideY) < 5) return { scope: 'artboard', guide, artboardId: artboard.id };
+                            }
+                            if (guide.type === 'vertical') {
+                                const guideX = rect.left + guide.position * artboard.width * state.view.scale;
+                                if (Math.abs(mouseClientPos.x - guideX) < 5) return { scope: 'artboard', guide, artboardId: artboard.id };
+                            }
                          }
                     }
                 }
                 return null;
             }
             
-            function onGridDrag(e) {
-                const { scope, grid, artboardId } = state.interaction.target;
+            function onGuideDrag(e) {
+                if(state.guides.locked) return;
+                const { scope, guide, artboardId } = state.interaction.target;
                 if (scope === 'workspace') {
                     const pos = getWorkspaceMousePos(e);
-                    grid.position = grid.type === 'horizontal' ? pos.y : pos.x;
+                    guide.position = guide.type === 'horizontal' ? pos.y : pos.x;
                 } else if (scope === 'artboard') {
                     const artboard = state.artboards.find(b => b.id === artboardId);
                     if (artboard) {
                         const pos = getMousePosOnArtboard(e, artboard);
-                        grid.position = grid.type === 'horizontal' ? pos.y : pos.x;
+                        guide.position = guide.type === 'horizontal' ? pos.y : pos.x;
                     }
                 }
-                drawGrids();
+                drawGuides();
             }
 
-            function drawGrids(mouseEvent = null) {
-                drawWorkspaceGrids();
-                state.artboards.forEach(artboard => drawArtboardGrids(artboard.id, mouseEvent));
+            function drawGuides(mouseEvent = null) {
+                drawWorkspaceGuides();
+                state.artboards.forEach(artboard => drawArtboardGuides(artboard.id, mouseEvent));
             }
 
-            function drawWorkspaceGrids() {
-                const canvas = app.workspaceGridCanvas; const ctx = canvas.getContext('2d');
+            function drawWorkspaceGuides() {
+                const canvas = app.workspaceGuideCanvas; const ctx = canvas.getContext('2d');
                 const { width, height } = app.workspaceContainer.getBoundingClientRect(); canvas.width = width; canvas.height = height;
-                ctx.clearRect(0, 0, width, height); if (!state.grids.visible) return;
-                ctx.strokeStyle = state.grids.locked ? 'rgba(255, 100, 100, 0.7)' : state.grids.color + '80';
+                ctx.clearRect(0, 0, width, height); if (!state.guides.visible) return;
+                ctx.strokeStyle = state.guides.locked ? 'rgba(255, 100, 100, 0.7)' : state.guides.color + '80';
                 ctx.lineWidth = 1;
-                state.grids.workspace.forEach(grid => {
+                state.guides.workspace.forEach(guide => {
                     ctx.beginPath();
-                    if (grid.type === 'horizontal') { const y = grid.position * state.view.scale + state.view.offsetY; ctx.moveTo(0, y); ctx.lineTo(width, y); } 
-                    else { const x = grid.position * state.view.scale + state.view.offsetX; ctx.moveTo(x, 0); ctx.lineTo(x, height); }
+                    if (guide.type === 'horizontal') { const y = guide.position * state.view.scale + state.view.offsetY; ctx.moveTo(0, y); ctx.lineTo(width, y); } 
+                    else { const x = guide.position * state.view.scale + state.view.offsetX; ctx.moveTo(x, 0); ctx.lineTo(x, height); }
                     ctx.stroke();
                 });
             }
 
-            function drawArtboardGrids(artboardId, mouseEvent) {
+            function drawArtboardGuides(artboardId, mouseEvent) {
                 const artboard = state.artboards.find(b => b.id === artboardId);
                 const canvases = getArtboardCanvases(artboardId);
-                if (!artboard || !canvases.gridCanvas) return;
-                const canvas = canvases.gridCanvas; const ctx = canvas.getContext('2d');
-                canvas.width = artboard.width; canvas.height = artboard.height; ctx.clearRect(0, 0, artboard.width, artboard.height); if (!state.grids.visible) return;
-                ctx.strokeStyle = state.grids.locked ? 'rgba(255, 100, 100, 0.7)' : state.grids.color + '80';
+                if (!artboard || !canvases.guideCanvas) return;
+                const canvas = canvases.guideCanvas; const ctx = canvas.getContext('2d');
+                canvas.width = artboard.width; canvas.height = artboard.height; ctx.clearRect(0, 0, artboard.width, artboard.height); if (!state.guides.visible) return;
+                ctx.strokeStyle = state.guides.locked ? 'rgba(255, 100, 100, 0.7)' : state.guides.color + '80';
                 ctx.lineWidth = 1;
-                const artboardGrids = state.grids.artboard[artboardId] || [];
-                artboardGrids.forEach(grid => {
+                const artboardGuides = state.guides.artboard[artboardId] || [];
+                artboardGuides.forEach(guide => {
                     ctx.beginPath();
-                    if (grid.type === 'horizontal') { const y = grid.position * artboard.height; ctx.moveTo(0, y); ctx.lineTo(artboard.width, y); } 
-                    else { const x = grid.position * artboard.width; ctx.moveTo(x, 0); ctx.lineTo(x, artboard.height); }
+                    if (guide.type === 'horizontal') { const y = guide.position * artboard.height; ctx.moveTo(0, y); ctx.lineTo(artboard.width, y); } 
+                    else { const x = guide.position * artboard.width; ctx.moveTo(x, 0); ctx.lineTo(x, artboard.height); }
                     ctx.stroke();
                 });
-                if (mouseEvent && state.interaction.mode === 'draggingArtboardGrid' && state.interaction.target.artboardId === artboardId) {
+                if (mouseEvent && state.interaction.mode === 'draggingArtboardGuide' && state.interaction.target.artboardId === artboardId) {
                     const pos = getMousePosOnArtboard(mouseEvent, artboard);
-                    ctx.strokeStyle = state.grids.color; ctx.lineWidth = 2; ctx.beginPath();
+                    ctx.strokeStyle = state.guides.color; ctx.lineWidth = 2; ctx.beginPath();
                     if (state.interaction.target.type === 'horizontal') { const y = pos.y * artboard.height; ctx.moveTo(0, y); ctx.lineTo(artboard.width, y); } 
                     else { const x = pos.x * artboard.width; ctx.moveTo(x, 0); ctx.lineTo(x, artboard.height); }
                     ctx.stroke();
@@ -1253,7 +1504,7 @@
                 if (artboardEdgeHoverTimeout) { clearTimeout(artboardEdgeHoverTimeout); artboardEdgeHoverTimeout = null; }
                 const oldHover = JSON.stringify(state.artboardEdgeHover); let newHover = null;
                 const HOVER_ZONE = 10;
-                if(state.interaction.mode === 'none' && !state.grids.locked) {
+                if(state.interaction.mode === 'none' && !state.guides.locked) {
                     for(const artboard of state.artboards) {
                         const el = document.querySelector(`.artboard[data-id="${artboard.id}"]`); if (!el) continue;
                         const rect = el.getBoundingClientRect();
@@ -1287,14 +1538,16 @@
                 if(dragHandleClicks.count === 2) { state.toolbar.isSimple = !state.toolbar.isSimple; applyToolbarState(); markAsChanged(); return; }
                 if(dragHandleClicks.count >= 3) { state.toolbar.isDefault = true; applyToolbarState(); markAsChanged(); dragHandleClicks.count = 0; return; }
                 state.interaction.mode = 'draggingToolbar';
-                const containerRect = app.bottomControlsContainer.getBoundingClientRect();
+                const containerRect = app.toolbarContainer.getBoundingClientRect();
                 state.interaction.startData.set('toolbar', { offsetX: e.clientX - containerRect.left, offsetY: e.clientY - containerRect.top });
             }
 
             function onToolbarDrag(e) {
                 const startData = state.interaction.startData.get('toolbar');
-                let newX = e.clientX - startData.offsetX; let newY = e.clientY - startData.offsetY;
-                const container = app.bottomControlsContainer;
+                const mainRect = app.mainContent.getBoundingClientRect();
+                let newX = e.clientX - startData.offsetX - mainRect.left;
+                let newY = e.clientY - startData.offsetY - mainRect.top;
+                const container = app.toolbarContainer;
                 container.style.transform = ``; container.style.left = `${newX}px`; container.style.top = `${newY}px`; container.style.bottom = '';
                 state.toolbar.x = newX; state.toolbar.y = newY; state.toolbar.isDefault = false;
                 markAsChanged();
@@ -1302,14 +1555,13 @@
 
             function applyToolbarState() {
                 const {x, y, isSimple, isDefault} = state.toolbar;
-                const container = app.bottomControlsContainer;
+                const container = app.toolbarContainer;
                 if (isDefault) {
                     container.style.left = '50%'; container.style.top = ''; container.style.bottom = '20px'; container.style.transform = 'translateX(-50%)';
                 } else {
                     container.style.left = `${x}px`; container.style.top = `${y}px`; container.style.bottom = ''; container.style.transform = '';
                 }
-                app.bottomControls.classList.remove('vertical-layout');
-                app.bottomControls.classList.toggle('simple-mode', isSimple);
+                app.movableControls.classList.toggle('simple-mode', isSimple);
             }
 
             function showContextMenu(e, items) {
@@ -1335,11 +1587,11 @@
                 if (!e.target.closest('#workspace-container') || e.target.closest('.artboard')) return;
                 const items = [
                     { label: 'Add Image/Video...', action: () => app.fileInput.click() }, { divider: true },
-                    { label: 'Add Horizontal Grid', action: () => { const pos = getWorkspaceMousePos(e); state.grids.workspace.push({ type: 'horizontal', position: pos.y, id: crypto.randomUUID() }); drawGrids(); markAsChanged(); } },
-                    { label: 'Add Vertical Grid', action: () => { const pos = getWorkspaceMousePos(e); state.grids.workspace.push({ type: 'vertical', position: pos.x, id: crypto.randomUUID() }); drawGrids(); markAsChanged(); } }, { divider: true },
-                    { label: state.grids.visible ? 'Hide All Grids' : 'Show All Grids', action: () => { state.grids.visible = !state.grids.visible; drawGrids(); } },
-                    { label: state.grids.locked ? 'Unlock Grids' : 'Lock Grids', action: () => { state.grids.locked = !state.grids.locked; drawGrids(); } },
-                    { label: 'Clean All Grids', action: () => { state.grids.workspace = []; Object.keys(state.grids.artboard).forEach(id => state.grids.artboard[id] = []); drawGrids(); markAsChanged(); } }, { divider: true },
+                    { label: 'Add Horizontal Guide', action: () => { const pos = getWorkspaceMousePos(e); state.guides.workspace.push({ type: 'horizontal', position: pos.y, id: crypto.randomUUID() }); drawGuides(); markAsChanged(); } },
+                    { label: 'Add Vertical Guide', action: () => { const pos = getWorkspaceMousePos(e); state.guides.workspace.push({ type: 'vertical', position: pos.x, id: crypto.randomUUID() }); drawGuides(); markAsChanged(); } }, { divider: true },
+                    { label: state.guides.visible ? 'Hide All Guides' : 'Show All Guides', action: () => { state.guides.visible = !state.guides.visible; drawGuides(); } },
+                    { label: state.guides.locked ? 'Unlock Guides' : 'Lock Guides', action: () => { state.guides.locked = !state.guides.locked; drawGuides(); } },
+                    { label: 'Clean All Guides', action: () => { state.guides.workspace = []; Object.keys(state.guides.artboard).forEach(id => state.guides.artboard[id] = []); drawGuides(); markAsChanged(); } }, { divider: true },
                     { label: 'Fit All Videos to 720p', action: resizeAllVideosTo720p },
                     { label: 'Fit All Artboards to View', action: fitAllArtboardsToView },
                     { label: 'Arrange Artboards', action: rearrangeArtboards }, { divider: true },
@@ -1356,9 +1608,9 @@
                 let items = [{ label: 'Add Comment', action: () => { addAnnotation({ type: 'comment', artboardId, data: pos, color: state.activeColor, text: '' }, true); } }];
                 if (artboard.type === 'video') { items.push({ label: 'Save Frame', action: () => saveVideoFrame(artboardId) }); }
                 items.push(
-                    { label: 'Add Horizontal Grid here', action: () => { if(!state.grids.artboard[artboardId]) state.grids.artboard[artboardId] = []; state.grids.artboard[artboardId].push({type: 'horizontal', position: pos.y, id: crypto.randomUUID()}); drawGrids(); markAsChanged(); } },
-                    { label: 'Add Vertical Grid here', action: () => { if(!state.grids.artboard[artboardId]) state.grids.artboard[artboardId] = []; state.grids.artboard[artboardId].push({type: 'vertical', position: pos.x, id: crypto.randomUUID()}); drawGrids(); markAsChanged(); } },
-                    { label: 'Clean Artboard Grids', action: () => { state.grids.artboard[artboardId] = []; drawGrids(); markAsChanged(); } },
+                    { label: 'Add Horizontal Guide here', action: () => { if(!state.guides.artboard[artboardId]) state.guides.artboard[artboardId] = []; state.guides.artboard[artboardId].push({type: 'horizontal', position: pos.y, id: crypto.randomUUID()}); drawGuides(); markAsChanged(); } },
+                    { label: 'Add Vertical Guide here', action: () => { if(!state.guides.artboard[artboardId]) state.guides.artboard[artboardId] = []; state.guides.artboard[artboardId].push({type: 'vertical', position: pos.x, id: crypto.randomUUID()}); drawGuides(); markAsChanged(); } },
+                    { label: 'Clean Artboard Guides', action: () => { state.guides.artboard[artboardId] = []; drawGuides(); markAsChanged(); } },
                     { divider: true }, { label: 'Copy File Name', action: () => navigator.clipboard.writeText(artboard.name) }
                 );
                 if (artboard.type === 'video') { items.push({ label: 'Fit to 720p', action: () => { resizeAllVideosTo720p(); } }); items.push({ label: 'Zoom to 100%', action: () => { resetArtboardScale(artboardId); }}); }
@@ -1395,6 +1647,205 @@
                 ];
                 showContextMenu(e, items);
             }
+            
+            async function gifToVideo(file) {
+                const artboardId = crypto.randomUUID();
+                try {
+                    addArtboard(file.name, null, 'video', { width: 300, height: 225 }, { isLoading: true, id: artboardId });
+                    
+                    const fileBuffer = await file.arrayBuffer();
+                    const canvas = document.createElement('canvas');
+                    let mediaRecorder;
+                    let chunks = [];
+                    let firstFrame = true;
+
+                    gifler(fileBuffer).frames(canvas, (ctx, frame) => {
+                        if (firstFrame) {
+                            canvas.width = frame.width;
+                            canvas.height = frame.height;
+                            
+                            let artboard = state.artboards.find(b => b.id === artboardId);
+                            if (artboard) {
+                                artboard.width = frame.width;
+                                artboard.height = frame.height;
+                                artboard.originalWidth = frame.width;
+                                artboard.originalHeight = frame.height;
+                            }
+                            rearrangeArtboards(); 
+
+                            const stream = canvas.captureStream(FRAME_RATE);
+                            mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+                            
+                            mediaRecorder.ondataavailable = e => { 
+                                if (e.data.size > 0) chunks.push(e.data); 
+                            };
+                            
+                            mediaRecorder.onstop = () => {
+                                const blob = new Blob(chunks, { type: 'video/webm' });
+                                const url = URL.createObjectURL(blob);
+                                let artboard = state.artboards.find(b => b.id === artboardId);
+                                if (artboard) {
+                                    artboard.isLoading = false;
+                                    artboard.src = url;
+                                    renderWorkspace();
+                                    if (app.timelinePanel.classList.contains('hidden')) {
+                                       app.timelinePanel.classList.remove('hidden');
+                                    }
+                                    global_updateTimeline();
+                                }
+                            };
+                            mediaRecorder.start();
+                            firstFrame = false;
+                        }
+                        ctx.drawImage(frame.buffer, frame.x, frame.y, frame.width, frame.height);
+                    }).then(() => {
+                        if (mediaRecorder && mediaRecorder.state === "recording") {
+                            mediaRecorder.stop();
+                        }
+                    }).catch(err => {
+                        console.error("Gifler failed:", err);
+                        throw err; 
+                    });
+                } catch (err) {
+                    console.error("Failed to convert GIF:", err);
+                    alert("Lỗi khi chuyển đổi file GIF.");
+                    state.artboards = state.artboards.filter(b => b.id !== artboardId);
+                    renderWorkspace();
+                }
+            }
+
+
+             async function handleZipFile(file) {
+                try {
+                    const jszip = new JSZip();
+                    const zip = await jszip.loadAsync(file);
+                    const indexHtmlFile = zip.file("index.html");
+
+                    if (!indexHtmlFile) {
+                        alert("index.html not found in the ZIP file.");
+                        return;
+                    }
+
+                    let htmlContent = await indexHtmlFile.async("string");
+                    const assetPromises = [];
+
+                    zip.forEach((relativePath, zipEntry) => {
+                        if (!zipEntry.dir && zipEntry.name !== "index.html") {
+                            const promise = zipEntry.async("blob").then(blob => ({
+                                path: relativePath,
+                                url: URL.createObjectURL(blob)
+                            }));
+                            assetPromises.push(promise);
+                        }
+                    });
+
+                    const assets = await Promise.all(assetPromises);
+                    for (const asset of assets) {
+                        htmlContent = htmlContent.replaceAll(`"${asset.path}"`, `"${asset.url}"`).replaceAll(`'${asset.path}'`, `'${asset.url}'`);
+                    }
+
+                    htmlToVideo({ name: file.name, htmlContent });
+
+                } catch (err) {
+                    console.error("Failed to process ZIP file:", err);
+                    alert("Lỗi khi xử lý file ZIP.");
+                }
+            }
+
+            async function htmlToVideo({ name, htmlContent, width = 300, height = 250 }) {
+                const artboardId = crypto.randomUUID();
+                addArtboard(name, null, 'video', { width, height }, { isLoading: true, id: artboardId });
+                
+                const iframe = document.createElement('iframe');
+                iframe.style.width = `${width}px`;
+                iframe.style.height = `${height}px`;
+                iframe.style.border = 'none';
+                iframe.style.position = 'fixed';
+                iframe.style.left = '-9999px';
+                
+                document.body.appendChild(iframe);
+
+                try {
+                    const doc = iframe.contentDocument;
+                    doc.open();
+                    doc.write(htmlContent);
+                    doc.close();
+
+                    await new Promise(resolve => iframe.onload = resolve);
+                    
+                    const animations = iframe.contentDocument.getAnimations({ subtree: true });
+                    await Promise.all(animations.map(anim => {
+                        anim.pause();
+                        anim.currentTime = 0;
+                        return anim.ready;
+                    }));
+
+                    const captureCanvas = document.createElement('canvas');
+                    captureCanvas.width = width;
+                    captureCanvas.height = height;
+                    const captureCtx = captureCanvas.getContext('2d');
+
+                    const stream = captureCanvas.captureStream();
+                    const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+                    const chunks = [];
+
+                    mediaRecorder.ondataavailable = e => {
+                        if (e.data.size > 0) chunks.push(e.data);
+                    };
+
+                    mediaRecorder.onstop = () => {
+                        const blob = new Blob(chunks, { type: 'video/webm' });
+                        const url = URL.createObjectURL(blob);
+                        
+                        let artboard = state.artboards.find(b => b.id === artboardId);
+                        if (artboard) {
+                            artboard.isLoading = false;
+                            artboard.src = url;
+                            renderWorkspace();
+                            if (app.timelinePanel.classList.contains('hidden')) {
+                                app.timelinePanel.classList.remove('hidden');
+                            }
+                        }
+                        document.body.removeChild(iframe);
+                    };
+
+                    mediaRecorder.start();
+                    
+                    const totalFrames = FRAME_RATE * 5; // 5 seconds duration
+                    const interval = 1000 / FRAME_RATE;
+
+                    for (let i = 0; i < totalFrames; i++) {
+                        const time = i * interval;
+                        animations.forEach(anim => anim.currentTime = time);
+                        
+                        await new Promise(r => requestAnimationFrame(r)); // Wait for styles to apply
+                        
+                        const canvas = await html2canvas(iframe.contentDocument.body, { useCORS: true, allowTaint: true });
+                        captureCtx.clearRect(0, 0, width, height);
+                        captureCtx.drawImage(canvas, 0, 0, width, height);
+                        if (stream.getVideoTracks()[0].requestFrame) {
+                           stream.getVideoTracks()[0].requestFrame();
+                        }
+                    }
+
+                    if (mediaRecorder.state === "recording") {
+                        mediaRecorder.stop();
+                    }
+
+                } catch (err) {
+                     console.error("Failed to convert HTML to video:", err);
+                     alert("Lỗi khi chuyển đổi HTML banner.");
+                     let artboardIndex = state.artboards.findIndex(b => b.id === artboardId);
+                     if (artboardIndex > -1) {
+                        state.artboards.splice(artboardIndex, 1);
+                        renderWorkspace();
+                     }
+                     if (document.body.contains(iframe)) {
+                        document.body.removeChild(iframe);
+                     }
+                }
+            }
+
 
             init();
         });
