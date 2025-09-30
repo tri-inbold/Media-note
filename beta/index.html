@@ -43,7 +43,7 @@
         body.spacebar-down.panning, body.spacebar-down.panning .artboard, body.spacebar-down.panning .interaction-canvas { cursor: grabbing !important; }
         #workspace { position: absolute; transform-origin: 0 0; }
         
-        .artboard { position: absolute; background-color: var(--panel-bg); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); border: 2px solid transparent; overflow: hidden; transition: border-color 0.2s; display: flex; flex-direction: column;}
+        .artboard { position: absolute; background-color: var(--panel-bg); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); border: 1px solid transparent; overflow: hidden; transition: border-color 0.2s; display: flex; flex-direction: column;}
         .artboard.dragging { z-index: 10; box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
         .artboard.selected { border-color: var(--highlight-color); }
         .artboard.video-missing { border-color: orange !important; }
@@ -1646,7 +1646,7 @@
             function zoomAtPoint(factor, x, y) { const oldScale = state.view.scale; const newScale = Math.max(state.view.minScale, Math.min(state.view.maxScale, oldScale * factor)); state.view.scale = newScale; state.view.offsetX = x - (x - state.view.offsetX) * (newScale / oldScale); state.view.offsetY = y - (y - state.view.offsetY) * (newScale / oldScale); updateWorkspaceTransform(); }
             function fitArtboardToView(artboardId) {
                 const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return;
-                const PADDING = 40;
+                const PADDING = 0;
                 const container = app.workspaceContainer;
                 const artboardEl = document.querySelector(`.artboard[data-id="${artboardId}"]`); if(!artboardEl) return;
                 const artboardHeight = artboardEl.offsetHeight;
@@ -1660,7 +1660,7 @@
                 state.view.offsetY = (container.offsetHeight - artboardHeight * newScale) / 2 - artboard.y * newScale;
                 updateWorkspaceTransform();
             }
-            function fitAllArtboardsToView() { if (state.artboards.length === 0) return; const PADDING = 50; let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity; state.artboards.forEach(b => { const artboardEl = document.querySelector(`.artboard[data-id="${b.id}"]`); const height = artboardEl ? artboardEl.offsetHeight : (b.height + 30 + (b.type==='video' ? 32:0)); minX = Math.min(minX, b.x); minY = Math.min(minY, b.y); maxX = Math.max(maxX, b.x + b.width); maxY = Math.max(maxY, b.y + height); }); const totalWidth = maxX - minX; const totalHeight = maxY - minY; if (totalWidth === 0 || totalHeight === 0) return; const container = app.workspaceContainer; const scaleX = (container.offsetWidth - 2 * PADDING) / totalWidth; const scaleY = (container.offsetHeight - 2 * PADDING) / totalHeight; const newScale = Math.min(scaleX, scaleY, 1); state.view.scale = newScale; state.view.offsetX = (container.offsetWidth - totalWidth * newScale) / 2 - minX * newScale; state.view.offsetY = (container.offsetHeight - totalHeight * newScale) / 2 - minY * newScale; updateWorkspaceTransform(); }
+            function fitAllArtboardsToView() { if (state.artboards.length === 0) return; const PADDING = 0; let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity; state.artboards.forEach(b => { const artboardEl = document.querySelector(`.artboard[data-id="${b.id}"]`); const height = artboardEl ? artboardEl.offsetHeight : (b.height + 30 + (b.type==='video' ? 32:0)); minX = Math.min(minX, b.x); minY = Math.min(minY, b.y); maxX = Math.max(maxX, b.x + b.width); maxY = Math.max(maxY, b.y + height); }); const totalWidth = maxX - minX; const totalHeight = maxY - minY; if (totalWidth === 0 || totalHeight === 0) return; const container = app.workspaceContainer; const scaleX = (container.offsetWidth - 2 * PADDING) / totalWidth; const scaleY = (container.offsetHeight - 2 * PADDING) / totalHeight; const newScale = Math.min(scaleX, scaleY, 1); state.view.scale = newScale; state.view.offsetX = (container.offsetWidth - totalWidth * newScale) / 2 - minX * newScale; state.view.offsetY = (container.offsetHeight - totalHeight * newScale) / 2 - minY * newScale; updateWorkspaceTransform(); }
             function onArtboardHeaderMouseDown(e, artboardId) {
                 if (state.spacebarPressed || e.button === 1) { startPanning(e); return; }
                 if (e.button !== 0) return;
@@ -2355,4 +2355,5 @@
         });
     </script>
 </body>
+
 </html>
