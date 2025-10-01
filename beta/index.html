@@ -17,7 +17,7 @@
         }
         body, html { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--workspace-bg); color: var(--text-color); overflow: hidden; height: 100vh; width: 100vw; }
         .hidden { display: none !important; }
-        .glass-panel { background: var(--panel-bg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid var(--border-color); box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2); }
+        .glass-panel { background: var(--panel-bg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 0px solid var(--border-color); box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2); }
         body.theme-light .glass-panel { backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: 0 2px 10px rgba(0,0,0,0.07); }
         
         #app-container { display: flex; flex-direction: row; height: 100%; width: 100%; }
@@ -43,15 +43,15 @@
         body.spacebar-down.panning, body.spacebar-down.panning .artboard, body.spacebar-down.panning .interaction-canvas { cursor: grabbing !important; }
         #workspace { position: absolute; transform-origin: 0 0; }
         
-        .artboard { position: absolute; background-color: var(--panel-bg); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); border: 1px solid transparent; overflow: hidden; transition: border-color 0.2s; display: flex; flex-direction: column;}
+        .artboard { position: absolute; background-color: var(--panel-bg); border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); border: 0px solid transparent; overflow: hidden; transition: border-color 0.2s; display: flex; flex-direction: column;}
         .artboard.dragging { z-index: 10; box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
         .artboard.selected { border-color: var(--highlight-color); }
-        .artboard.video-missing { border-color: orange !important; }
-        .artboard.video-missing::after { content: 'Missing Video - Drop to Relink'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.7); color: white; padding: 10px 15px; border-radius: 8px; font-size: 14px; pointer-events: none; z-index: 100; }
+        .artboard.video-missing { border-color: 1px solid orange !important; }
+        .artboard.video-missing::after { content: 'Missing Video > Drop to Relink'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.5); color: #fff; padding: 8px 10px; border-radius: 8px; font-size: 14px; pointer-events: none; z-index: 100; }
         .artboard-header { position: relative; width: 100%; height: 30px; background-color: rgba(255,255,255,0.3); display: flex; justify-content: space-between; align-items: center; padding: 0 5px 0 10px; box-sizing: border-box; font-size: 12px; color: var(--text-color); cursor: grab; flex-shrink: 0; }
         .artboard-header:active { cursor: grabbing; }
         .artboard-header-tools { display: flex; align-items: center; }
-        .artboard-title-container { flex: 1 1 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 5px; display: flex; align-items: baseline; pointer-events: none; min-width: 0; }
+        .artboard-title-container { flex: 1 1 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 5px; display: flex; align-items: baseline; pointer-events: none; min-width: 0; -webkit-user-select: none; -moz-user-select: none;-ms-user-select: none; user-select: none;}
         .artboard-header-tools button { pointer-events: auto; }
         .artboard-title { text-overflow: ellipsis; overflow: hidden; }
         .artboard-info { color: var(--text-color-light); font-size: 0.9em; padding-left: 8px; }
@@ -79,7 +79,7 @@
         .artboard-video-controls .vid-timeline { flex-grow:1; -webkit-appearance: none; appearance: none; height: 100%; background: transparent; cursor: pointer; position: relative; z-index: 2;}
         .artboard-video-controls .vid-timeline::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 10px; height: 10px; background: #fff; border-radius: 50%; }
         .time-input { background: transparent; border: none; color: white; font-size:12px; margin: 0 8px; font-variant-numeric: tabular-nums; text-align: center; padding: 2px; width: 75px; border-radius: 3px; }
-        .time-input:focus { background: rgba(255,255,255,0.2); outline: 1px solid var(--highlight-color); }
+        .time-input:focus { background: transparent; outline: 1px solid var(--highlight-color); }
         #time-display { width: 80px; font-size: 1em; color: var(--text-color); }
         #time-display:focus { color: var(--text-color); }
 
@@ -88,7 +88,7 @@
         #tools-panel, #help-panel { padding: 8px; border-radius: 12px; display: flex; align-items: center; }
         #tools-panel { padding: 8px 10px; gap: 4px; }
         #help-panel { padding: 0; background: none; border: none; }
-        #help-btn { background: var(--panel-bg); border: 1px solid var(--border-color); color: var(--text-color); cursor: pointer; display: flex; align-items: center; justify-content: center; height: 38px; padding: 0 12px; border-radius: 8px; font-weight: bold; font-size: 1.2em; }
+        #help-btn { background: var(--panel-bg); border: 1px var(--panel-bg); color: var(--text-color-light); cursor: pointer; display: flex; align-items: center; justify-content: center; height: 38px; padding: 0 12px; border-radius: 8px; font-weight: bold; font-size: 1.2em; }
         .playback-controls { display: flex; align-items: center; gap: 4px; }
         .tool-btn { width: 28px; height: 28px; border-radius: 8px; border: none; background: transparent; color: var(--text-color-light); cursor: pointer; display: flex; justify-content: center; align-items: center; transition: all 0.2s; padding: 0; }
         .tool-btn:hover { color: var(--text-color); background-color: rgba(255,255,255,0.1); }
@@ -98,7 +98,7 @@
         .tool-btn svg { width: 18px; height: 18px; fill: currentColor; }
         .divider { width: 1px; height: 20px; background: var(--border-color); margin: 0 5px; }
         #color-picker { position: relative; }
-        #active-color-btn { width: 20px; height: 20px; border-radius: 50%; cursor: pointer; border: 2px solid var(--text-color); }
+        #active-color-btn { width: 20px; height: 20px; border-radius: 50%; cursor: pointer; filter: drop-shadow(0px 0px 0.5px grey)}
         #color-palette-popup { position: absolute; bottom: 170%; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; padding: 8px; border-radius: 10px; background: var(--bg-color); border: 1px solid var(--border-color); z-index: 25; }
         .color-btn { width: 20px; height: 20px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: all 0.2s; }
         .color-btn:hover { transform: scale(1.2); }
@@ -108,12 +108,12 @@
         #timeline-bg { position: absolute; left: 0; top: 50%; transform: translateY(-50%); height: 5px; border-radius: 5px; pointer-events: none; width: 100%; background: rgba(255, 255, 255, 0.3); }
         body.theme-light #timeline-bg { background: rgba(0,0,0,0.1); }
         #timeline-slider { position: relative; z-index: 1; flex-grow: 1; -webkit-appearance: none; appearance: none; width: 100%; height: 100%; background: transparent !important; border-radius: 5px; outline: none; }
-        #timeline-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 3px; height: 44px; background: #cccccc; cursor: pointer; border-radius: 0; margin-top: -1px;}
-        #timeline-slider::-moz-range-thumb { width: 3x; height: 44px; background: #cccccc; cursor: pointer; border-radius: 0;}
+        #timeline-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 2.5px; height: 30px; background: var(--highlight-color); cursor: pointer; border-radius: 0; margin-top: -1px;}
+        #timeline-slider::-moz-range-thumb { width: 2.5x; height: 30px; background: var(--highlight-color); cursor: pointer; border-radius: 0;}
         #speed-controls { display: flex; background: rgba(0,0,0,0.2); border-radius: 8px; margin-left: 10px; }
         body.theme-light #speed-controls { background: rgba(0,0,0,0.05); }
         .speed-btn { background: none; border: none; color: var(--text-color-light); padding: 4px 8px; cursor: pointer; font-size: 0.9em;}
-        .speed-btn.active { color: #fff; background: var(--highlight-color); border-radius: 8px; }
+        .speed-btn.active { color: #fff; background: var(--text-color-light); border-radius: 8px; }
         body.theme-light .speed-btn.active { color: #fff; }
 
         #right-panel { flex: 0 0 340px; display: flex; flex-direction: column; z-index: 20; background: var(--bg-color); border-left: 1px solid var(--border-color); flex-shrink: 0; transition: all 0.3s ease; }
@@ -150,8 +150,8 @@
         .complete-checkbox { appearance: none; width: 16px; height: 16px; border: 2px solid var(--checkbox-border); border-radius: 50%; cursor: pointer; transition: all 0.2s; }
         .complete-checkbox:checked { background-color: #28a745; border-color: #28a745; }
         .complete-checkbox:checked::after { content: '\2713'; display: block; text-align: center; color: #fff; font-weight: bold; font-size: 11px; line-height: 13px; }
-        #panel-resizer { width: 5px; cursor: col-resize; flex-shrink: 0; background-color: transparent; transition: background-color 0.2s ease; align-self: stretch; }
-        #panel-resizer:hover { background-color: var(--highlight-color); }
+        #panel-resizer { width: 1px; cursor: col-resize; flex-shrink: 0; background-color: transparent; transition: background-color 0.2s ease; align-self: stretch; -webkit-touch-callout: none; }
+        #panel-resizer:hover { width: 5px; background-color: var(--highlight-color); -webkit-touch-callout: none;}
         #right-panel.collapsed + #panel-resizer { display: none; }
 
         #help-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; display: flex; justify-content: center; align-items: center; }
@@ -165,7 +165,7 @@
         #help-modal strong { color: var(--highlight-color); }
         #modal-close-btn { position: absolute; top: 10px; right: 15px; background: none; border: none; color: var(--text-color); font-size: 28px; cursor: pointer; }
         #help-modal hr { border-color: var(--border-color); }
-        .help-actions { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+        .help-actions { display: flex; align-items: center;  justify-content: space-between; flex-wrap: wrap; }
         .help-actions button { background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 5px; padding: 4px 8px; cursor: pointer; }
         .help-actions label { display: flex; align-items: center; gap: 5px; }
         input[type="color"] { background-color: transparent; border: none; width: 17px; height: 17px; padding: 0; cursor: pointer; }
@@ -206,7 +206,7 @@
         @keyframes spin { to { transform: rotate(360deg); } }
         .artboard.loading .artboard-content > * { display: none; }
         
-        #timeline-panel { display: flex; flex-direction: column; width: 100%; padding: 10px; box-sizing: border-box; }
+        #timeline-panel { display: flex; flex-direction: column; width: 100%; padding: 8px; box-sizing: border-box; }
         #master-timeline-controls { width: 100%; }
         .timeline-header { display: flex; align-items: center; gap: 10px; padding: 0 5px; }
         .timeline-title { font-weight: bold; font-size: 0.9em; flex-shrink: 0; color: var(--text-color-light); margin-right: 10px; }
@@ -221,7 +221,7 @@
     <div id="app-container">
         <div id="main-content">
             <div id="drop-zone">
-                <p>Drag & drop Video, Image, or GIF files here<br>Or double-click / Ctrl+D to select files</p>
+                <p style="-webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;">Drag & drop Video, Image, or GIF files here<br>Or double-click / Ctrl+D to select files</p>
             </div>
 
             <div id="workspace-container" class="hidden">
@@ -307,15 +307,15 @@
                     <ul>
                         <li><strong>V</strong><span>Select Tool</span></li>
                         <li><strong>H</strong><span>Hand Tool (Pan)</span></li>
-                        <li><strong>Q,W,E,R,T,Y</strong><span>Select Drawing Tool</span></li>
-                        <li><strong>Shift + Drag</strong><span>Draw Square/Circle/Straight Line</span></li>
+                        <li><strong>Q,W,E,R,T,Y</strong><span>Select Comment Tools</span></li>
+                        <li><strong>Shift + Drag</strong><span>Draw Square/Straight Line</span></li>
                         <li><strong>Ctrl + D</strong><span>Open / Add Files</span></li>
                         <li><strong>Ctrl + W</strong><span>Close Selected Artboard</span></li>
                         <li><strong>Ctrl + S</strong><span>Save File</span></li>
                         <li><strong>Ctrl + Shift + S</strong><span>Save As New File</span></li>
                         <li><strong>Ctrl+Alt+Shift+P</strong><span>Package Project (.zip)</span></li>
                         <li><strong>Delete</strong><span>Delete Selected Item</span></li>
-                        <li><strong>Ctrl + H</strong><span>Toggle Panel</span></li>
+                        <li><strong>Ctrl + H</strong><span>Show/hide Comment Panel</span></li>
                     </ul>
                 </div>
                 <div>
@@ -333,11 +333,12 @@
                     </ul>
                 </div>
                  <div>
-                    <h4>Video</h4>
+                    <h4>Video Artboard</h4>
                     <ul>
                        <li><strong>Spacebar</strong><span>Play / Pause Selected</span></li>
                        <li><strong>Ctrl + Spacebar</strong><span>Play / Pause All</span></li>
-                       <li><strong>M / Ctrl+M</strong><span>Mute Selected / Mute All</span></li>
+                       <li><strong>M</strong><span>Mute Selected</span></li>
+					   <li><strong>Ctrl+M</strong><span>Mute All</span></li>
                        <li><strong>← / →</strong><span>Previous / Next Frame</span></li>
                        <li><strong>Shift + ← / →</strong><span>Jump 10 Frames</span></li>
                        <li><strong>Alt + ← / →</strong><span>Jump Between Comments</span></li>
@@ -348,9 +349,9 @@
             </div>
             <hr>
             <div class="help-actions">
-                <span><strong>User:</strong> <span id="current-user-display"></span> <button id="change-user-btn">[Edit]</button></span>
-                 <label>Artboard background color: <input type="color" id="artboard-bg-color-picker" title="Artboard Background Color"></label>
-                 <label>Guide line color: <input type="color" id="guide-color-picker" title="Guide Color"></label>
+                <span><strong>User:</strong> <span id="current-user-display"></span> <button id="change-user-btn">Edit</button></span>
+                 <label><strong>Artboard:</strong> background color <input type="color" id="artboard-bg-color-picker" title="Artboard Background Color"></label>
+                 <label><strong>Guide:</strong> line color <input type="color" id="guide-color-picker" title="Guide Color"></label>
                 <span><strong>Theme:</strong> 
                     <select id="theme-selector">
                         <option value="system">System</option>
@@ -419,7 +420,7 @@
                     currentUser: null, clipboard: [],
                     interaction: { mode: 'none', target: null, startPos: { x: 0, y: 0 }, startWorkspacePos: {x:0, y:0}, startData: new Map() },
                     view: { scale: 1, offsetX: 0, offsetY: 0, minScale: 0.1, maxScale: 10 },
-                    layout: { nextX: 50, nextY: 50, rowMaxHeight: 0, margin: 50, maxRowWidth: 4000, isPanelCollapsed: false, artboardBgColor: '#000000' },
+                    layout: { nextX: 50, nextY: 50, rowMaxHeight: 0, margin: 50, maxRowWidth: 4000, isPanelCollapsed: false, artboardBgColor: '#ffffff' },
                     spacebarPressed: false, isGlobalMuted: true, areVideosInSync: true,
                     guides: { visible: true, locked: false, color: '#00FFFF', workspace: [], artboard: {} },
                     artboardEdgeHover: null,
@@ -532,10 +533,6 @@
 
                     document.getElementById('artboard-bg-color-picker').value = state.layout.artboardBgColor;
                     document.getElementById('guide-color-picker').value = state.guides.color;
-
-                    if (state.artboards.some(b => b.type === 'video')) {
-                        app.timelinePanel.classList.remove('hidden');
-                    }
                     
                     applyToolbarState();
                     applyRightPanelState();
@@ -549,7 +546,7 @@
             }
             
             async function handleDrop(e) { e.preventDefault(); document.body.classList.remove('dragging'); if (e.dataTransfer.files.length) handleFiles(Array.from(e.dataTransfer.files)); }
-            function handleFiles(files) { if (!files || files.length === 0) return; if (state.artboards.length === 0) { app.dropZone.classList.add('hidden'); app.workspaceContainer.classList.remove('hidden'); app.toolbarContainer.classList.remove('hidden'); app.rightPanel.classList.remove('hidden'); } const imageFiles = files.filter(f => f.type.startsWith('image/') && !f.name.endsWith('.gif')); const videoFiles = files.filter(f => f.type.startsWith('video/')); const gifFiles = files.filter(f => f.name.endsWith('.gif')); imageFiles.forEach(file => { const reader = new FileReader(); reader.onload = e => addArtboard(file.name, e.target.result, 'image', {width: 0, height: 0}); reader.readAsDataURL(file); }); videoFiles.forEach(file => { const url = URL.createObjectURL(file); addArtboard(file.name, url, 'video'); if (app.timelinePanel.classList.contains('hidden')) app.timelinePanel.classList.remove('hidden'); }); gifFiles.forEach(gifToVideo); }
+            function handleFiles(files) { if (!files || files.length === 0) return; if (state.artboards.length === 0) { app.dropZone.classList.add('hidden'); app.workspaceContainer.classList.remove('hidden'); app.toolbarContainer.classList.remove('hidden'); app.rightPanel.classList.remove('hidden'); } const imageFiles = files.filter(f => f.type.startsWith('image/') && !f.name.endsWith('.gif')); const videoFiles = files.filter(f => f.type.startsWith('video/')); const gifFiles = files.filter(f => f.name.endsWith('.gif')); imageFiles.forEach(file => { const reader = new FileReader(); reader.onload = e => addArtboard(file.name, e.target.result, 'image', {width: 0, height: 0}); reader.readAsDataURL(file); }); videoFiles.forEach(file => { const url = URL.createObjectURL(file); addArtboard(file.name, url, 'video'); }); gifFiles.forEach(gifToVideo); }
             async function handlePaste(e) {
                 const activeEl = document.activeElement; if (activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'INPUT') return;
                 const imageItem = Array.from(e.clipboardData.items).find(item => item.type.startsWith('image/'));
@@ -1519,7 +1516,7 @@
             function global_updateTimeline() { 
                 let maxDuration = 0; 
                 const videos = Array.from(document.querySelectorAll('#workspace video')); 
-                if (videos.length === 0) { 
+                if (videos.length <= 1) { 
                     app.timelinePanel.classList.add('hidden'); 
                     return; 
                 } 
@@ -1581,7 +1578,7 @@
                 return `<!DOCTYPE html>\n` + docClone.documentElement.outerHTML;
             }
             async function saveState() { if (!state.currentFileHandle) { await saveStateAs(); return; } await saveStateSilently(); }
-            async function saveStateAs() { const htmlContent = await generateAnnotatedHTML(); const fallbackSave = (data) => { const blob = new Blob([data], { type: 'text/html;charset=utf-8' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Unified_QC.html`; a.click(); URL.revokeObjectURL(a.href); state.hasUnsavedChanges = false; updateSaveButtonState(); }; if ('showSaveFilePicker' in window) { try { const fileHandle = await window.showSaveFilePicker({ suggestedName: `Unified_QC.html`, types: [{ description: 'HTML QC File', accept: { 'text/html': ['.html'] } }] }); const writable = await fileHandle.createWritable(); await writable.write(htmlContent); await writable.close(); state.currentFileHandle = fileHandle; state.hasUnsavedChanges = false; updateSaveButtonState(); } catch (err) { if (err.name !== 'AbortError') { console.error('Error saving file:', err); fallbackSave(htmlContent); } } } else { fallbackSave(htmlContent); } }
+            async function saveStateAs() { const htmlContent = await generateAnnotatedHTML(); const fallbackSave = (data) => { const blob = new Blob([data], { type: 'text/html;charset=utf-8' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Media_QC.html`; a.click(); URL.revokeObjectURL(a.href); state.hasUnsavedChanges = false; updateSaveButtonState(); }; if ('showSaveFilePicker' in window) { try { const fileHandle = await window.showSaveFilePicker({ suggestedName: `Media_QC.html`, types: [{ description: 'HTML QC File', accept: { 'text/html': ['.html'] } }] }); const writable = await fileHandle.createWritable(); await writable.write(htmlContent); await writable.close(); state.currentFileHandle = fileHandle; state.hasUnsavedChanges = false; updateSaveButtonState(); } catch (err) { if (err.name !== 'AbortError') { console.error('Error saving file:', err); fallbackSave(htmlContent); } } } else { fallbackSave(htmlContent); } }
             function deleteAnnotationsByIndices(indicesToDelete) {
                 if (!indicesToDelete || indicesToDelete.length === 0) return;
                 const idsToDelete = new Set(); const queue = indicesToDelete.map(index => state.annotations[index]?.id).filter(id => id); queue.forEach(id => idsToDelete.add(id)); let currentQueue = [...queue];
@@ -2109,12 +2106,13 @@
                 let items = [{ label: 'Add Comment', action: () => { addAnnotation({ type: 'comment', artboardId, data: pos, color: state.activeColor, text: '' }, true); } }];
                 if (artboard.type === 'video') { items.push({ label: 'Save Frame', action: () => saveVideoFrame(artboardId) }); }
                 items.push(
-                    { label: 'Add Horizontal Guide here', action: () => { if(!state.guides.artboard[artboardId]) state.guides.artboard[artboardId] = []; state.guides.artboard[artboardId].push({type: 'horizontal', position: pos.y, id: crypto.randomUUID()}); drawGuides(); markAsChanged(); } },
-                    { label: 'Add Vertical Guide here', action: () => { if(!state.guides.artboard[artboardId]) state.guides.artboard[artboardId] = []; state.guides.artboard[artboardId].push({type: 'vertical', position: pos.x, id: crypto.randomUUID()}); drawGuides(); markAsChanged(); } },
+					{ divider: true },
+                    { label: 'Add Horizontal Guide', action: () => { if(!state.guides.artboard[artboardId]) state.guides.artboard[artboardId] = []; state.guides.artboard[artboardId].push({type: 'horizontal', position: pos.y, id: crypto.randomUUID()}); drawGuides(); markAsChanged(); } },
+                    { label: 'Add Vertical Guide', action: () => { if(!state.guides.artboard[artboardId]) state.guides.artboard[artboardId] = []; state.guides.artboard[artboardId].push({type: 'vertical', position: pos.x, id: crypto.randomUUID()}); drawGuides(); markAsChanged(); } },
                     { label: 'Clean Artboard Guides', action: () => { state.guides.artboard[artboardId] = []; drawGuides(); markAsChanged(); } },
                     { divider: true }, { label: 'Copy File Name', action: () => navigator.clipboard.writeText(artboard.name) }
                 );
-                if (artboard.type === 'video') { items.push({ label: 'Fit to 720p', action: () => { resizeAllVideosTo720p(); } }); items.push({ label: 'Zoom to 100%', action: () => { resetArtboardScale(artboardId); }}); }
+                if (artboard.type === 'video') { items.push({ label: 'Fit Video to 720p', action: () => { resizeAllVideosTo720p(); } }); items.push({ label: 'Zoom to 100%', action: () => { resetArtboardScale(artboardId); }}); }
                 if (artboard.type === 'image' && artboard.name.match(/\.(png|webp|gif)$/i)) { items.push({ label: 'Change Background Color', action: () => { document.getElementById('artboard-bg-color-picker').click(); }}); }
                 items.push({ divider: true }); items.push({ label: 'Close Artboard', action: deleteSelectedArtboards });
                 showContextMenu(e, items);
@@ -2199,7 +2197,6 @@
                 const artboardId = crypto.randomUUID();
                 const fileUrl = URL.createObjectURL(file); // Create blob URL for gifler
                 try {
-                    // Keep original .gif name for display
                     addArtboard(file.name, null, 'video', { width: 300, height: 225 }, { isLoading: true, id: artboardId });
                     
                     const canvas = document.createElement('canvas');
@@ -2244,11 +2241,8 @@
                                     let artboard = state.artboards.find(b => b.id === artboardId);
                                     if (artboard) {
                                         artboard.isLoading = false;
-                                        artboard.src = dataUrl; // Embed as data URL
+                                        artboard.src = dataUrl;
                                         renderWorkspace();
-                                        if (app.timelinePanel.classList.contains('hidden')) {
-                                           app.timelinePanel.classList.remove('hidden');
-                                        }
                                         global_updateTimeline();
                                     }
                                 }
@@ -2260,15 +2254,14 @@
                         ctx.drawImage(frame.buffer, frame.x, frame.y, frame.width, frame.height);
                     });
                     
-                    // Attach the on-end callback correctly for this version of gifler
                     if(animation.animator) {
                         const originalOnEnd = animation.animator.onend;
                         animation.animator.onend = () => {
                             if (originalOnEnd) originalOnEnd();
                             onDone();
                         };
-                    } else { // Fallback if animator isn't exposed
-                        setTimeout(onDone, 5000); // Failsafe timeout
+                    } else {
+                        setTimeout(onDone, 5000);
                     }
                 } catch (err) {
                     console.error("Failed to convert GIF:", err);
@@ -2276,7 +2269,7 @@
                     state.artboards = state.artboards.filter(b => b.id !== artboardId);
                     renderWorkspace();
                 } finally {
-                    URL.revokeObjectURL(fileUrl); // Clean up blob URL
+                    URL.revokeObjectURL(fileUrl);
                 }
             }
             
@@ -2302,7 +2295,7 @@
                 try {
                     const zip = new JSZip();
                     const htmlContent = await generateAnnotatedHTML();
-                    zip.file("Unified_QC.html", htmlContent);
+                    zip.file("Media_QC.html", htmlContent);
 
                     const mediaFolder = zip.folder("media");
                     const fetchPromises = [];
@@ -2336,7 +2329,7 @@
                     const zipBlob = await zip.generateAsync({ type: "blob" });
                     const a = document.createElement('a');
                     a.href = URL.createObjectURL(zipBlob);
-                    a.download = "Unified_QC_Package.zip";
+                    a.download = "Media_QC_Package.zip";
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
@@ -2355,5 +2348,4 @@
         });
     </script>
 </body>
-
 </html>
