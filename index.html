@@ -452,6 +452,29 @@
 
             async function initTesseract() {
                 const helpPanel = document.getElementById('help-panel');
+                const ocrStatus = document.createElement('span');
+                ocrStatus.id = 'ocr-status';
+                ocrStatus.textContent = '◷';
+                ocrStatus.title = 'OCR Engine Loading...';
+                ocrStatus.style.cssText = 'font-size: 0.8em; margin-right: 10px; color: var(--text-color-light); user-select: none;';
+                helpPanel.prepend(ocrStatus);
+
+                if (!window.Tesseract) {
+                    ocrStatus.textContent = '✗';
+                    ocrStatus.title = 'OCR Engine failed to load.';
+                    console.error('Tesseract.js script not loaded.');
+                    return;
+                }
+
+                // Check if the library is ready
+                const checkTesseract = setInterval(() => {
+                    if (window.Tesseract) {
+                        tesseractReady = true;
+                        ocrStatus.textContent = '✓';
+                        ocrStatus.title = 'OCR Engine Ready';
+                        clearInterval(checkTesseract);
+                    }
+                }, 100);
             }
 
             function init() {
@@ -849,6 +872,7 @@
                 }
             }
 
+            // --- OCR Tool Implementation ---
 
             function startOcrSelection() {
                 if (ocrSelectionActive) return;
@@ -1030,7 +1054,7 @@
                 const resultBox = createOcrResultBox(rect);
                 const statusEl = resultBox.querySelector('.status');
                 const textarea = resultBox.querySelector('textarea');
-                let worker;
+                let worker; // Keep worker in this scope to terminate it in finally block
 
                 try {
                     statusEl.textContent = 'Capturing screen area...';
@@ -1043,8 +1067,9 @@
 
                     statusEl.textContent = 'Initializing OCR worker...';
                     
+                    // --- FIX IS ON THE NEXT LINE ---
                     worker = await Tesseract.createWorker('ita+eng', 1, {
-                        langPath: 'https://cdn.jsdelivr.net/npm/tesseract.js-data@5.0.0/',
+                        langPath: 'https://cdn.jsdelivr.net/npm/tesseract.js-data@5.0.0/', // This tells Tesseract where to find the language files
                         logger: m => {
                             if (m.status === 'recognizing text') {
                                 const progress = Math.round(m.progress * 100);
@@ -1135,6 +1160,7 @@
                 return box;
             }
 
+            // --- End OCR Tool ---
 
             function addArtboard(name, src, type, size = {width:0, height:0}, options = {}) {
                 const { isLoading = false, id = crypto.randomUUID() } = options;
@@ -2521,7 +2547,7 @@
             
             async function gifToVideo(file) {
                 const artboardId = crypto.randomUUID();
-                const fileUrl = URL.createObjectURL(file);
+                const fileUrl = URL.createObjectURL(file); // Create blob URL for gifler
                 try {
                     addArtboard(file.name, null, 'video', { width: 300, height: 225 }, { isLoading: true, id: artboardId });
                     
