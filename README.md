@@ -1,72 +1,69 @@
-# Media note
+# Media QC v22.2
 
-Công cụ QC video và hình ảnh, hoạt động hoàn toàn trên trình duyệt. Tất cả chức năng, giao diện và dữ liệu chú thích đều được gói gọn trong một file HTML duy nhất.
+Đây là một ứng dụng web mạnh mẽ được thiết kế để kiểm tra chất lượng (QC) các tệp video, hình ảnh và GIF. Nó cung cấp một không gian làm việc tương tác nơi người dùng có thể tải lên nhiều loại tệp đa phương tiện, xem lại chúng một cách đồng bộ và thêm các chú thích chi tiết.
 
 https://tri-inbold.github.io/Media-note/
 
-https://tri-inbold.github.io/Media-note/beta
 
+## Các tính năng chính
 
-## Tính năng nổi bật
-
-*   **Hai chế độ trong một:** Tự động chuyển đổi giao diện và chức năng phù hợp khi bạn làm việc với video (`Video Mode`) hoặc chỉ với hình ảnh (`Image Mode`).
-*   **Chú thích đa dạng:** Thêm bình luận, vẽ các hình dạng (vuông, tròn, đường thẳng, mũi tên) trực tiếp lên media.
-*   **Hệ thống trả lời lồng nhau:** Dễ dàng thảo luận và theo dõi các chuỗi phản hồi.
-*   **Lưu trữ tất cả trong một file:** Toàn bộ chú thích, hình ảnh dán vào và thông tin media được nhúng trực tiếp vào file `.html`. Chỉ cần gửi một file duy nhất cho người khác để xem lại.
-*   **Không cần cài đặt:** Hoạt động hoàn toàn offline trên mọi trình duyệt hiện đại (Chrome, Firefox, Edge).
-*   **Giao diện Sáng/Tối:** Tự động chuyển đổi theo hệ thống hoặc cho phép người dùng tùy chỉnh.
-*   **Hỗ trợ đa người dùng:** Lưu lại tên người dùng để dễ dàng xác định ai đã tạo chú thích.
+*   **Không gian làm việc linh hoạt:** Kéo và thả các tệp đa phương tiện (video, hình ảnh, GIF) trực tiếp vào không gian làm việc. Người dùng có thể di chuyển, thay đổi kích thước và sắp xếp các "artboard" chứa nội dung đa phương tiện một cách tự do.
+*   **Hỗ trợ đa định dạng:**
+    *   **Video:** Tải và phát các định dạng video phổ biến.
+    *   **Hình ảnh:** Hiển thị các định dạng ảnh tĩnh.
+    *   **GIF:** Chuyển đổi và phát các tệp GIF dưới dạng video lặp lại.
+*   **Chú thích nâng cao:**
+    *   **Nhiều công cụ vẽ:** Thêm nhận xét, vẽ hình chữ nhật, hình tròn, đường thẳng và mũi tên trực tiếp lên video và hình ảnh.
+    *   **Chú thích hình ảnh:** Dán hoặc tải lên hình ảnh để làm chú thích.
+    *   **Màu sắc tùy chỉnh:** Chọn từ một bảng màu hoặc sử dụng bộ chọn màu để có màu chú thích cụ thể.
+*   **Dòng thời gian (Timeline) đồng bộ:**
+    *   **Điều khiển chính:** Một dòng thời gian tổng thể cho phép phát, tạm dừng, tua và điều khiển tốc độ phát lại của tất cả các video cùng một lúc.
+    *   **Đồng bộ hóa:** Giữ cho tất cả các video được phát đồng bộ với nhau.
+    *   **Điều khiển riêng lẻ:** Mỗi video cũng có các điều khiển phát lại và âm lượng riêng.
+*   **Quản lý nhận xét hiệu quả:**
+    *   **Danh sách nhận xét:** Tất cả các chú thích được liệt kê trong một bảng điều khiển bên phải, được nhóm theo từng tệp đa phương tiện.
+    *   **Dấu thời gian:** Các nhận xét trên video được tự động gắn dấu thời gian, cho phép người dùng chuyển đến khung hình chính xác.
+    *   **Tìm kiếm và lọc:** Dễ dàng tìm kiếm các nhận xét cụ thể.
+*   **Công cụ OCR (Nhận dạng ký tự quang học):**
+    *   Trích xuất văn bản trực tiếp từ hình ảnh hoặc khung hình video bằng cách chọn một vùng.
+*   **Lưu và xuất:**
+    *   **Lưu dưới dạng HTML:** Lưu toàn bộ phiên làm việc, bao gồm các tệp đa phương tiện đã tải lên, chú thích và bố cục không gian làm việc vào một tệp HTML duy nhất.
+    *   **Đóng gói dự án:** Xuất toàn bộ dự án dưới dạng tệp .zip, bao gồm tệp HTML và các tệp đa phương tiện liên quan.
 
 ## Cách sử dụng
 
-1.  **Tải file:** Tải về file `index.html`.
-2.  **Mở trên trình duyệt:** Mở file vừa tải bằng trình duyệt web của bạn (khuyên dùng Chrome).
-3.  **Kéo và thả:** Kéo và thả file video hoặc hình ảnh của bạn vào cửa sổ trình duyệt để bắt đầu.
-    *   Nếu có **video**, ứng dụng sẽ vào `Video Mode`.
-    *   Nếu chỉ có **hình ảnh**, ứng dụng sẽ vào `Image Mode`.
-4.  **Lưu lại:** Sử dụng phím tắt `Ctrl + S` hoặc nút "Lưu file HTML" để lưu lại toàn bộ công việc của bạn.
+1.  **Mở `index.html`:** Khởi chạy ứng dụng bằng cách mở tệp `index.html` trong trình duyệt web của bạn.
+2.  **Tải lên tệp:**
+    *   Kéo và thả các tệp video, hình ảnh hoặc GIF vào cửa sổ ứng dụng.
+    *   Hoặc, nhấp đúp vào vùng trống để mở hộp thoại chọn tệp.
+3.  **Sắp xếp không gian làm việc:**
+    *   Nhấp và kéo tiêu đề của mỗi artboard để di chuyển nó.
+    *   Kéo góc dưới cùng bên phải của artboard để thay đổi kích thước.
+4.  **Thêm chú thích:**
+    *   Chọn một công cụ từ thanh công cụ (ví dụ: nhận xét, hình chữ nhật).
+    *   Nhấp và kéo trên artboard để tạo chú thích.
+    *   Nhập văn bản cho nhận xét của bạn vào danh sách ở bảng điều khiển bên phải.
+5.  **Điều khiển phát lại:**
+    *   Sử dụng các điều khiển trên dòng thời gian chính để quản lý tất cả các video.
+    *   Sử dụng các điều khiển riêng lẻ trên mỗi artboard video để điều khiển cụ thể.
+6.  **Lưu công việc của bạn:**
+    *   Nhấp vào nút "Save HTML File" để lưu trạng thái hiện tại của bạn. Thao tác này sẽ tạo ra một tệp HTML mới chứa tất cả dữ liệu của bạn.
 
-## Phím tắt chính
+## Các phím tắt
 
-#### Chung (Cả hai chế độ)
+Ứng dụng hỗ trợ một loạt các phím tắt để tăng tốc quy trình làm việc của bạn. Nhấp vào nút **?** trong ứng dụng để xem danh sách đầy đủ. Một số phím tắt phổ biến bao gồm:
 
-| Phím tắt             | Chức năng                               |
-| -------------------- | --------------------------------------- |
-| `Ctrl` + `D`         | Mở file / Thêm hình ảnh mới (Image Mode) |
-| `Ctrl` + `S`         | Lưu lại file HTML                       |
-| `Ctrl` + `Shift` + `S` | Lưu thành một file mới                  |
-| `Ctrl` + `C` / `V`   | Copy / Dán chú thích, hình ảnh          |
-| `Delete`             | Xóa các mục đã chọn                     |
-| `Q, W, E, R, T`      | Chọn nhanh các công cụ vẽ               |
+*   **V:** Công cụ chọn
+*   **H:** Công cụ kéo (Pan)
+*   **Q, W, E, R, T, Y, U:** Chọn các công cụ vẽ, hình ảnh và OCR
+*   **Phím cách:** Phát/Tạm dừng video đã chọn
+*   **Ctrl + Phím cách:** Phát/Tạm dừng tất cả video
+*   **Ctrl + S:** Lưu tệp
+*   **Ctrl + D:** Mở/Thêm tệp
+*   **← / →:** Chuyển đến khung hình trước/tiếp theo
 
-#### Video Mode
+## Các thư viện được sử dụng
 
-| Phím tắt             | Chức năng             |
-| -------------------- | --------------------- |
-| `Spacebar`           | Play / Pause          |
-| `←` / `→`            | Di chuyển từng frame   |
-| `Shift` + `←` / `→`  | Di chuyển từng giây   |
-| `Lăn chuột`          | Tiến/lùi các frame    |
-
-#### Image Mode
-
-| Phím tắt               | Chức năng                  |
-| ---------------------- | -------------------------- |
-| `Spacebar` + Kéo chuột | Di chuyển (Pan)            |
-| `Chuột giữa`           | Di chuyển (Pan)            |
-| `Ctrl` + Lăn chuột    | Phóng to / Thu nhỏ        |
-| `Ctrl` + `G`           | Tự động sắp xếp các hình ảnh |
-
-## Công nghệ sử dụng
-
-Dự án được xây dựng hoàn toàn bằng "Vanilla Stack" để đảm bảo tính gọn nhẹ và di động:
-
-*   HTML5 (Canvas API)
-*   CSS3 (Flexbox, Grid)
-*   JavaScript (ES6+)
-
-Không sử dụng bất kỳ framework hay thư viện bên ngoài nào.
-
-## Contact
-
-tri.vu.trong@inbold.com
+*   **Tesseract.js:** Cho chức năng OCR.
+*   **JSZip:** Để đóng gói các dự án thành tệp .zip.
+*   **gifler.js:** Để xử lý và hiển thị các tệp GIF.
