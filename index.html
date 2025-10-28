@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Media QC v22.2</title>
+    <title>Media QC v22.3</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
@@ -88,8 +88,8 @@
         #movable-controls { display: flex; gap: 10px; align-items: center; }
         #tools-panel, #help-panel { padding: 8px; border-radius: 12px; display: flex; align-items: center; }
         #tools-panel { padding: 8px 10px; gap: 4px; }
-        #help-panel { padding: 0; background: none; border: none; }
-        #help-btn { background: var(--panel-bg); border: 1px var(--panel-bg); color: var(--text-color-light); cursor: pointer; display: flex; align-items: center; justify-content: center; height: 38px; padding: 0 12px; border-radius: 8px; font-weight: bold; font-size: 1.2em; }
+        #help-panel { padding: 0; background: none; border: none; display: flex; align-items: center; gap: 8px;}
+        #help-btn { background: var(--panel-bg); border: 1px solid var(--border-color); color: var(--text-color-light); cursor: pointer; display: flex; align-items: center; justify-content: center; height: 38px; padding: 0 12px; border-radius: 8px; font-weight: bold; font-size: 1.2em; }
         .playback-controls { display: flex; align-items: center; gap: 4px; }
         .tool-btn { width: 28px; height: 28px; border-radius: 8px; border: none; background: transparent; color: var(--text-color-light); cursor: pointer; display: flex; justify-content: center; align-items: center; transition: all 0.2s; padding: 0; }
         .tool-btn:hover { color: var(--text-color); background-color: rgba(255,255,255,0.1); }
@@ -116,14 +116,22 @@
         .speed-btn { background: none; border: none; color: var(--text-color-light); padding: 4px 8px; cursor: pointer; font-size: 0.9em;}
         .speed-btn.active { color: #fff; background: var(--text-color-light); border-radius: 8px; }
         body.theme-light .speed-btn.active { color: #fff; }
+        
+        #zoom-controls { position: relative; }
+        #zoom-display-btn { background: var(--panel-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 8px; padding: 0 12px; height: 38px; cursor: pointer; font-weight: bold; width: 70px; }
+        #zoom-dropdown { position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%); background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; list-style: none; padding: 5px 0; margin: 0; min-width: 100px; text-align: center; z-index: 10; }
+        #zoom-dropdown li { padding: 5px 15px; cursor: pointer; }
+        #zoom-dropdown li:hover { background-color: var(--highlight-color); color: #fff; }
+        #movable-controls.simple-mode #zoom-controls { display: none; }
 
-        #right-panel { flex: 0 0 340px; display: flex; flex-direction: column; z-index: 20; background: var(--bg-color); border-left: 1px solid var(--border-color); flex-shrink: 0; transition: all 0.3s ease; }
+
+        #right-panel { flex: 0 0 340px; display: flex; flex-direction: column; z-index: 20; background: var(--bg-color); border-left: 1px solid var(--border-color); flex-shrink: 0; transition: flex-basis 0.3s ease; min-width: 0; }
         #right-panel.collapsed { flex-basis: 0 !important; min-width: 0 !important; border: none; }
         #right-panel.collapsed > * { display: none; }
         #list-header { padding: 10px; border-bottom: 1px solid var(--border-color); }
         #search-input { width: 100%; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-color); padding: 8px; box-sizing: border-box; }
-        #list-container { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
-        #annotation-list { list-style: none; padding: 10px; margin: 0; overflow-y: auto; flex-grow: 1; }
+        #list-container { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+        #annotation-list { list-style: none; padding: 10px; margin: 0; overflow-y: auto; flex-grow: 1; min-width: 0; }
         #annotation-list.mask-completed li.completed { display: none; }
         #save-btn { display: block; width: calc(100% - 20px); margin: 10px; padding: 12px; border: none; border-radius: 10px; background-color: var(--highlight-color); color: #fff; font-size: 1em; font-weight: bold; cursor: pointer; flex-shrink: 0; transition: background-color 0.3s ease, color 0.3s ease, opacity 0.3s ease; }
         #save-btn.unsaved { background-color: #ffc107; color: #000; }
@@ -137,9 +145,9 @@
         #annotation-list li .content { margin: 0; font-size: 0.9em; white-space: pre-wrap; min-height: 1em; word-break: break-word; }
         #annotation-list li .annotation-image { max-width: 100%; border-radius: 4px; margin-top: 5px; display: block; }
         #annotation-list li.reply-item { margin-left: 20px; transform: scale(0.98); }
-        #annotation-list .group-header { font-weight: bold; font-size: 0.9em; color: var(--text-color); background-color: var(--list-item-reply-bg); padding: 5px 10px; margin: 15px 0 5px 0; border-radius: 5px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        #annotation-list .group-header { font-weight: bold; font-size: 0.9em; color: var(--text-color); background-color: var(--list-item-reply-bg); padding: 5px 10px; margin: 15px 0 5px 0; border-radius: 5px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; overflow: hidden;}
         #annotation-list .group-header:first-child { margin-top: 0; }
-        #annotation-list .group-header > span:first-child { font-size: 0.8em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-grow: 1; padding-right: 5px; min-width: 0; }
+        #annotation-list .group-header > span:first-child { font-size: 0.8em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto; padding-right: 5px; min-width: 0; }
         .collapse-toggle { transition: transform 0.2s; display: inline-block; }
         .group-header.collapsed .collapse-toggle { transform: rotate(-90deg); }
         .header-tools { display: flex; align-items: center; gap: 2px; } 
@@ -151,7 +159,7 @@
         .complete-checkbox { appearance: none; width: 16px; height: 16px; border: 2px solid var(--checkbox-border); border-radius: 50%; cursor: pointer; transition: all 0.2s; }
         .complete-checkbox:checked { background-color: #28a745; border-color: #28a745; }
         .complete-checkbox:checked::after { content: '\2713'; display: block; text-align: center; color: #fff; font-weight: bold; font-size: 11px; line-height: 13px; }
-        #panel-resizer { width: 1px; cursor: col-resize; flex-shrink: 0; background-color: transparent; transition: background-color 0.2s ease; align-self: stretch; -webkit-touch-callout: none; }
+        #panel-resizer { width: 1px; cursor: col-resize; flex-shrink: 0; background-color: transparent; transition: background-color 0.2s ease; align-self: stretch; z-index: 21; -webkit-touch-callout: none; }
         #panel-resizer:hover { width: 5px; background-color: var(--highlight-color); -webkit-touch-callout: none;}
         #right-panel.collapsed + #panel-resizer { display: none; }
 
@@ -187,10 +195,6 @@
         .context-menu-divider { height: 1px; background-color: var(--border-color); margin: 5px 0; }
         
         #workspace-guide-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 15; }
-        .artboard-edge-highlight { position: absolute; background-color: var(--highlight-color); opacity: 0.8; pointer-events: none; z-index: 10; }
-        .artboard-edge-highlight.top, .artboard-edge-highlight.bottom { width: 100%; height: 4px; left: 0; }
-        .artboard-edge-highlight.left, .artboard-edge-highlight.right { width: 4px; height: 100%; top: 0; }
-        .artboard-edge-highlight.top { top: -2px; } .artboard-edge-highlight.bottom { bottom: -2px; } .artboard-edge-highlight.left { left: -2px; } .artboard-edge-highlight.right { right: -2px; }
 
         #toolbar-drag-handle { cursor: grab; padding: 0px; margin-right: 6px; align-self: stretch; display: flex; align-items: center; justify-content: center; }
         #toolbar-drag-handle::before { content: ''; width: 4px; height: 20px; background-color: var(--text-color-light); border-radius: 2px; opacity: 0.7; }
@@ -273,6 +277,18 @@
                         </div>
                     </div>
                      <div id="help-panel">
+                        <div id="zoom-controls">
+                            <button id="zoom-display-btn">100%</button>
+                            <ul id="zoom-dropdown" class="hidden">
+                                <li data-zoom="4">400%</li>
+                                <li data-zoom="2">200%</li>
+                                <li data-zoom="1.5">150%</li>
+                                <li data-zoom="1">100%</li>
+                                <li data-zoom="0.75">75%</li>
+                                <li data-zoom="0.5">50%</li>
+                                <li data-zoom="0.25">25%</li>
+                            </ul>
+                        </div>
                         <button id="help-btn" title="Help & Shortcuts">?</button>
                     </div>
                 </div>
@@ -374,6 +390,9 @@
                         <option value="dark">Dark</option>
                     </select>
                 </span>
+                <span id="extra-settings" style="display: flex; align-items: center; gap: 10px;">
+                    <button id="clean-cache-btn">Clean Cache</button>
+                </span>
             </div>
         </div>
     </div>
@@ -423,7 +442,6 @@
             let imageAnnotationCache = new Map();
             let historyManager;
             let autoSaveTimeout;
-            let artboardEdgeHoverTimeout = null; 
             let dragHandleClicks = { count: 0, time: 0 };
             
             let tesseractWorker = null;
@@ -443,7 +461,6 @@
                     layout: { nextX: 50, nextY: 50, rowMaxHeight: 0, margin: 50, maxRowWidth: 4000, isPanelCollapsed: false, artboardBgColor: '#ffffff' },
                     spacebarPressed: false, isGlobalMuted: true, areVideosInSync: true,
                     guides: { visible: true, locked: false, color: '#00FFFF', workspace: [], artboard: {} },
-                    artboardEdgeHover: null,
                     toolbar: { x: 0, y: 0, isSimple: false, isDefault: true }
                 };
                 historyManager = createHistoryManager();
@@ -451,26 +468,25 @@
             }
 
             async function initTesseract() {
-                const helpPanel = document.getElementById('help-panel');
+                const ocrStatusContainer = document.getElementById('extra-settings');
                 const ocrStatus = document.createElement('span');
                 ocrStatus.id = 'ocr-status';
                 ocrStatus.textContent = '◷';
                 ocrStatus.title = 'OCR Engine Loading...';
-                ocrStatus.style.cssText = 'font-size: 0.8em; margin-right: 10px; color: var(--text-color-light); user-select: none;';
-                helpPanel.prepend(ocrStatus);
+                ocrStatus.style.cssText = 'font-size: 0.8em; color: var(--text-color-light); user-select: none;';
+                ocrStatusContainer.appendChild(ocrStatus);
 
                 if (!window.Tesseract) {
-                    ocrStatus.textContent = '✗';
+                    ocrStatus.textContent = 'OCR Failed';
                     ocrStatus.title = 'OCR Engine failed to load.';
                     console.error('Tesseract.js script not loaded.');
                     return;
                 }
 
-                // Check if the library is ready
                 const checkTesseract = setInterval(() => {
                     if (window.Tesseract) {
                         tesseractReady = true;
-                        ocrStatus.textContent = '✓';
+                        ocrStatus.textContent = 'OCR Enlgish';
                         ocrStatus.title = 'OCR Engine Ready';
                         clearInterval(checkTesseract);
                     }
@@ -536,6 +552,7 @@
                 document.getElementById('help-btn').addEventListener('click', () => document.getElementById('help-modal').classList.remove('hidden'));
                 document.getElementById('modal-close-btn').addEventListener('click', () => document.getElementById('help-modal').classList.add('hidden'));
                 document.getElementById('change-user-btn').addEventListener('click', changeUser);
+                document.getElementById('clean-cache-btn').addEventListener('click', cleanCache);
                 
                 const artboardBgColorPicker = document.getElementById('artboard-bg-color-picker');
                 artboardBgColorPicker.addEventListener('input', (e) => changeArtboardBg(e.target.value));
@@ -544,8 +561,23 @@
                 const guideColorPicker = document.getElementById('guide-color-picker');
                 guideColorPicker.addEventListener('input', (e) => changeGuideColor(e.target.value));
                 guideColorPicker.addEventListener('change', (e) => { changeGuideColor(e.target.value, true); });
+                
+                document.getElementById('zoom-display-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    document.getElementById('zoom-dropdown').classList.toggle('hidden');
+                });
+                document.querySelectorAll('#zoom-dropdown li').forEach(item => {
+                    item.addEventListener('click', () => {
+                        const newScale = parseFloat(item.dataset.zoom);
+                        setZoom(newScale);
+                    });
+                });
 
-                window.addEventListener('click', (e) => { if (!e.target.closest('#color-picker')) document.getElementById('color-palette-popup').classList.add('hidden'); hideContextMenu(); });
+                window.addEventListener('click', (e) => { 
+                    if (!e.target.closest('#color-picker')) document.getElementById('color-palette-popup').classList.add('hidden'); 
+                    if (!e.target.closest('#zoom-controls')) document.getElementById('zoom-dropdown').classList.add('hidden');
+                    hideContextMenu(); 
+                });
                 
                 app.workspaceContainer.addEventListener('contextmenu', onWorkspaceContextMenu);
                 app.annotationList.addEventListener('contextmenu', onAnnotationListContextMenu);
@@ -554,9 +586,18 @@
 
                 new ResizeObserver(drawMasterRuler).observe(app.timelinePanel);
 
-                updateSaveButtonState();
+                updateWorkspaceTransform();
                 applyToolbarState();
                 requestAnimationFrame(masterTimelineUpdater);
+            }
+            
+            function cleanCache() {
+                if (confirm('Are you sure you want to clean the cache? This will remove saved user and theme preferences.')) {
+                    localStorage.removeItem('qcToolUser');
+                    localStorage.removeItem('qcToolTheme');
+                    alert('Cache cleaned. The page will now reload.');
+                    location.reload();
+                }
             }
 
             async function autoLoadData() {
@@ -648,7 +689,7 @@
                         case 'v': if (!isInputFocused) { e.preventDefault(); pasteAnnotations(); } return;
                         case 'h': e.preventDefault(); toggleRightPanel(); return;
                         case 'g': e.preventDefault(); if (e.shiftKey) { resizeAllVideosTo720p(); } else { rearrangeArtboards(); } return;
-                        case '1': e.preventDefault(); if(state.selectedArtboardIds.length === 1) { fitArtboardToView(state.selectedArtboardIds[0]); } else { state.view.scale = 1; updateWorkspaceTransform(); } return;
+                        case '1': e.preventDefault(); if(state.selectedArtboardIds.length === 1) { fitArtboardToView(state.selectedArtboardIds[0]); } else { setZoom(1); } return;
                         case '0': if (e.altKey) { e.preventDefault(); fitAllArtboardsToView(); } else { e.preventDefault(); state.view = { ...state.view, scale: 1, offsetX: 0, offsetY: 0 }; updateWorkspaceTransform(); } return;
                         case ';':
                             e.preventDefault();
@@ -704,13 +745,6 @@
 
                 if (state.currentTool === 'pan' || state.spacebarPressed || e.button === 1) { startPanning(e); return; }
                 
-                if (state.artboardEdgeHover && !state.guides.locked) {
-                    e.preventDefault(); e.stopPropagation();
-                    state.interaction.mode = 'draggingArtboardGuide';
-                    state.interaction.target = { artboardId: state.artboardEdgeHover.artboardId, type: ['left', 'right'].includes(state.artboardEdgeHover.edge) ? 'vertical' : 'horizontal' };
-                    return;
-                }
-                
                 state.selectedAnnotationIndices = []; state.selectedArtboardIds = [];
                 updateListSelection(); updateArtboardSelection();
             }
@@ -725,11 +759,9 @@
                     case 'draggingToolbar': onToolbarDrag(e); break;
                     case 'draggingArtboard': onArtboardDrag(e); break; 
                     case 'resizingArtboard': onArtboardResize(e); break; 
-                    case 'draggingArtboardGuide': drawGuides(e); break;
                     case 'draggingGuide': onGuideDrag(e); break;
                     default: onCanvasMouseMove(e); break; 
                 } 
-                handleArtboardEdgeHover(e);
             }
             function onWindowMouseUp(e) {
                 app.workspaceContainer.style.cursor = '';
@@ -739,20 +771,56 @@
                     const beforeState = []; const afterState = [];
                     state.selectedArtboardIds.forEach(id => { const board = state.artboards.find(b => b.id === id); const start = state.interaction.startData.get(id); if(board && start) { beforeState.push({id, x: start.x, y: start.y }); afterState.push({id, x: board.x, y: board.y }); } });
                      if (JSON.stringify(beforeState) !== JSON.stringify(afterState)) {
-                        historyManager.execute({ type: 'MOVE_ARTBOARDS', before: beforeState, after: afterState,
-                            do: (action) => { action.after.forEach(s => { const board = state.artboards.find(b=>b.id===s.id); if(board) Object.assign(board, {x:s.x, y:s.y}); }); renderWorkspace(); },
-                            undo: (action) => { action.before.forEach(s => { const board = state.artboards.find(b=>b.id===s.id); if(board) Object.assign(board, {x:s.x, y:s.y}); }); renderWorkspace(); }
-                        });
+                        const doAction = (action) => {
+                            const videoTimes = new Map();
+                            document.querySelectorAll('#workspace video').forEach(v => {
+                                const artboardEl = v.closest('.artboard');
+                                if (artboardEl) {
+                                    videoTimes.set(artboardEl.dataset.id, v.currentTime);
+                                }
+                            });
+
+                            action.after.forEach(s => { const board = state.artboards.find(b=>b.id===s.id); if(board) Object.assign(board, {x:s.x, y:s.y}); });
+                            renderWorkspace();
+
+                            if (videoTimes.size > 0) {
+                                document.querySelectorAll('#workspace video').forEach(v => {
+                                    const artboardEl = v.closest('.artboard');
+                                    if (artboardEl && videoTimes.has(artboardEl.dataset.id)) {
+                                        const savedTime = videoTimes.get(artboardEl.dataset.id);
+                                        const setTime = () => { if(isFinite(v.duration)) v.currentTime = savedTime; };
+                                        if (v.readyState >= 1) { setTime(); } 
+                                        else { v.addEventListener('loadedmetadata', setTime, { once: true }); }
+                                    }
+                                });
+                            }
+                        };
+                        const undoAction = (action) => {
+                             const videoTimes = new Map();
+                            document.querySelectorAll('#workspace video').forEach(v => {
+                                const artboardEl = v.closest('.artboard');
+                                if (artboardEl) {
+                                    videoTimes.set(artboardEl.dataset.id, v.currentTime);
+                                }
+                            });
+                            
+                            action.before.forEach(s => { const board = state.artboards.find(b=>b.id===s.id); if(board) Object.assign(board, {x:s.x, y:s.y}); });
+                            renderWorkspace();
+
+                             if (videoTimes.size > 0) {
+                                document.querySelectorAll('#workspace video').forEach(v => {
+                                    const artboardEl = v.closest('.artboard');
+                                    if (artboardEl && videoTimes.has(artboardEl.dataset.id)) {
+                                        const savedTime = videoTimes.get(artboardEl.dataset.id);
+                                        const setTime = () => { if(isFinite(v.duration)) v.currentTime = savedTime; };
+                                        if (v.readyState >= 1) { setTime(); } 
+                                        else { v.addEventListener('loadedmetadata', setTime, { once: true }); }
+                                    }
+                                });
+                            }
+                        };
+                        historyManager.execute({ type: 'MOVE_ARTBOARDS', before: beforeState, after: afterState, do: doAction, undo: undoAction });
                      }
-                } else if (state.interaction.mode === 'draggingArtboardGuide') {
-                    const { artboardId, type } = state.interaction.target;
-                    const artboard = state.artboards.find(b => b.id === artboardId);
-                    if (artboard) {
-                        const pos = getMousePosOnArtboard(e, artboard); const position = type === 'vertical' ? pos.x : pos.y;
-                        if (!state.guides.artboard[artboardId]) { state.guides.artboard[artboardId] = []; }
-                        state.guides.artboard[artboardId].push({ type, position, id: crypto.randomUUID() });
-                        markAsChanged(); drawGuides();
-                    }
                 } else if (state.interaction.mode === 'draggingGuide') {
                     const { scope, guide, artboardId } = state.interaction.target;
                     const startData = state.interaction.startData.get('guide');
@@ -955,7 +1023,7 @@
 
             async function captureWorkspaceArea(rect) {
                 app.toolbarContainer.classList.add('hidden');
-                document.querySelectorAll('.artboard-resizer, .artboard-edge-highlight').forEach(el => el.style.display = 'none');
+                document.querySelectorAll('.artboard-resizer').forEach(el => el.style.display = 'none');
                 
                 const captureCanvas = document.createElement('canvas');
                 captureCanvas.width = rect.width;
@@ -1016,7 +1084,7 @@
                 }
 
                 app.toolbarContainer.classList.remove('hidden');
-                document.querySelectorAll('.artboard-resizer, .artboard-edge-highlight').forEach(el => el.style.display = '');
+                document.querySelectorAll('.artboard-resizer').forEach(el => el.style.display = '');
 
                 return captureCanvas.toDataURL('image/png');
             }
@@ -1054,7 +1122,7 @@
                 const resultBox = createOcrResultBox(rect);
                 const statusEl = resultBox.querySelector('.status');
                 const textarea = resultBox.querySelector('textarea');
-                let worker; // Keep worker in this scope to terminate it in finally block
+                let worker; 
 
                 try {
                     statusEl.textContent = 'Capturing screen area...';
@@ -1067,9 +1135,9 @@
 
                     statusEl.textContent = 'Initializing OCR worker...';
                     
-                    // --- FIX IS ON THE NEXT LINE ---
-                    worker = await Tesseract.createWorker('ita+eng', 1, {
-                        langPath: 'https://cdn.jsdelivr.net/npm/tesseract.js-data@5.0.0/', // This tells Tesseract where to find the language files
+                    worker = await Tesseract.createWorker('eng', 1, {
+                        corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.0.0/tesseract-core.wasm.js',
+                        langPath: 'https://raw.githubusercontent.com/tesseract-ocr/tessdata/main/4.00/',
                         logger: m => {
                             if (m.status === 'recognizing text') {
                                 const progress = Math.round(m.progress * 100);
@@ -1079,7 +1147,6 @@
                     });
 
                     await worker.setParameters({
-                         tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿĀāĂăĄąĆćĈĉĊċČčĎďĐđĒēĔĕĖėĘęĚěĜĝĞğĠġĢģĤĥĦħĨĩĪīĬĭĮįİıĴĵĶķĹĺĻļĽľĿŀŁłŃńŅņŇňŊŋŌōŎŏŐőŒœŔŕŖŗŘřŚśŜŝŞşŠšŢţŤťŦŧŨũŪūŬŭŮůŰűŲųŴŵŶŷŸŹźŻżŽžȘșȚț 0123456789.,;:!?@#$%^&*()-+=\'"<>~/*–',
                          preserve_interword_spaces: '1',
                     });
 
@@ -1184,16 +1251,18 @@
 
                 const createArtboardObject = (id, name, src, type, size, isLoading) => {
                     const artboard = { id, name, type, src, x: 50, y: 50, width: size.width, height: size.height, originalWidth: size.width, originalHeight: size.height, scale: 1, isLoading };
+                    
+                    if ((type === 'video' || type === 'image') && !isLoading && artboard.originalHeight > 720) {
+                        const targetHeight = 720;
+                        const aspectRatio = artboard.originalWidth / artboard.originalHeight;
+                        artboard.height = targetHeight;
+                        artboard.width = targetHeight * aspectRatio;
+                        artboard.scale = artboard.height / artboard.originalHeight;
+                    }
+
                     if (type === 'video') { 
                         artboard.frameBackups = {}; 
                         artboard.videoFailedToLoad = false;
-                        if (!isLoading && artboard.originalHeight > 0) {
-                            const targetHeight = 720;
-                            const aspectRatio = artboard.originalWidth / artboard.originalHeight;
-                            artboard.height = targetHeight;
-                            artboard.width = targetHeight * aspectRatio;
-                            artboard.scale = artboard.height / artboard.originalHeight;
-                        }
                     }
                     state.guides.artboard[artboard.id] = [];
                     state.artboards.push(artboard);
@@ -1215,7 +1284,10 @@
                     artboardEl.classList.toggle('selected', state.selectedArtboardIds.includes(artboard.id));
                     let contentHTML = ''; let videoControlsHTML = '';
                     if (!artboard.isLoading) {
-                        const artboardSrc = artboard.src || artboard.name; 
+                        let artboardSrc = artboard.src || artboard.name;
+                        if (!artboardSrc.startsWith('data:') && !artboardSrc.startsWith('blob:') && !artboardSrc.includes('://') && !artboardSrc.startsWith('/')) {
+                            artboardSrc = './' + artboardSrc;
+                        }
                         switch(artboard.type) {
                             case 'image': contentHTML = `<img src="${artboardSrc}" alt="${artboard.name}" crossOrigin="anonymous">`; break;
                             case 'video': contentHTML = `<video src="${artboardSrc}" playsinline loop crossOrigin="anonymous"></video><img class="frame-backup hidden" alt="Backup Frame">`; break;
@@ -1345,7 +1417,12 @@
                 if (state.selectedArtboardIds.length === 0) return;
                 const artboardsToRemove = state.artboards.filter(b => state.selectedArtboardIds.includes(b.id));
                 const annotationsOnArtboards = state.annotations.filter(a => state.selectedArtboardIds.includes(a.artboardId));
-                if ((artboardsToRemove.length > 0 || annotationsOnArtboards.length > 0) && !confirm(`Delete ${artboardsToRemove.length} artboard(s) and ${annotationsOnArtboards.length} comments on them?`)) return;
+
+                if (annotationsOnArtboards.length > 0) {
+                    if (!confirm(`Delete ${artboardsToRemove.length} artboard(s) and all ${annotationsOnArtboards.length} comments on them? This action cannot be undone.`)) {
+                        return;
+                    }
+                }
                 
                 historyManager.execute({ 
                     type: 'DELETE_ARTBOARDS', 
@@ -1991,11 +2068,44 @@
                 }
             }
             function redrawAllAnnotations() { state.artboards.forEach(artboard => redrawArtboardAnnotations(artboard.id)); }
-            function updateWorkspaceTransform() { const { offsetX, offsetY, scale } = state.view; app.workspace.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`; drawGuides(); }
-            function zoomAtPoint(factor, x, y) { const oldScale = state.view.scale; const newScale = Math.max(state.view.minScale, Math.min(state.view.maxScale, oldScale * factor)); state.view.scale = newScale; state.view.offsetX = x - (x - state.view.offsetX) * (newScale / oldScale); state.view.offsetY = y - (y - state.view.offsetY) * (newScale / oldScale); updateWorkspaceTransform(); }
+            
+            function updateZoomDisplay() {
+                const zoomPercent = Math.round(state.view.scale * 100);
+                document.getElementById('zoom-display-btn').textContent = `${zoomPercent}%`;
+            }
+            function updateWorkspaceTransform() { 
+                const { offsetX, offsetY, scale } = state.view; 
+                app.workspace.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`; 
+                updateZoomDisplay();
+                drawGuides(); 
+            }
+            function zoomAtPoint(factor, x, y) { 
+                const oldScale = state.view.scale; 
+                const newScale = Math.max(state.view.minScale, Math.min(state.view.maxScale, oldScale * factor)); 
+                state.view.scale = newScale; 
+                state.view.offsetX = x - (x - state.view.offsetX) * (newScale / oldScale); 
+                state.view.offsetY = y - (y - state.view.offsetY) * (newScale / oldScale); 
+                updateWorkspaceTransform(); 
+            }
+            function setZoom(scale) {
+                const rect = app.workspaceContainer.getBoundingClientRect();
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                
+                const oldScale = state.view.scale;
+                const newScale = Math.max(state.view.minScale, Math.min(state.view.maxScale, scale));
+                
+                state.view.offsetX = centerX - (centerX - state.view.offsetX) * (newScale / oldScale);
+                state.view.offsetY = centerY - (centerY - state.view.offsetY) * (newScale / oldScale);
+                state.view.scale = newScale;
+                
+                updateWorkspaceTransform();
+                document.getElementById('zoom-dropdown').classList.add('hidden');
+            }
+
             function fitArtboardToView(artboardId) {
                 const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return;
-                const PADDING = 0;
+                const PADDING = 20;
                 const container = app.workspaceContainer;
                 const artboardEl = document.querySelector(`.artboard[data-id="${artboardId}"]`); if(!artboardEl) return;
                 const artboardHeight = artboardEl.offsetHeight;
@@ -2009,7 +2119,7 @@
                 state.view.offsetY = (container.offsetHeight - artboardHeight * newScale) / 2 - artboard.y * newScale;
                 updateWorkspaceTransform();
             }
-            function fitAllArtboardsToView() { if (state.artboards.length === 0) return; const PADDING = 0; let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity; state.artboards.forEach(b => { const artboardEl = document.querySelector(`.artboard[data-id="${b.id}"]`); const height = artboardEl ? artboardEl.offsetHeight : (b.height + 30 + (b.type==='video' ? 32:0)); minX = Math.min(minX, b.x); minY = Math.min(minY, b.y); maxX = Math.max(maxX, b.x + b.width); maxY = Math.max(maxY, b.y + height); }); const totalWidth = maxX - minX; const totalHeight = maxY - minY; if (totalWidth === 0 || totalHeight === 0) return; const container = app.workspaceContainer; const scaleX = (container.offsetWidth - 2 * PADDING) / totalWidth; const scaleY = (container.offsetHeight - 2 * PADDING) / totalHeight; const newScale = Math.min(scaleX, scaleY, 1); state.view.scale = newScale; state.view.offsetX = (container.offsetWidth - totalWidth * newScale) / 2 - minX * newScale; state.view.offsetY = (container.offsetHeight - totalHeight * newScale) / 2 - minY * newScale; updateWorkspaceTransform(); }
+            function fitAllArtboardsToView() { if (state.artboards.length === 0) return; const PADDING = 50; let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity; state.artboards.forEach(b => { const artboardEl = document.querySelector(`.artboard[data-id="${b.id}"]`); const height = artboardEl ? artboardEl.offsetHeight : (b.height + 30 + (b.type==='video' ? 32:0)); minX = Math.min(minX, b.x); minY = Math.min(minY, b.y); maxX = Math.max(maxX, b.x + b.width); maxY = Math.max(maxY, b.y + height); }); const totalWidth = maxX - minX; const totalHeight = maxY - minY; if (totalWidth === 0 || totalHeight === 0) return; const container = app.workspaceContainer; const scaleX = (container.offsetWidth - 2 * PADDING) / totalWidth; const scaleY = (container.offsetHeight - 2 * PADDING) / totalHeight; const newScale = Math.min(scaleX, scaleY, 1); state.view.scale = newScale; state.view.offsetX = (container.offsetWidth - totalWidth * newScale) / 2 - minX * newScale; state.view.offsetY = (container.offsetHeight - totalHeight * newScale) / 2 - minY * newScale; updateWorkspaceTransform(); }
             function onArtboardHeaderMouseDown(e, artboardId) {
                 if (state.spacebarPressed || e.button === 1) { startPanning(e); return; }
                 if (e.button !== 0) return;
@@ -2309,7 +2419,7 @@
 
             function drawGuides(mouseEvent = null) {
                 drawWorkspaceGuides();
-                state.artboards.forEach(artboard => drawArtboardGuides(artboard.id, mouseEvent));
+                state.artboards.forEach(artboard => drawArtboardGuides(artboard.id));
             }
 
             function drawWorkspaceGuides() {
@@ -2326,7 +2436,7 @@
                 });
             }
 
-            function drawArtboardGuides(artboardId, mouseEvent) {
+            function drawArtboardGuides(artboardId) {
                 const artboard = state.artboards.find(b => b.id === artboardId);
                 const canvases = getArtboardCanvases(artboardId);
                 if (!artboard || !canvases.guideCanvas) return;
@@ -2341,44 +2451,6 @@
                     else { const x = guide.position * artboard.width; ctx.moveTo(x, 0); ctx.lineTo(x, artboard.height); }
                     ctx.stroke();
                 });
-                if (mouseEvent && state.interaction.mode === 'draggingArtboardGuide' && state.interaction.target.artboardId === artboardId) {
-                    const pos = getMousePosOnArtboard(mouseEvent, artboard);
-                    ctx.strokeStyle = state.guides.color; ctx.lineWidth = 2 / artboard.scale; ctx.beginPath();
-                    if (state.interaction.target.type === 'horizontal') { const y = pos.y * artboard.height; ctx.moveTo(0, y); ctx.lineTo(artboard.width, y); } 
-                    else { const x = pos.x * artboard.width; ctx.moveTo(x, 0); ctx.lineTo(x, artboard.height); }
-                    ctx.stroke();
-                }
-            }
-            
-            function handleArtboardEdgeHover(e) {
-                if (artboardEdgeHoverTimeout) { clearTimeout(artboardEdgeHoverTimeout); artboardEdgeHoverTimeout = null; }
-                const oldHover = JSON.stringify(state.artboardEdgeHover); let newHover = null;
-                const HOVER_ZONE = 10;
-                if(state.interaction.mode === 'none' && !state.guides.locked) {
-                    for(const artboard of state.artboards) {
-                        const el = document.querySelector(`.artboard[data-id="${artboard.id}"]`); if (!el) continue;
-                        const rect = el.getBoundingClientRect();
-                        const onTop = e.clientY > rect.top - HOVER_ZONE && e.clientY < rect.top + HOVER_ZONE; const onBottom = e.clientY > rect.bottom - HOVER_ZONE && e.clientY < rect.bottom + HOVER_ZONE;
-                        const onLeft = e.clientX > rect.left - HOVER_ZONE && e.clientX < rect.left + HOVER_ZONE; const onRight = e.clientX > rect.right - HOVER_ZONE && e.clientX < rect.right + HOVER_ZONE;
-                        let edge = null;
-                        if (onTop && onLeft || onBottom && onRight || onBottom && onLeft || onTop && onRight) {} 
-                        else if (onTop) edge = 'top'; else if (onBottom) edge = 'bottom'; else if (onLeft) edge = 'left'; else if (onRight) edge = 'right';
-                        if (edge) { newHover = { artboardId: artboard.id, edge }; break; }
-                    }
-                }
-                state.artboardEdgeHover = newHover;
-                if (oldHover !== JSON.stringify(state.artboardEdgeHover)) {
-                    document.querySelectorAll('.artboard-edge-highlight').forEach(el => el.remove());
-                    if (state.artboardEdgeHover) {
-                        artboardEdgeHoverTimeout = setTimeout(() => {
-                           if (state.artboardEdgeHover) {
-                               const { artboardId, edge } = state.artboardEdgeHover;
-                               const artboardEl = document.querySelector(`.artboard[data-id="${artboardId}"]`);
-                               if (artboardEl) { const highlightEl = document.createElement('div'); highlightEl.className = `artboard-edge-highlight ${edge}`; artboardEl.appendChild(highlightEl); }
-                           }
-                        }, 1000);
-                    }
-                }
             }
             
             function onToolbarDragStart(e) {
@@ -2407,7 +2479,7 @@
                 const {x, y, isSimple, isDefault} = state.toolbar;
                 const container = app.toolbarContainer;
                 if (isDefault) {
-                    container.style.left = '50%'; container.style.top = ''; container.style.bottom = '70px'; container.style.transform = 'translateX(-50%)';
+                    container.style.left = '50%'; container.style.top = ''; container.style.bottom = '50px'; container.style.transform = 'translateX(-50%)';
                 } else {
                     container.style.left = `${x}px`; container.style.top = `${y}px`; container.style.bottom = ''; container.style.transform = '';
                 }
@@ -2681,6 +2753,7 @@
                     const zipBlob = await zip.generateAsync({ type: "blob" });
                     const a = document.createElement('a');
                     a.href = URL.createObjectURL(zipBlob);
+                    a.download = "Media_QC_Project.zip";
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
