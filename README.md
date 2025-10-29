@@ -1,4 +1,4 @@
-# Media QC v22.2
+# Media QC v22.3
 
 Đây là một ứng dụng web mạnh mẽ được thiết kế để kiểm tra chất lượng (QC) các tệp video, hình ảnh và GIF. Nó cung cấp một không gian làm việc tương tác nơi người dùng có thể tải lên nhiều loại tệp đa phương tiện, xem lại chúng một cách đồng bộ và thêm các chú thích chi tiết.
 
