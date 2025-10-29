@@ -11,10 +11,10 @@
     <style>
         /* --- COMBINED AND NORMALIZED CSS --- */
         :root { 
-            --bg-color: #2e2e2e; --panel-bg: rgba(40, 40, 40, 0.8); --border-color: rgba(255, 255, 255, 0.2); --text-color: #f0f0f0; --text-color-light: #999; --highlight-color: #00aaff; --input-bg: rgba(0,0,0,0.3); --list-item-bg: rgba(0,0,0,0.2); --list-item-reply-bg: rgba(0,0,0,0.3); --checkbox-border: #555; --icon-btn-color: #999; --icon-btn-hover-color: #fff; --workspace-bg: #202020; --video-slot-bg: #000;
+            --bg-color: #2e2e2e; --panel-bg: rgba(40, 40, 40, 0.8); --border-color: rgba(255, 255, 255, 0.2); --text-color: #f0f0f0; --text-color-light: #999; --highlight-color: #00aaff; --input-bg: rgba(0,0,0,0.3); --list-item-bg: rgba(0,0,0,0.2); --list-item-reply-bg: rgba(0,0,0,0.3); --checkbox-border: #555; --icon-btn-color: #999; --icon-btn-hover-color: #fff; --workspace-bg: #202020; --video-slot-bg: #000; --artboard-header-color: rgb(0,0,0,0.5);
         }
         body.theme-light {
-            --bg-color: #f0f2f5; --panel-bg: #ffffff; --border-color: #dee2e6; --text-color: #212529; --text-color-light: #6c757d; --input-bg: #ffffff; --list-item-bg: #ffffff; --list-item-reply-bg: #f1f3f5; --checkbox-border: #adb5bd; --icon-btn-color: #6c757d; --icon-btn-hover-color: #212529; --workspace-bg: #e9ecef; --video-slot-bg: #ffffff;
+            --bg-color: #f0f2f5; --panel-bg: #ffffff; --border-color: #dee2e6; --text-color: #212529; --text-color-light: #6c757d; --input-bg: #ffffff; --list-item-bg: #ffffff; --list-item-reply-bg: #f1f3f5; --checkbox-border: #adb5bd; --icon-btn-color: #6c757d; --icon-btn-hover-color: #212529; --workspace-bg: #e9ecef; --video-slot-bg: #ffffff; --artboard-header-color: white;
         }
         body, html { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--workspace-bg); color: var(--text-color); overflow: hidden; height: 100vh; width: 100vw; }
         .hidden { display: none !important; }
@@ -49,7 +49,7 @@
         .artboard.selected { border-color: 1px var(--highlight-color); }
         .artboard.video-missing { border-color: 1px solid orange !important; }
         .artboard.video-missing::after { content: 'Missing Video > Drop to Relink'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.5); color: #fff; padding: 8px 10px; border-radius: 8px; font-size: 14px; pointer-events: none; z-index: 100; }
-        .artboard-header { position: relative; width: 100%; height: 30px; background-color: rgba(0,0,0,0.5); display: flex; justify-content: space-between; align-items: center; padding: 0 5px 0 10px; box-sizing: border-box; font-size: 12px; color: var(--text-color); cursor: grab; flex-shrink: 0; }
+        .artboard-header { position: relative; width: 100%; height: 30px; background-color: var(--artboard-header-color); display: flex; justify-content: space-between; align-items: center; padding: 0 5px 0 10px; box-sizing: border-box; font-size: 12px; color: var(--text-color); cursor: grab; flex-shrink: 0; }
         .artboard-header:active { cursor: grabbing; }
         .artboard-header-tools { display: flex; align-items: center; }
         .artboard-title-container { flex: 1 1 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 5px; display: flex; align-items: baseline; pointer-events: none; min-width: 0; -webkit-user-select: none; -moz-user-select: none;-ms-user-select: none; user-select: none;}
@@ -71,7 +71,7 @@
         .artboard canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;}
         .artboard-resizer { position: absolute; right: 2px; bottom: 2px; width: 16px; height: 16px; cursor: se-resize; z-index: 5; color: rgba(255,255,255,0.5); }
         .artboard-resizer:hover { color: white; }
-        .artboard-video-controls { position: relative; width: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; padding: 4px 8px; box-sizing: border-box; height: 32px; z-index: 5; flex-shrink: 0; }
+        .artboard-video-controls { position: relative; width: 100%; background: var(--artboard-header-color); display: flex; align-items: center; padding: 4px 8px; box-sizing: border-box; height: 32px; z-index: 5; flex-shrink: 0; }
         .artboard-video-controls button { background:none; border:none; color:white; cursor:pointer; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; padding:0; font-size: 1.2em;}
         .artboard-video-controls button svg { width: 18px; height: 18px; fill: currentColor; }
         .vid-timeline-wrapper { position: relative; flex-grow: 1; height: 100%; display: flex; align-items: center;}
@@ -2774,5 +2774,6 @@
     </script>
 </body>
 </html>
+
 
 
