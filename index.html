@@ -1147,7 +1147,7 @@
 
                     statusEl.textContent = 'Initializing OCR worker...';
                     
-                    worker = await Tesseract.createWorker('lat', 1, {
+					const worker = await Tesseract.createWorker('lat', 1, {
 					    corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.0.0/tesseract-core.wasm.js',
 					    langPath: 'https://github.com/tesseract-ocr/tessdata/raw/4.00/',
 					    gzip: false
@@ -1159,9 +1159,16 @@
 					        statusEl.textContent = `Recognizing text... ${progress}%`;
 					    }
 					});
-
-
-
+					
+					await worker.load();
+					await worker.loadLanguage('lat');
+					await worker.initialize('lat');
+					
+					tesseractWorker = worker;
+					tesseractReady = true;
+					ocrStatus.textContent = 'OCR Latin';
+					ocrStatus.title = 'OCR Engine Ready (Latin)';
+					
                     await worker.setParameters({
                          preserve_interword_spaces: '1',
                     });
@@ -2789,5 +2796,6 @@
     </script>
 </body>
 </html>
+
 
 
