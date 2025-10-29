@@ -468,42 +468,30 @@
             }
 
             async function initTesseract() {
-			    const ocrStatusContainer = document.getElementById('extra-settings');
-			    const ocrStatus = document.createElement('span');
-			    ocrStatus.id = 'ocr-status';
-			    ocrStatus.textContent = '◷';
-			    ocrStatus.title = 'OCR Engine Loading...';
-			    ocrStatus.style.cssText = 'font-size: 0.8em; color: var(--text-color-light); user-select: none;';
-			    ocrStatusContainer.appendChild(ocrStatus);
-			
-			    if (!window.Tesseract) {
-			        ocrStatus.textContent = 'OCR Failed';
-			        ocrStatus.title = 'OCR Engine failed to load.';
-			        console.error('Tesseract.js script not loaded.');
-			        return;
-			    }
-			
-			    try {
-			        tesseractWorker = await Tesseract.createWorker({
-			            langPath: 'https://github.com/tesseract-ocr/tessdata/raw/4.00/',
-			            gzip: false,
-			            logger: m => console.log(m)
-			        });
-			
-			        await tesseractWorker.load();
-			        await tesseractWorker.loadLanguage('lat');
-			        await tesseractWorker.initialize('lat');
-			
-			        tesseractReady = true;
-			        ocrStatus.textContent = 'OCR Latin';
-			        ocrStatus.title = 'OCR Engine Ready (Latin)';
-			    } catch (err) {
-			        console.error('Tesseract initialization failed:', err);
-			        ocrStatus.textContent = 'OCR Error';
-			        ocrStatus.title = 'Failed to load Latin data';
-			    }
-			}
+                const ocrStatusContainer = document.getElementById('extra-settings');
+                const ocrStatus = document.createElement('span');
+                ocrStatus.id = 'ocr-status';
+                ocrStatus.textContent = '◷';
+                ocrStatus.title = 'OCR Engine Loading...';
+                ocrStatus.style.cssText = 'font-size: 0.8em; color: var(--text-color-light); user-select: none;';
+                ocrStatusContainer.appendChild(ocrStatus);
 
+                if (!window.Tesseract) {
+                    ocrStatus.textContent = 'OCR Failed';
+                    ocrStatus.title = 'OCR Engine failed to load.';
+                    console.error('Tesseract.js script not loaded.');
+                    return;
+                }
+
+                const checkTesseract = setInterval(() => {
+                    if (window.Tesseract) {
+                        tesseractReady = true;
+                        ocrStatus.textContent = 'OCR Enlgish';
+                        ocrStatus.title = 'OCR Engine Ready';
+                        clearInterval(checkTesseract);
+                    }
+                }, 100);
+            }
 
             function init() {
                 resetState();
@@ -1147,28 +1135,18 @@
 
                     statusEl.textContent = 'Initializing OCR worker...';
                     
-					const worker = await Tesseract.createWorker('lat', 1, {
+                    worker = await Tesseract.createWorker('lat', 1, {
 					    corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.0.0/tesseract-core.wasm.js',
 					    langPath: 'https://github.com/tesseract-ocr/tessdata/raw/4.00/',
-					    gzip: false
-					});
-					
-					worker.setLogger(m => {
-					    if (m.status === 'recognizing text') {
-					        const progress = Math.round(m.progress * 100);
-					        statusEl.textContent = `Recognizing text... ${progress}%`;
+					    gzip: false,
+					    logger: m => {
+					        if (m.status === 'recognizing text') {
+					            const progress = Math.round(m.progress * 100);
+					            statusEl.textContent = `Recognizing text... ${progress}%`;
+					        }
 					    }
 					});
-					
-					await worker.load();
-					await worker.loadLanguage('lat');
-					await worker.initialize('lat');
-					
-					tesseractWorker = worker;
-					tesseractReady = true;
-					ocrStatus.textContent = 'OCR Latin';
-					ocrStatus.title = 'OCR Engine Ready (Latin)';
-					
+
                     await worker.setParameters({
                          preserve_interword_spaces: '1',
                     });
@@ -2796,6 +2774,3 @@
     </script>
 </body>
 </html>
-
-
-
