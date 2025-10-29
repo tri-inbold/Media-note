@@ -78,7 +78,7 @@
         .vid-timeline-bg { position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 100%; height: 4px; background: rgba(255,255,255,0.3); border-radius: 4px;}
         .vid-timeline-markers { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none;}
         .artboard-video-controls .vid-timeline { flex-grow:1; -webkit-appearance: none; appearance: none; height: 100%; background: transparent; cursor: pointer; position: relative; z-index: 2;}
-        .artboard-video-controls .vid-timeline::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 10px; height: 10px; background: var(--button-controler-color); border-radius: 50%; margin-top: -4px; }
+        .artboard-video-controls .vid-timeline::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 10px; height: 10px; background: var(--button-controler-color); border-radius: 50%; margin-top: -3px; }
 		.artboard-video-controls .vid-timeline::-webkit-slider-thumb:hover { transform: scale(1.2); }
 		.artboard-video-controls .vid-timeline::-webkit-slider-runnable-track { height: 4px; background: color-mix(in srgb, var(--button-controler-color) 40%, transparent); border-radius: 2px; }
         .time-input { background: transparent; border: none; color: var(--button-controler-color); font-size:13px; margin: 0 8px; font-variant-numeric: tabular-nums; text-align: center; padding: 2px; width: 75px; border-radius: 3px; }
@@ -157,7 +157,7 @@
         .icon-btn:hover { opacity: 1; color: var(--icon-btn-hover-color); }
         .icon-btn svg { width: 12px; height: 12px; fill: currentColor; }
         .complete-checkbox { transform: scale(0.75); }
-        #annotation-list li textarea { background: transparent; overflow-y: hidden; transition: background-color 0.2s ease;}
+        #annotation-list li textarea { width: calc(100% - 6px); background: transparent; border: none; border-radius: 4px; color: var(--text-color); font-family: inherit; font-size: 1em; resize: none; overflow-y: hidden; box-sizing: border-box; outline: none; }
 		#annotation-list li textarea:focus { outline: none; background-color: var(--panel-bg);}
         .complete-checkbox { appearance: none; width: 16px; height: 16px; border: 2px solid var(--checkbox-border); border-radius: 50%; cursor: pointer; transition: all 0.2s; }
         .complete-checkbox:checked { background-color: #28a745; border-color: #28a745; }
@@ -2777,6 +2777,7 @@
     </script>
 </body>
 </html>
+
 
 
 
