@@ -79,6 +79,7 @@
         .vid-timeline-markers { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none;}
         .artboard-video-controls .vid-timeline { flex-grow:1; -webkit-appearance: none; appearance: none; height: 100%; background: transparent; cursor: pointer; position: relative; z-index: 2;}
         .artboard-video-controls .vid-timeline::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 10px; height: 10px; background: var(--button-controler-color); border-radius: 50%; }
+		.artboard-video-controls .vid-timeline::-webkit-slider-runnable-track { height: 4px; background: color-mix(in srgb, var(--button-controler-color) 40%, transparent); border-radius: 2px; }
         .time-input { background: transparent; border: none; color: var(--button-controler-color); font-size:12px; margin: 0 8px; font-variant-numeric: tabular-nums; text-align: center; padding: 2px; width: 75px; border-radius: 3px; }
         .time-input:focus { background: transparent; outline: 1px solid var(--highlight-color); }
         #time-display { width: 80px; font-size: 1em; color: var(--text-color); }
@@ -2774,6 +2775,7 @@
     </script>
 </body>
 </html>
+
 
 
 
