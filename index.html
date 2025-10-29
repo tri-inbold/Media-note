@@ -1137,7 +1137,7 @@
                     
                     worker = await Tesseract.createWorker('lat', 1, {
 					    corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.0.0/tesseract-core.wasm.js',
-					    langPath: 'https://github.com/tesseract-ocr/tessdata/raw/4.00/',
+					    langPath: 'https://cdn.jsdelivr.net/gh/tesseract-ocr/tessdata@4.00/',
 					    gzip: false,
 					    logger: m => {
 					        if (m.status === 'recognizing text') {
@@ -2774,3 +2774,4 @@
     </script>
 </body>
 </html>
+
