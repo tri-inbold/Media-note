@@ -471,12 +471,32 @@
                     layout: { nextX: 50, nextY: 50, rowMaxHeight: 0, margin: 50, maxRowWidth: 4000, isPanelCollapsed: false, artboardBgColor: '#ffffff' },
                     spacebarPressed: false, isGlobalMuted: true, areVideosInSync: true,
                     guides: { visible: true, locked: false, color: '#00FFFF', workspace: [], artboard: {} },
-                    toolbar: { x: 0, y: 0, isSimple: false, isDefault: true }
+                    isSimpleMode: false,
+					toolbar: { x: 0, y: 0, isSimple: false, isDefault: true }
                 };
                 historyManager = createHistoryManager();
                 imageAnnotationCache.clear();
             }
 
+			function toggleSimpleMode() {
+                state.isSimpleMode = !state.isSimpleMode;
+
+                app.rightPanel.classList.toggle('hidden', state.isSimpleMode);
+                app.panelResizer.classList.toggle('hidden', state.isSimpleMode);
+
+                state.toolbar.isSimple = state.isSimpleMode;
+                applyToolbarState();
+
+                if (state.isSimpleMode) {
+                    app.timelinePanel.classList.add('hidden');
+                } else {
+                    global_updateTimeline();
+                }
+
+                drawAnnotationConnectorLines();
+                updateAnnotationPopup();
+            }
+			
             async function initTesseract() {
                 const ocrStatusContainer = document.getElementById('extra-settings');
                 const ocrStatus = document.createElement('span');
@@ -674,6 +694,12 @@
             function onKeyUp(e) { if (e.key === ' ') { e.preventDefault(); state.spacebarPressed = false; app.body.classList.remove('spacebar-down', 'panning'); } }
 
             function onKeyDown(e) {
+				 if (e.key === 'Tab') {
+                    e.preventDefault();
+                    toggleSimpleMode();
+                    return;
+                }
+				
                 const activeEl = document.activeElement;
                 const isInputFocused = ['TEXTAREA', 'INPUT'].includes(activeEl.tagName);
 
@@ -3216,3 +3242,4 @@
     </script>
 </body>
 </html>
+
