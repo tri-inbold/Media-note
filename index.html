@@ -126,7 +126,6 @@
         #zoom-dropdown li:hover { background-color: var(--highlight-color); color: #fff; }
         #movable-controls.simple-mode #zoom-controls { display: none; }
 
-
         #right-panel { flex: 0 0 340px; display: flex; flex-direction: column; z-index: 20; background: var(--bg-color); border-left: 1px solid var(--border-color); flex-shrink: 0; transition: flex-basis 0.3s ease; min-width: 0; }
         #right-panel.collapsed { flex-basis: 0 !important; min-width: 0 !important; border: none; }
         #right-panel.collapsed > * { display: none; }
@@ -220,7 +219,6 @@
         .timeline-title { font-weight: bold; font-size: 0.9em; flex-shrink: 0; color: var(--text-color-light); margin-right: 10px; }
         #master-timeline-ruler { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
 
-        /* --- OCR Tool Styles --- */
         #ocr-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.5); cursor: crosshair; z-index: 1000; }
         #ocr-selection-box { position: fixed; border: 2px solid var(--highlight-color); background: rgba(0, 170, 255, 0.2); z-index: 1001; pointer-events: none;}
         #ocr-result-box { position: fixed; z-index: 1002; background: var(--panel-bg); border: 1px solid var(--border-color); box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2); border-radius: 8px; padding: 10px; min-width: 300px; max-width: 500px; display: flex; flex-direction: column; gap: 8px; backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); }
@@ -233,7 +231,6 @@
         #ocr-result-box .footer .status { font-size: 0.8em; color: var(--text-color-light); }
         #ocr-result-box .footer .copy-btn { background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 5px; padding: 4px 8px; cursor: pointer; }
         
-        /* --- Additions for Annotation Pop-up --- */
         #annotation-popup {
             position: fixed;
             z-index: 999;
@@ -245,7 +242,7 @@
             width: 280px;
             backdrop-filter: blur(15px);
             -webkit-backdrop-filter: blur(15px);
-            transform: translate(15px, 15px); /* Offset from the annotation point */
+            transform: translate(15px, 15px);
         }
         #annotation-popup .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
         #annotation-popup .time { font-size: 0.8em; color: var(--text-color-light); }
@@ -728,9 +725,9 @@
                         case '0': if (e.altKey) { e.preventDefault(); fitAllArtboardsToView(); } else { e.preventDefault(); state.view = { ...state.view, scale: 1, offsetX: 0, offsetY: 0 }; updateWorkspaceTransform(); } return;
                         case ';':
                             e.preventDefault();
-                            if (e.shiftKey) { // Ctrl + Shift + ;
+                            if (e.shiftKey) {
                                 state.guides.locked = !state.guides.locked;
-                            } else { // Ctrl + ;
+                            } else {
                                 state.guides.visible = !state.guides.visible;
                             }
                             drawGuides();
@@ -1260,8 +1257,6 @@
                 };
                 return box;
             }
-
-            // --- End OCR Tool ---
 
             function addArtboard(name, src, type, size = {width:0, height:0}, options = {}) {
                 const { isLoading = false, id = crypto.randomUUID() } = options;
@@ -2244,7 +2239,51 @@
                 return `<!DOCTYPE html>\n` + docClone.documentElement.outerHTML;
             }
             async function saveState() { if (!state.currentFileHandle) { await saveStateAs(); return; } await saveStateSilently(); }
-            async function saveStateAs() { const htmlContent = await generateAnnotatedHTML(); const fallbackSave = (data) => { const blob = new Blob([data], { type: 'text/html;charset=utf-8' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Media_QC.html`; a.click(); URL.revokeObjectURL(a.href); state.hasUnsavedChanges = false; updateSaveButtonState(); }; if ('showSaveFilePicker' in window) { try { const fileHandle = await window.showSaveFilePicker({ suggestedName: `Media_QC.html`, types: [{ description: 'HTML QC File', accept: { 'text/html': ['.html'] } }] }); const writable = await fileHandle.createWritable(); await writable.write(htmlContent); await writable.close(); state.currentFileHandle = fileHandle; state.hasUnsavedChanges = false; updateSaveButtonState(); } catch (err) { if (err.name !== 'AbortError') { console.error('Error saving file:', err); fallbackSave(htmlContent); } } } else { fallbackSave(htmlContent); } }
+
+			async function saveStateAs() {
+                const htmlContent = await generateAnnotatedHTML();
+                
+                let suggestedName = 'Media_QC.html';
+                if (state.artboards.length > 0) {
+                    const firstFileName = state.artboards[0].name;
+                    const baseName = firstFileName.substring(0, firstFileName.lastIndexOf('.')) || firstFileName;
+                    suggestedName = `${baseName}_QC.html`;
+                }
+
+                const fallbackSave = (data) => {
+                    const blob = new Blob([data], { type: 'text/html;charset=utf-8' });
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = suggestedName;
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                    state.hasUnsavedChanges = false;
+                    updateSaveButtonState();
+                };
+
+                if ('showSaveFilePicker' in window) {
+                    try {
+                        const fileHandle = await window.showSaveFilePicker({
+                            suggestedName: suggestedName,
+                            types: [{ description: 'HTML QC File', accept: { 'text/html': ['.html'] } }]
+                        });
+                        const writable = await fileHandle.createWritable();
+                        await writable.write(htmlContent);
+                        await writable.close();
+                        state.currentFileHandle = fileHandle;
+                        state.hasUnsavedChanges = false;
+                        updateSaveButtonState();
+                    } catch (err) {
+                        if (err.name !== 'AbortError') {
+                            console.error('Error saving file:', err);
+                            fallbackSave(htmlContent);
+                        }
+                    }
+                } else {
+                    fallbackSave(htmlContent);
+                }
+            }
+			
             function deleteAnnotationsByIndices(indicesToDelete) {
                 if (!indicesToDelete || indicesToDelete.length === 0) return;
                 const idsToDelete = new Set(); const queue = indicesToDelete.map(index => state.annotations[index]?.id).filter(id => id); queue.forEach(id => idsToDelete.add(id)); let currentQueue = [...queue];
@@ -2264,6 +2303,7 @@
                     undo: (action) => { action.items.forEach(item => state.annotations.splice(item.originalIndex, 0, item.annotation)); state.selectedAnnotationIndices = action.items.map(item => item.originalIndex); updateAnnotationList(); redrawAllAnnotations(); }
                 });
             }
+			
             function updateListSelection() {
                 const selectedIds = new Set(state.selectedAnnotationIndices.map(i => state.annotations[i]?.id).filter(Boolean));
                 document.querySelectorAll('#annotation-list li:not(.group-header)').forEach(item => {
@@ -2288,6 +2328,7 @@
                 drawAnnotationConnectorLines();
                 updateAnnotationPopup();
             }
+			
             function makeListItemEditable(li, index) { 
                 let contentEl = li.querySelector('.content'); if (!contentEl) { contentEl = document.createElement('p'); contentEl.className = 'content'; li.appendChild(contentEl); } 
                 if (contentEl.querySelector('textarea')) return; const ann = state.annotations[index]; const oldText = ann.text || ''; 
@@ -3072,3 +3113,4 @@
     </script>
 </body>
 </html>
+
