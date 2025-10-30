@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Media QC v22.3</title>
+    <title>Media QC v22.4</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
@@ -1984,6 +1984,13 @@
                     state.interaction.mode = 'dragging'; state.interaction.target = { artboardId }; state.interaction.startData.clear();
                     state.selectedAnnotationIndices.forEach(index => { const ann = state.annotations[index]; state.interaction.startData.set(ann.id, { artboardId: ann.artboardId, data: JSON.parse(JSON.stringify(ann.data)) }); });
                 } else if (state.currentTool && state.currentTool !== 'select' && state.currentTool !== 'pan') {
+                    if (state.layout.isPanelCollapsed && state.currentTool === 'comment' && state.selectedAnnotationIndices.length > 0) {
+                        state.selectedAnnotationIndices = [];
+                        state.lastClickedAnnIndex = -1;
+                        updateListSelection();
+                        return;
+                    }
+
                     if (state.currentTool === 'comment') { addAnnotation({ type: 'comment', artboardId, data: pos, color: state.activeColor, text: '' }, true); }
                     else if (state.currentTool === 'image') { state.interaction.mode = 'placingImage'; state.interaction.target = { artboardId }; app.imageToolInput.click(); }
                     else { state.interaction.mode = 'drawing'; state.interaction.target = { artboardId }; }
@@ -3237,5 +3244,6 @@
     </script>
 </body>
 </html>
+
 
 
