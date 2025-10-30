@@ -25,7 +25,7 @@
         #app-container { display: flex; flex-direction: row; height: 100%; width: 100%; }
         #main-content { flex-grow: 1; position: relative; height: 100%; display: flex; flex-direction: column; }
         
-        #drop-zone { position: absolute; inset: 20px; border: 2px dashed rgba(173, 181, 189, 0.5); border-radius: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; font-size: 1.2em; color: var(--text-color-light); z-index: 100; transition: all 0.3s; pointer-events: auto; }
+        #drop-zone { position: absolute; inset: 20px; border: 2px dashed rgba(173, 181, 189, 0.5); border-radius: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; font-size: 1.2em; color: var(--text-color-light); z-index: 100; transition: all 0.3s; pointer-events: auto; pointer-events: none; }
         #drop-zone p { background: var(--panel-bg); padding: 25px 35px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid var(--border-color); line-height: 1.6; }
         #drop-zone.hidden { pointer-events: none; opacity: 0; }
         body.dragging #drop-zone { border-color: var(--highlight-color); background-color: rgba(0, 170, 255, 0.1); }
@@ -3258,6 +3258,7 @@
     </script>
 </body>
 </html>
+
 
 
 
