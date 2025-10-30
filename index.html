@@ -468,33 +468,28 @@
                     currentUser: null, clipboard: [],
                     interaction: { mode: 'none', target: null, startPos: { x: 0, y: 0 }, startWorkspacePos: {x:0, y:0}, startData: new Map() },
                     view: { scale: 1, offsetX: 0, offsetY: 0, minScale: 0.1, maxScale: 10 },
-                    layout: { nextX: 50, nextY: 50, rowMaxHeight: 0, margin: 50, maxRowWidth: 4000, isPanelCollapsed: false, artboardBgColor: '#ffffff' },
+                    layout: { nextX: 50, nextY: 50, rowMaxHeight: 0, margin: 50, maxRowWidth: 4000, isPanelCollapsed: false, artboardBgColor: null },
                     spacebarPressed: false, isGlobalMuted: true, areVideosInSync: true,
                     guides: { visible: true, locked: false, color: '#00FFFF', workspace: [], artboard: {} },
-                    isSimpleMode: false,
-					toolbar: { x: 0, y: 0, isSimple: false, isDefault: true }
+                    toolbar: { x: 0, y: 0, isSimple: false, isDefault: true }
                 };
                 historyManager = createHistoryManager();
                 imageAnnotationCache.clear();
             }
 
 			function toggleSimpleMode() {
-                state.isSimpleMode = !state.isSimpleMode;
+                toggleRightPanel();
 
-                app.rightPanel.classList.toggle('hidden', state.isSimpleMode);
-                app.panelResizer.classList.toggle('hidden', state.isSimpleMode);
+                const isPanelCollapsed = state.layout.isPanelCollapsed;
 
-                state.toolbar.isSimple = state.isSimpleMode;
+                state.toolbar.isSimple = isPanelCollapsed;
                 applyToolbarState();
 
-                if (state.isSimpleMode) {
+                if (isPanelCollapsed) {
                     app.timelinePanel.classList.add('hidden');
                 } else {
                     global_updateTimeline();
                 }
-
-                drawAnnotationConnectorLines();
-                updateAnnotationPopup();
             }
 			
             async function initTesseract() {
@@ -3242,4 +3237,5 @@
     </script>
 </body>
 </html>
+
 
