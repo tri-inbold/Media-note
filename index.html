@@ -1792,6 +1792,7 @@
                 const canvas = app.workspaceGuideCanvas;
                 const ctx = canvas.getContext('2d');
                 
+                // Vẫn gọi drawGuides để vẽ các đường gióng trước
                 drawGuides();
 
                 if (state.layout.isPanelCollapsed || state.selectedAnnotationIndices.length === 0) {
@@ -1811,12 +1812,25 @@
                     if (!screenPos) return;
 
                     const liRect = li.getBoundingClientRect();
-                    const startX = liRect.left;
-                    const startY = liRect.top + liRect.height / 2;
+                                     
+                    const startX = liRect.left - canvasRect.left;
+                    const startY = liRect.top + liRect.height / 2 - canvasRect.top;
+                    
+                    const endX = screenPos.x - canvasRect.left;
+                    const endY = screenPos.y - canvasRect.top;
+
+                    const dx = endX - startX;
+                    const handleOffset = Math.max(50, Math.min(150, Math.abs(dx) * 0.5));
+
+                    const cp1x = startX - handleOffset;
+                    const cp1y = startY;
+                    
+                    const cp2x = endX + handleOffset;
+                    const cp2y = endY;
 
                     ctx.beginPath();
-                    ctx.moveTo(startX - canvasRect.left, startY - canvasRect.top);
-                    ctx.lineTo(screenPos.x - canvasRect.left, screenPos.y - canvasRect.top);
+                    ctx.moveTo(startX, startY);
+                    ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, endX, endY);
                     
                     ctx.strokeStyle = ann.color || '#E53935';
                     ctx.lineWidth = 2;
@@ -3244,6 +3258,7 @@
     </script>
 </body>
 </html>
+
 
 
 
