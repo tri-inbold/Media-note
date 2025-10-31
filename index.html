@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Media QC v22.4</title>
+    <title>Media QC v22.5</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
@@ -2011,57 +2011,75 @@
                 selectArtboard(artboardId, e.ctrlKey || e.metaKey);
                 if (state.interaction.mode !== 'none') return; 
                 
-                const pos = getMousePosOnArtboard(e, artboard); state.interaction.startPos = pos;
+                const pos = getMousePosOnArtboard(e, artboard); 
+                state.interaction.startPos = pos;
                 const hit = getHitAnnotation(pos, artboardId, true);
                 
-                if (e.altKey && hit.index !== -1) {
-                    app.workspaceContainer.style.cursor = 'copy';
-                    const { newAnnotations, newIndices } = duplicateSelectedAnnotations();
-                    if (newAnnotations.length > 0) {
+                if (hit.index !== -1) {
+                    if (e.altKey) {
+                        app.workspaceContainer.style.cursor = 'copy';
+                        const { newAnnotations, newIndices } = duplicateSelectedAnnotations();
+                        if (newAnnotations.length > 0) {
+                            state.interaction.mode = 'dragging';
+                            state.interaction.target = { artboardId, isDuplicating: true, originalAnnotations: state.clipboard };
+                            state.interaction.startData.clear();
+                            newIndices.forEach(index => {
+                                const ann = state.annotations[index];
+                                state.interaction.startData.set(ann.id, { artboardId: ann.artboardId, data: JSON.parse(JSON.stringify(ann.data)) });
+                            });
+                        }
+                        return;
+                    }
+                    
+                    if (hit.handle) {
+                        state.interaction.mode = 'resizing';
+                        state.interaction.target = { index: hit.index, handle: hit.handle, artboardId };
+                        const ann = state.annotations[hit.index];
+                        state.interaction.startData.set(ann.id, JSON.parse(JSON.stringify(ann.data)));
+                    } else {
+                        const ann = state.annotations[hit.index];
+                        if (ann.videoTime !== undefined) {
+                            const artboardEl = document.querySelector(`.artboard[data-id="${artboardId}"]`);
+                            const videoEl = artboardEl ? artboardEl.querySelector('video') : null;
+                            if (videoEl && !artboard.videoFailedToLoad && Math.abs(videoEl.currentTime - ann.videoTime) > (1 / FRAME_RATE / 2)) {
+                                if (!state.selectedAnnotationIndices.includes(hit.index)) {
+                                    state.selectedAnnotationIndices = [hit.index];
+                                    updateListSelection();
+                                }
+                                return;
+                            }
+                        }
+                        if (!state.selectedAnnotationIndices.includes(hit.index)) {
+                            state.selectedAnnotationIndices = [hit.index];
+                            updateListSelection();
+                        }
+                        state.lastClickedAnnIndex = hit.index;
                         state.interaction.mode = 'dragging';
-                        state.interaction.target = { artboardId, isDuplicating: true, originalAnnotations: state.clipboard };
+                        state.interaction.target = { artboardId };
                         state.interaction.startData.clear();
-                        newIndices.forEach(index => {
+                        state.selectedAnnotationIndices.forEach(index => {
                             const ann = state.annotations[index];
                             state.interaction.startData.set(ann.id, { artboardId: ann.artboardId, data: JSON.parse(JSON.stringify(ann.data)) });
                         });
                     }
-                    return;
-                }
-                
-                if (hit.handle) {
-                    state.interaction.mode = 'resizing'; state.interaction.target = { index: hit.index, handle: hit.handle, artboardId };
-                    const ann = state.annotations[hit.index]; state.interaction.startData.set(ann.id, JSON.parse(JSON.stringify(ann.data)));
-                } else if (hit.index !== -1) {
-                    const ann = state.annotations[hit.index];
-                    if (ann.videoTime !== undefined) {
-                        const artboardEl = document.querySelector(`.artboard[data-id="${artboardId}"]`); const videoEl = artboardEl ? artboardEl.querySelector('video') : null;
-                        if (videoEl && !artboard.videoFailedToLoad && Math.abs(videoEl.currentTime - ann.videoTime) > (1 / FRAME_RATE / 2)) { if (!state.selectedAnnotationIndices.includes(hit.index)) { state.selectedAnnotationIndices = [hit.index]; updateListSelection(); } return; }
+                } else {
+                    if (state.selectedAnnotationIndices.length > 0) {
+                        state.selectedAnnotationIndices = [];
+                        updateListSelection();
                     }
-                    if (!state.selectedAnnotationIndices.includes(hit.index)) { 
-                        if(e.shiftKey && state.lastClickedAnnIndex !== -1) {
-                        } else {
-                           state.selectedAnnotationIndices = [hit.index]; 
+
+                    if (state.currentTool && !['select', 'pan'].includes(state.currentTool)) {
+                        if (state.currentTool === 'comment') {
+                            addAnnotation({ type: 'comment', artboardId, data: pos, color: state.activeColor, text: '' }, true);
+                        } else if (state.currentTool === 'image') {
+                            state.interaction.mode = 'placingImage';
+                            state.interaction.target = { artboardId };
+                            app.imageToolInput.click();
+                        } else { // Các công cụ vẽ khác
+                            state.interaction.mode = 'drawing';
+                            state.interaction.target = { artboardId };
                         }
-                        updateListSelection(); 
                     }
-                    state.lastClickedAnnIndex = hit.index;
-                    state.interaction.mode = 'dragging'; state.interaction.target = { artboardId }; state.interaction.startData.clear();
-                    state.selectedAnnotationIndices.forEach(index => { const ann = state.annotations[index]; state.interaction.startData.set(ann.id, { artboardId: ann.artboardId, data: JSON.parse(JSON.stringify(ann.data)) }); });
-                } else if (state.currentTool && !['select', 'pan'].includes(state.currentTool)) {
-                    if (state.currentTool === 'comment') {
-                        addAnnotation({ type: 'comment', artboardId, data: pos, color: state.activeColor, text: '' }, true);
-                    } else if (state.currentTool === 'image') {
-                        state.interaction.mode = 'placingImage';
-                        state.interaction.target = { artboardId };
-                        app.imageToolInput.click();
-                    } else { 
-                        state.interaction.mode = 'drawing';
-                        state.interaction.target = { artboardId };
-                    }
-                } else { 
-                    state.selectedAnnotationIndices = []; 
-                    updateListSelection(); 
                 }
             }
 
@@ -2232,17 +2250,16 @@
             }
             
 			function navigateCommentMarkers(direction) {
-                if (state.selectedArtboardIds.length !== 1) {
-                    if (state.artboards.length > 0) {
-                        state.selectedArtboardIds = [state.artboards[0].id];
-                        updateArtboardSelection();
-                    } else {
-                        return;
-                    }
+                if (state.artboards.length === 0) return;
+
+                const sortedArtboards = [...state.artboards].sort((a, b) => a.y - b.y || a.x - b.x);
+                let currentArtboardId = state.selectedArtboardIds[0];
+
+                if (!currentArtboardId) {
+                    currentArtboardId = sortedArtboards[0].id;
                 }
-                const artboardId = state.selectedArtboardIds[0];
-                const artboard = state.artboards.find(b => b.id === artboardId);
-                if (!artboard) return;
+                
+                let currentArtboardIndex = sortedArtboards.findIndex(b => b.id === currentArtboardId);
 
                 const getSortKey = (ann) => {
                     let y = 0, x = 0;
@@ -2250,9 +2267,8 @@
                     else if (ann.data && ann.data.p1) { y = Math.min(ann.data.p1.y, ann.data.p2.y); x = Math.min(ann.data.p1.x, ann.data.p2.x); }
                     return { time: ann.videoTime, y, x };
                 };
-
-                const sortedAnnotations = state.annotations
-                    .filter(a => a.artboardId === artboardId)
+                const currentAnnotations = state.annotations
+                    .filter(a => a.artboardId === currentArtboardId)
                     .sort((a,b) => {
                         const keyA = getSortKey(a);
                         const keyB = getSortKey(b);
@@ -2262,47 +2278,69 @@
                         if (Math.abs(keyA.y - keyB.y) > 0.01) return keyA.y - keyB.y;
                         return keyA.x - keyB.x;
                     });
-
-                if (sortedAnnotations.length === 0) return;
-
-                let currentIndex = -1;
+                
+                let currentCommentIndex = -1;
                 if (state.selectedAnnotationIndices.length === 1) {
                     const currentAnn = state.annotations[state.selectedAnnotationIndices[0]];
-                    if(currentAnn) {
-                        currentIndex = sortedAnnotations.findIndex(a => a.id === currentAnn.id);
+                    if (currentAnn) {
+                        currentCommentIndex = currentAnnotations.findIndex(a => a.id === currentAnn.id);
                     }
                 }
 
-                let nextIndex;
-                if (currentIndex === -1) {
-                    nextIndex = direction > 0 ? 0 : sortedAnnotations.length - 1;
-                } else {
-                    nextIndex = (currentIndex + direction + sortedAnnotations.length) % sortedAnnotations.length;
+                const nextCommentIndex = currentCommentIndex + direction;
+
+                if (nextCommentIndex >= 0 && nextCommentIndex < currentAnnotations.length) {
+                    const nextAnnotation = currentAnnotations[nextCommentIndex];
+                    selectAnnotation(nextAnnotation);
+                    return;
                 }
 
-                const nextAnnotation = sortedAnnotations[nextIndex];
-                const globalIndex = state.annotations.findIndex(a => a.id === nextAnnotation.id);
+                for (let i = 1; i <= sortedArtboards.length; i++) {
+                    const nextArtboardIndex = (currentArtboardIndex + (i * direction) + sortedArtboards.length) % sortedArtboards.length;
+                    const nextArtboard = sortedArtboards[nextArtboardIndex];
+                    
+                    const nextArtboardAnnotations = state.annotations
+                        .filter(a => a.artboardId === nextArtboard.id)
+                        .sort((a,b) => {
+                            const keyA = getSortKey(a);
+                            const keyB = getSortKey(b);
+                            if (keyA.time !== undefined && keyB.time !== undefined) return keyA.time - keyB.time;
+                            if (Math.abs(keyA.y - keyB.y) > 0.01) return keyA.y - keyB.y;
+                            return keyA.x - keyB.x;
+                        });
 
-                if (globalIndex !== -1) {
-                    state.selectedAnnotationIndices = [globalIndex];
-                    state.lastClickedAnnIndex = globalIndex;
-                    updateListSelection();
-
-                    const li = app.annotationList.querySelector(`li[data-id='${nextAnnotation.id}']`);
-                    if (li) {
-                        li.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
-
-                    if (artboard.type === 'video' && nextAnnotation.videoTime !== undefined) {
-                        const video = document.querySelector(`.artboard[data-id="${artboardId}"] video`);
-                        if (video) {
-                            video.currentTime = nextAnnotation.videoTime;
-                            video.pause();
-                        }
+                    if (nextArtboardAnnotations.length > 0) {
+                        const targetAnnotation = direction > 0 ? nextArtboardAnnotations[0] : nextArtboardAnnotations[nextArtboardAnnotations.length - 1];
+                        selectArtboard(nextArtboard.id, false);
+                        selectAnnotation(targetAnnotation);
+                        return;
                     }
                 }
             }
-			
+
+            function selectAnnotation(annotation) {
+                if (!annotation) return;
+                const globalIndex = state.annotations.findIndex(a => a.id === annotation.id);
+                if (globalIndex === -1) return;
+
+                state.selectedAnnotationIndices = [globalIndex];
+                state.lastClickedAnnIndex = globalIndex;
+                updateListSelection();
+
+                const li = app.annotationList.querySelector(`li[data-id='${annotation.id}']`);
+                if (li) {
+                    li.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+
+                const artboard = state.artboards.find(b => b.id === annotation.artboardId);
+                if (artboard && artboard.type === 'video' && annotation.videoTime !== undefined) {
+                    const video = document.querySelector(`.artboard[data-id="${artboard.id}"] video`);
+                    if (video) {
+                        video.currentTime = annotation.videoTime;
+                        video.pause();
+                    }
+                }
+            }			
             function drawMasterRuler() {
                 const canvas = app.masterTimelineRuler;
                 if (!canvas.offsetParent) return;
@@ -3401,6 +3439,7 @@
     </script>
 </body>
 </html>
+
 
 
 
