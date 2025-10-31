@@ -693,6 +693,12 @@
             function onKeyUp(e) { if (e.key === ' ') { e.preventDefault(); state.spacebarPressed = false; app.body.classList.remove('spacebar-down', 'panning'); } }
 
 			function onKeyDown(e) {
+				if (e.key === 'Tab') {
+                    e.preventDefault();
+                    toggleSimpleMode();
+                    return;
+                }
+				
                 const activeEl = document.activeElement;
                 const isInputFocused = ['TEXTAREA', 'INPUT'].includes(activeEl.tagName);
 
@@ -3449,6 +3455,7 @@
     </script>
 </body>
 </html>
+
 
 
 
