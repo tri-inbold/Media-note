@@ -575,7 +575,8 @@
                 app.listContainer.addEventListener('click', (e) => { if (e.target === app.listContainer || e.target === app.annotationList) { state.selectedAnnotationIndices = []; state.lastClickedAnnIndex = -1; updateListSelection(); } });
                 app.panelResizer.addEventListener('mousedown', initPanelResize);
                 app.panelResizer.addEventListener('dblclick', toggleRightPanel);
-                
+                app.panelResizer.addEventListener('contextmenu', e => e.preventDefault());
+
                 app.playPauseBtn.addEventListener('click', () => global_togglePlayPause(false));
                 document.getElementById('mute-btn').addEventListener('click', global_toggleMute);
                 document.querySelectorAll('.speed-btn').forEach(btn => btn.addEventListener('click', () => global_setPlaybackSpeed(parseFloat(btn.dataset.speed))));
@@ -1489,26 +1490,34 @@
                     redrawArtboardAnnotations(artboard.id); 
                 };
 
-                const playBtn = artboardEl.querySelector('.vid-play-btn'); const muteBtn = artboardEl.querySelector('.vid-mute-btn'); const timeInput = artboardEl.querySelector('.vid-time'); const timeline = artboardEl.querySelector('.vid-timeline');
+                const controlsEl = artboardEl.querySelector('.artboard-video-controls');
+                const playBtn = artboardEl.querySelector('.vid-play-btn'); 
+                const muteBtn = artboardEl.querySelector('.vid-mute-btn'); 
+                const timeInput = artboardEl.querySelector('.vid-time'); 
+                const timeline = artboardEl.querySelector('.vid-timeline');
+
+                controlsEl.addEventListener('mousedown', e => {
+                    hideContextMenu();
+                    state.interaction.didDrag = false;
+                    if (e.button === 1 || e.button === 2 || state.spacebarPressed) {
+                        e.preventDefault();
+                        if (!e.target.closest('button, input')) {
+                            startPanning(e);
+                        }
+                    }
+                });
+
                 video.muted = state.isGlobalMuted; muteBtn.innerHTML = video.muted ? MUTE_ICON_SVG : UNMUTE_ICON_SVG;
                 playBtn.addEventListener('click', e => { e.stopPropagation(); video.paused ? video.play() : video.pause(); });
                 muteBtn.addEventListener('click', e => { e.stopPropagation(); video.muted = !video.muted; muteBtn.innerHTML = video.muted ? MUTE_ICON_SVG : UNMUTE_ICON_SVG; });
                 video.addEventListener('play', () => { playBtn.textContent = '❚❚'; global_updatePlayButtonState(); });
                 video.addEventListener('pause', () => { playBtn.textContent = '▶'; global_updatePlayButtonState(); });
-                video.addEventListener('loadedmetadata', () => {
-					timeline.max = video.duration;
-					global_updateTimeline();
-
-					const durationEl = artboardEl.querySelector('.vid-duration');
-					if (durationEl) {
-						durationEl.textContent = formatTimeHHMMSSFF(video.duration, video.duration);
-					}
-				});
+                video.addEventListener('loadedmetadata', () => { timeline.max = video.duration; global_updateTimeline(); });
                 video.addEventListener('timeupdate', () => { if (!timeline.matches(':active')) timeline.value = video.currentTime; if (document.activeElement !== timeInput) { timeInput.value = formatTimeHHMMSSFF(video.currentTime, video.duration); } redrawArtboardAnnotations(artboard.id); });
                 timeline.addEventListener('input', e => { e.stopPropagation(); video.currentTime = parseFloat(timeline.value); redrawArtboardAnnotations(artboard.id); });
                 initTimeInput(timeInput, () => video.currentTime, (newTime) => {video.currentTime = newTime; redrawArtboardAnnotations(artboard.id);}, () => video.duration);
             }
-            
+			
             async function captureFrame(videoEl) { const canvas = document.createElement('canvas'); canvas.width = videoEl.videoWidth; canvas.height = videoEl.videoHeight; const ctx = canvas.getContext('2d'); ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height); return canvas.toDataURL('image/webp', 0.5); }
             async function saveVideoFrame(artboardId) {
                 const artboard = state.artboards.find(b => b.id === artboardId);
@@ -1811,7 +1820,6 @@
                 const canvas = app.workspaceGuideCanvas;
                 const ctx = canvas.getContext('2d');
                 
-                // Vẫn gọi drawGuides để vẽ các đường gióng trước
                 drawGuides();
 
                 if (state.layout.isPanelCollapsed || state.selectedAnnotationIndices.length === 0) {
@@ -2538,13 +2546,27 @@
             }
             function fitAllArtboardsToView() { if (state.artboards.length === 0) return; const PADDING = 50; let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity; state.artboards.forEach(b => { const artboardEl = document.querySelector(`.artboard[data-id="${b.id}"]`); const height = artboardEl ? artboardEl.offsetHeight : (b.height + 30 + (b.type==='video' ? 32:0)); minX = Math.min(minX, b.x); minY = Math.min(minY, b.y); maxX = Math.max(maxX, b.x + b.width); maxY = Math.max(maxY, b.y + height); }); const totalWidth = maxX - minX; const totalHeight = maxY - minY; if (totalWidth === 0 || totalHeight === 0) return; const container = app.workspaceContainer; const scaleX = (container.offsetWidth - 2 * PADDING) / totalWidth; const scaleY = (container.offsetHeight - 2 * PADDING) / totalHeight; const newScale = Math.min(scaleX, scaleY, 1); state.view.scale = newScale; state.view.offsetX = (container.offsetWidth - totalWidth * newScale) / 2 - minX * newScale; state.view.offsetY = (container.offsetHeight - totalHeight * newScale) / 2 - minY * newScale; updateWorkspaceTransform(); }
             function onArtboardHeaderMouseDown(e, artboardId) {
-                if (state.spacebarPressed || e.button === 1) { startPanning(e); return; }
+                hideContextMenu();
+                state.interaction.didDrag = false;
+
+                if (e.button === 1 || e.button === 2 || state.spacebarPressed) {
+                    e.preventDefault();
+                    startPanning(e);
+                    return;
+                }
+
                 if (e.button !== 0) return;
-                e.stopPropagation(); selectArtboard(artboardId, e.ctrlKey || e.metaKey);
-                state.interaction.mode = 'draggingArtboard'; state.interaction.target = { artboardId }; state.interaction.startPos = getWorkspaceMousePos(e); state.interaction.startData.clear();
+
+                e.stopPropagation(); 
+                selectArtboard(artboardId, e.ctrlKey || e.metaKey);
+                state.interaction.mode = 'draggingArtboard'; 
+                state.interaction.target = { artboardId }; 
+                state.interaction.startPos = getWorkspaceMousePos(e); 
+                state.interaction.startData.clear();
                 state.selectedArtboardIds.forEach(id => { const board = state.artboards.find(b => b.id === id); if (board) { state.interaction.startData.set(id, { x: board.x, y: board.y }); } });
                 document.querySelectorAll('.artboard.selected').forEach(el => el.classList.add('dragging'));
             }
+			
             function onArtboardDrag(e) { if (state.interaction.mode !== 'draggingArtboard') return; const currentPos = getWorkspaceMousePos(e); const dx = currentPos.x - state.interaction.startPos.x; const dy = currentPos.y - state.interaction.startPos.y; state.selectedArtboardIds.forEach(id => { const board = state.artboards.find(b => b.id === id); const startPos = state.interaction.startData.get(id); if (board && startPos) { board.x = startPos.x + dx; board.y = startPos.y + dy; const el = document.querySelector(`.artboard[data-id="${id}"]`); if (el) { el.style.left = `${board.x}px`; el.style.top = `${board.y}px`; } } }); drawGuides(); }
             function onArtboardResizeMouseDown(e, artboardId) { e.stopPropagation(); const artboard = state.artboards.find(b => b.id === artboardId); if(!artboard) return; state.interaction = { mode: 'resizingArtboard', target: { artboardId }, startPos: { x: e.clientX, y: e.clientY }, startWidth: artboard.width, startHeight: artboard.height }; document.querySelector(`.artboard[data-id="${artboardId}"]`).classList.add('dragging'); }
             function onArtboardResize(e) { if (state.interaction.mode !== 'resizingArtboard') return; const { artboardId } = state.interaction.target; const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return; const dx = e.clientX - state.interaction.startPos.x; const newWidth = state.interaction.startWidth + (dx / state.view.scale); const aspectRatio = artboard.originalWidth / artboard.originalHeight; artboard.width = Math.max(50, newWidth); artboard.height = artboard.width / aspectRatio; artboard.scale = artboard.width / artboard.originalWidth; redrawArtboard(artboardId); markAsChanged(); }
@@ -3281,6 +3303,7 @@
     </script>
 </body>
 </html>
+
 
 
 
