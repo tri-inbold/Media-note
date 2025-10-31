@@ -1976,12 +1976,11 @@
             }
 
             function onCanvasMouseDown(e, artboardId) {
-				hideContextMenu();
+                hideContextMenu();
                 state.interaction.didDrag = false;
-				
+
                 if (e.button === 2) {
                     e.preventDefault();
-                    state.interaction.rightClickStartPos = { x: e.clientX, y: e.clientY };
                 }
 
                 const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return;
@@ -2007,7 +2006,7 @@
                 if (state.interaction.mode !== 'none') return; 
                 
                 const pos = getMousePosOnArtboard(e, artboard); state.interaction.startPos = pos;
-                const hit = getHitAnnotation(pos, artboard.id, true);
+                const hit = getHitAnnotation(pos, artboardId, true);
                 
                 if (e.altKey && hit.index !== -1) {
                     app.workspaceContainer.style.cursor = 'copy';
@@ -2035,6 +2034,7 @@
                     }
                     if (!state.selectedAnnotationIndices.includes(hit.index)) { 
                         if(e.shiftKey && state.lastClickedAnnIndex !== -1) {
+                           // Logic chọn nhiều mục bằng Shift (nếu cần)
                         } else {
                            state.selectedAnnotationIndices = [hit.index]; 
                         }
@@ -2043,10 +2043,21 @@
                     state.lastClickedAnnIndex = hit.index;
                     state.interaction.mode = 'dragging'; state.interaction.target = { artboardId }; state.interaction.startData.clear();
                     state.selectedAnnotationIndices.forEach(index => { const ann = state.annotations[index]; state.interaction.startData.set(ann.id, { artboardId: ann.artboardId, data: JSON.parse(JSON.stringify(ann.data)) }); });
-                } else if (state.currentTool && state.currentTool !== 'select' && state.currentTool !== 'pan' && state.currentTool !== 'image') {
-                    if (state.currentTool === 'comment') { addAnnotation({ type: 'comment', artboardId, data: pos, color: state.activeColor, text: '' }, true); }
-                    else { state.interaction.mode = 'drawing'; state.interaction.target = { artboardId }; }
-                } else { state.selectedAnnotationIndices = []; updateListSelection(); }
+                } else if (state.currentTool && !['select', 'pan'].includes(state.currentTool)) {
+                    if (state.currentTool === 'comment') {
+                        addAnnotation({ type: 'comment', artboardId, data: pos, color: state.activeColor, text: '' }, true);
+                    } else if (state.currentTool === 'image') {
+                        state.interaction.mode = 'placingImage';
+                        state.interaction.target = { artboardId };
+                        app.imageToolInput.click();
+                    } else { // rect, circle, line, arrow, ocr
+                        state.interaction.mode = 'drawing';
+                        state.interaction.target = { artboardId };
+                    }
+                } else { 
+                    state.selectedAnnotationIndices = []; 
+                    updateListSelection(); 
+                }
             }
 
             function getConstrainedPos(startPos, currentPos, tool, isShiftPressed, artboard) {
@@ -3321,6 +3332,7 @@
     </script>
 </body>
 </html>
+
 
 
 
