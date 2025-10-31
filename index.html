@@ -770,8 +770,11 @@
 
             function onWorkspaceMouseDown(e) {
                 hideContextMenu();
-                if (e.button === 2) return;
                 
+                if (e.button === 2) {
+                    e.preventDefault();
+                }
+
                 if (e.target.closest('.artboard')) return;
 
                 const hitGuide = getHitGuide(e);
@@ -784,11 +787,15 @@
                     return;
                 }
 
-                if (state.currentTool === 'pan' || state.spacebarPressed || e.button === 1) { startPanning(e); return; }
+                if (state.currentTool === 'pan' || state.spacebarPressed || e.button === 1 || e.button === 2) { 
+                    startPanning(e); 
+                    return; 
+                }
                 
                 state.selectedAnnotationIndices = []; state.selectedArtboardIds = [];
                 updateListSelection(); updateArtboardSelection();
             }
+			
             function onWindowMouseMove(e) { 
                 if (e.altKey && state.interaction.mode === 'dragging') {
                     app.workspaceContainer.style.cursor = 'copy';
@@ -3258,6 +3265,7 @@
     </script>
 </body>
 </html>
+
 
 
 
