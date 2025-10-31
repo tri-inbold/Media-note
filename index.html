@@ -773,6 +773,7 @@
                 
                 if (e.button === 2) {
                     e.preventDefault();
+                    state.interaction.rightClickStartPos = { x: e.clientX, y: e.clientY };
                 }
 
                 if (e.target.closest('.artboard')) return;
@@ -1938,16 +1939,19 @@
             }
 
             function onCanvasMouseDown(e, artboardId) {
-                if (e.button === 2) return;
-                
-                const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return;
-                const hitGuide = getHitGuide(e);
+                if (e.button === 2) {
+                    e.preventDefault();
+                    state.interaction.rightClickStartPos = { x: e.clientX, y: e.clientY };
+                }
 
-                if (state.currentTool === 'pan') {
-                    onArtboardHeaderMouseDown(e, artboard.id);
-                    return;
+                const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return;
+                
+                if (state.currentTool === 'pan' || state.spacebarPressed || e.button === 1 || e.button === 2) { 
+                    startPanning(e); 
+                    return; 
                 }
                 
+                const hitGuide = getHitGuide(e);
                 if (hitGuide && hitGuide.scope === 'artboard') {
                     e.preventDefault(); e.stopPropagation();
                     if (!hitGuide.guide.id) hitGuide.guide.id = crypto.randomUUID();
@@ -1955,11 +1959,6 @@
                     state.interaction.target = hitGuide;
                     state.interaction.startData.set('guide', { position: hitGuide.guide.position });
                     return;
-                }
-                
-                if (state.spacebarPressed || e.button === 1) { 
-                    startPanning(e); 
-                    return; 
                 }
                 
                 e.stopPropagation();
@@ -2004,16 +2003,8 @@
                     state.lastClickedAnnIndex = hit.index;
                     state.interaction.mode = 'dragging'; state.interaction.target = { artboardId }; state.interaction.startData.clear();
                     state.selectedAnnotationIndices.forEach(index => { const ann = state.annotations[index]; state.interaction.startData.set(ann.id, { artboardId: ann.artboardId, data: JSON.parse(JSON.stringify(ann.data)) }); });
-                } else if (state.currentTool && state.currentTool !== 'select' && state.currentTool !== 'pan') {
-                    if (state.layout.isPanelCollapsed && state.currentTool === 'comment' && state.selectedAnnotationIndices.length > 0) {
-                        state.selectedAnnotationIndices = [];
-                        state.lastClickedAnnIndex = -1;
-                        updateListSelection();
-                        return;
-                    }
-
+                } else if (state.currentTool && state.currentTool !== 'select' && state.currentTool !== 'pan' && state.currentTool !== 'image') {
                     if (state.currentTool === 'comment') { addAnnotation({ type: 'comment', artboardId, data: pos, color: state.activeColor, text: '' }, true); }
-                    else if (state.currentTool === 'image') { state.interaction.mode = 'placingImage'; state.interaction.target = { artboardId }; app.imageToolInput.click(); }
                     else { state.interaction.mode = 'drawing'; state.interaction.target = { artboardId }; }
                 } else { state.selectedAnnotationIndices = []; updateListSelection(); }
             }
@@ -2998,7 +2989,18 @@
             function hideContextMenu() { app.contextMenu.classList.add('hidden'); }
             
             function onWorkspaceContextMenu(e) {
+                if (state.interaction.rightClickStartPos) {
+                    const dx = Math.abs(e.clientX - state.interaction.rightClickStartPos.x);
+                    const dy = Math.abs(e.clientY - state.interaction.rightClickStartPos.y);
+                    if (dx > 5 || dy > 5) { 
+                        e.preventDefault();
+                        state.interaction.rightClickStartPos = null;
+                        return;
+                    }
+                }
+                
                 if (!e.target.closest('#workspace-container') || e.target.closest('.artboard')) return;
+
                 const items = [
                     { label: 'Add Image/Video...', action: () => app.fileInput.click() }, { divider: true },
                     { label: 'Add Horizontal Guide', action: () => { const pos = getWorkspaceMousePos(e); state.guides.workspace.push({ type: 'horizontal', position: pos.y, id: crypto.randomUUID() }); drawGuides(); markAsChanged(); } },
@@ -3015,6 +3017,16 @@
             }
             
             function onArtboardContextMenu(e, artboardId) {
+                if (state.interaction.rightClickStartPos) {
+                    const dx = Math.abs(e.clientX - state.interaction.rightClickStartPos.x);
+                    const dy = Math.abs(e.clientY - state.interaction.rightClickStartPos.y);
+                    if (dx > 5 || dy > 5) {
+                        e.preventDefault();
+                        state.interaction.rightClickStartPos = null;
+                        return;
+                    }
+                }
+                
                 e.preventDefault(); e.stopPropagation();
                 if (!state.selectedArtboardIds.includes(artboardId)) { selectArtboard(artboardId, false); }
                 const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return;
@@ -3265,6 +3277,7 @@
     </script>
 </body>
 </html>
+
 
 
 
