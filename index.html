@@ -230,6 +230,9 @@
         #ocr-result-box .qr-result { padding: 10px 5px; font-size: 0.9em; color: var(--text-color-light); min-height: 100px; box-sizing: border-box; line-height: 1.5; }
         #ocr-result-box .qr-result a { color: var(--highlight-color); text-decoration: none; word-break: break-all; font-weight: bold; }
         #ocr-result-box .qr-result a:hover { text-decoration: underline; }
+
+		.editable-content { width: 100%; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-color); font-family: inherit; font-size: 1em; resize: none; overflow-y: auto; box-sizing: border-box; outline: none; padding: 5px; min-height: 2.5em; }
+		.editable-content:focus { border-color: var(--highlight-color); outline: 1px solid var(--highlight-color); }
 		
         #annotation-popup { position: fixed; z-index: 999; background: var(--panel-bg); border: 1px solid var(--border-color); box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2); border-radius: 8px; padding: 10px 12px; width: 280px; backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); transform: translate(15px, 15px); }
         #annotation-popup .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
@@ -1729,10 +1732,11 @@
                 li.addEventListener('dblclick', (e) => { if (!e.target.closest('a')) makeListItemEditable(li, index); });
                 li.querySelector('.complete-checkbox').addEventListener('click', e => { e.stopPropagation(); ann.completed = e.target.checked; li.classList.toggle('completed', ann.completed); markAsChanged(); redrawAllAnnotations(); updateAnnotationPopup();});
                 li.querySelector('.icon-btn[title="Delete"]').addEventListener('click', e => { e.stopPropagation(); deleteAnnotationsByIndices([index]); });
-                li.querySelector('.icon-btn[title="Copy Text"]').addEventListener('click', e => { e.stopPropagation(); if (ann.text) navigator.clipboard.writeText(ann.text.replace(/<[^>]*>/g, '')); });
+                li.querySelector('.icon-btn[title="Copy Text"]').addEventListener('click', e => { e.stopPropagation(); if (ann.text) navigator.clipboard.writeText(ann.text.replace(/<[^>]*>/g, '')); }); // Strip HTML for copy
                 li.querySelector('.icon-btn[title="Reply"]').addEventListener('click', e => { e.stopPropagation(); addAnnotation({ type: 'reply', artboardId: ann.artboardId, text: '', parentId: ann.id }, true); });
                 return li;
             }
+			
             function updateAnnotationList() {
                 const listScrollTop = app.annotationList.scrollTop;
                 app.annotationList.innerHTML = '';
@@ -1892,7 +1896,69 @@
                 });
             }
 
-			function updateAnnotationPopup(editIndex = -1) {
+function makeContentEditable(contentEl, initialHtml, onSaveCallback) {
+                if (contentEl.querySelector('.editable-content')) return;
+
+                const oldHtml = initialHtml || '';
+                contentEl.innerHTML = `<div class="editable-content" contenteditable="true">${oldHtml}</div>`;
+                
+                const editableDiv = contentEl.querySelector('.editable-content');
+                attachFormattingListener(editableDiv);
+
+                setTimeout(() => {
+                    editableDiv.focus();
+                    // Đặt con trỏ ở cuối
+                    const range = document.createRange();
+                    const sel = window.getSelection();
+                    range.selectNodeContents(editableDiv);
+                    range.collapse(false);
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                }, 0);
+
+                const save = () => {
+                    const newHtml = editableDiv.innerHTML;
+                    if (newHtml !== oldHtml) {
+                        onSaveCallback(newHtml, oldHtml);
+                    }
+                    // Dọn dẹp và hủy chọn
+                    contentEl.innerHTML = linkify(newHtml) || '&nbsp;';
+                    state.selectedAnnotationIndices = [];
+                    state.lastClickedAnnIndex = -1;
+                    updateListSelection();
+                };
+
+                editableDiv.addEventListener('blur', save, { once: true });
+                editableDiv.addEventListener('keydown', e => {
+                    if (e.key === 'Escape') {
+                        e.stopPropagation();
+                        editableDiv.removeEventListener('blur', save);
+                        contentEl.innerHTML = linkify(oldHtml) || '&nbsp;';
+                    }
+                    if (e.ctrlKey && e.key === 'Enter') {
+                        e.stopPropagation();
+                        editableDiv.blur();
+                    }
+                });
+            }
+
+            function makeListItemEditable(li, index) {
+                const contentEl = li.querySelector('.content');
+                const ann = state.annotations[index];
+                if (!contentEl || !ann) return;
+
+                const onSave = (newHtml, oldHtml) => {
+                    historyManager.execute({
+                        type: 'EDIT_TEXT', annotationId: ann.id, before: oldHtml, after: newHtml,
+                        do: () => { const a = state.annotations.find(a => a.id === ann.id); if (a) a.text = newHtml; updateAnnotationList(); },
+                        undo: () => { const a = state.annotations.find(a => a.id === ann.id); if (a) a.text = oldHtml; updateAnnotationList(); }
+                    });
+                };
+                
+                makeContentEditable(contentEl, ann.text, onSave);
+            }
+
+            function updateAnnotationPopup(editIndex = -1) {
                 if (!state.layout.isPanelCollapsed || state.selectedAnnotationIndices.length !== 1) {
                     app.annotationPopup.classList.add('hidden');
                     return;
@@ -1911,74 +1977,33 @@
                     return;
                 }
                 
-                const isEditing = index === editIndex;
-
                 const userDisplay = ann.user ? `<strong>${ann.user}</strong>` : '';
                 const timeInfo = ann.videoTime !== undefined ? ` @${formatTime(ann.videoTime)}` : '';
                 const headerToolsHtml = `<div class="header-tools"><button class="icon-btn" title="Delete"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button><button class="icon-btn" title="Copy Text"><svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg></button><button class="icon-btn" title="Reply"><svg viewBox="0 0 24 24"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg></button><input type="checkbox" class="complete-checkbox" ${ann.completed ? 'checked' : ''}></div>`;
                 
-                const contentHtml = isEditing 
-                    ? `<textarea rows="1">${(ann.text || '').replace(/<br\s*\/?>/gi, '\n')}</textarea>` 
-                    : `<div class="content">${ann.text ? linkify(ann.text) : '...'}</div>`;
-
                 app.annotationPopup.innerHTML = `
-                    <div class="header">
-                        <span class="time">${userDisplay}${timeInfo}</span>
-                        ${headerToolsHtml}
-                    </div>
-                    ${contentHtml}
+                    <div class="header"><span class="time">${userDisplay}${timeInfo}</span>${headerToolsHtml}</div>
+                    <div class="content">${ann.text ? linkify(ann.text) : '...'}</div>
                 `;
                 app.annotationPopup.style.borderColor = ann.color || '';
 
                 app.annotationPopup.querySelector('.icon-btn[title="Delete"]').onclick = () => deleteAnnotationsByIndices([index]);
                 app.annotationPopup.querySelector('.icon-btn[title="Copy Text"]').onclick = () => { if (ann.text) navigator.clipboard.writeText(ann.text.replace(/<[^>]*>/g, '')); };
                 app.annotationPopup.querySelector('.icon-btn[title="Reply"]').onclick = () => addAnnotation({ type: 'reply', artboardId: ann.artboardId, text: '', parentId: ann.id }, true);
-                app.annotationPopup.querySelector('.complete-checkbox').onchange = (e) => { 
-                    ann.completed = e.target.checked; 
-                    markAsChanged(); 
-                    redrawAllAnnotations(); 
-                    const li = app.annotationList.querySelector(`li[data-id='${ann.id}']`);
-                    if (li) {
-                        li.classList.toggle('completed', ann.completed);
-                        li.querySelector('.complete-checkbox').checked = ann.completed;
-                    }
-                };
+                app.annotationPopup.querySelector('.complete-checkbox').onchange = (e) => { ann.completed = e.target.checked; markAsChanged(); redrawAllAnnotations(); };
                 
-                if (isEditing) {
-                    const textarea = app.annotationPopup.querySelector('textarea');
-                    attachFormattingListener(textarea);
-                    const autoSize = () => { textarea.style.height = 'auto'; textarea.style.height = `${textarea.scrollHeight}px`; };
-                    textarea.addEventListener('input', autoSize);
-                    setTimeout(() => { textarea.focus(); textarea.select(); autoSize(); }, 0);
-                    
-                    const save = () => {
-                        const newText = textarea.value.replace(/\n/g, '<br>');
-                        const oldText = ann.text || '';
-                        if (newText !== oldText) {
-                            historyManager.execute({ type: 'EDIT_TEXT', annotationId: ann.id, before: oldText, after: newText,
-                                do: (action) => { const annToUpdate = state.annotations.find(a => a.id === action.annotationId); if(annToUpdate) annToUpdate.text = action.after; updateAnnotationList(); redrawAllAnnotations(); updateAnnotationPopup(); },
-                                undo: (action) => { const annToUpdate = state.annotations.find(a => a.id === action.annotationId); if(annToUpdate) annToUpdate.text = action.before; updateAnnotationList(); redrawAllAnnotations(); updateAnnotationPopup(); }
-                            });
-                        }
-                        state.selectedAnnotationIndices = [];
-                        state.lastClickedAnnIndex = -1;
-                        updateListSelection();
+                if (index === editIndex) {
+                    const contentEl = app.annotationPopup.querySelector('.content');
+                    const onSave = (newHtml, oldHtml) => {
+                         historyManager.execute({
+                            type: 'EDIT_TEXT', annotationId: ann.id, before: oldHtml, after: newHtml,
+                            do: (action) => { const a = state.annotations.find(a => a.id === action.annotationId); if (a) a.text = action.after; updateAnnotationList(); },
+                            undo: (action) => { const a = state.annotations.find(a => a.id === action.annotationId); if (a) a.text = action.before; updateAnnotationList(); }
+                        });
                     };
-
-                    textarea.addEventListener('blur', save, { once: true });
-                    textarea.addEventListener('keydown', e => {
-                        if (e.key === 'Escape') {
-                            e.stopPropagation();
-                            textarea.removeEventListener('blur', save);
-                            updateAnnotationPopup();
-                        }
-                        if (e.ctrlKey && e.key === 'Enter') {
-                            e.stopPropagation();
-                            textarea.blur();
-                        }
-                    });
+                    makeContentEditable(contentEl, ann.text, onSave);
                 }
-                
+
                 app.annotationPopup.style.left = `${screenPos.x}px`;
                 app.annotationPopup.style.top = `${screenPos.y}px`;
                 app.annotationPopup.classList.remove('hidden');
@@ -2579,49 +2604,6 @@
                 updateAnnotationPopup();
             }
 			
-			function makeListItemEditable(li, index) { 
-                let contentEl = li.querySelector('.content'); if (!contentEl) { contentEl = document.createElement('p'); contentEl.className = 'content'; li.appendChild(contentEl); } 
-                if (contentEl.querySelector('textarea')) return; 
-                const ann = state.annotations[index]; 
-                const oldText = ann.text || ''; 
-                
-                contentEl.innerHTML = `<textarea rows="1">${oldText.replace(/<br\s*\/?>/gi, '\n')}</textarea>`; 
-                
-                const textarea = contentEl.querySelector('textarea'); 
-                
-                attachFormattingListener(textarea);
-
-                const autoSize = () => { textarea.style.height = 'auto'; textarea.style.height = `${textarea.scrollHeight}px`; }; 
-                textarea.addEventListener('input', autoSize); 
-                setTimeout(() => { textarea.focus(); textarea.select(); autoSize(); }, 0); 
-                
-                const save = () => { 
-                    const newText = textarea.value.replace(/\n/g, '<br>'); 
-                    
-                    if (newText !== oldText) { 
-                        historyManager.execute({ type: 'EDIT_TEXT', annotationId: ann.id, before: oldText, after: newText,
-                            do: () => { const annToUpdate = state.annotations.find(a => a.id === ann.id); if(annToUpdate) annToUpdate.text = newText; updateAnnotationList(); redrawAllAnnotations(); updateAnnotationPopup(); },
-                            undo: () => { const annToUpdate = state.annotations.find(a => a.id === ann.id); if(annToUpdate) annToUpdate.text = oldText; updateAnnotationList(); redrawAllAnnotations(); updateAnnotationPopup(); } });
-                    }
-                    updateAnnotationList();
-                    state.selectedAnnotationIndices = [];
-                    state.lastClickedAnnIndex = -1;
-                    updateListSelection();
-                }; 
-                
-                textarea.addEventListener('blur', save, { once: true }); 
-                textarea.addEventListener('keydown', e => { 
-                    if (e.key === 'Escape') { 
-                        e.stopPropagation(); 
-                        textarea.removeEventListener('blur', save); 
-                        updateAnnotationList();
-                    } 
-                    if (e.ctrlKey && e.key === 'Enter') { 
-                        e.stopPropagation(); 
-                        textarea.blur(); 
-                    } 
-                }); 
-            }
 			
             function redrawArtboardAnnotations(artboardId) {
                 const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return;
@@ -2936,33 +2918,19 @@
                 };
             }
 
-            function applyFormat(textarea, format) {
-                const start = textarea.selectionStart;
-                const end = textarea.selectionEnd;
-                const selectedText = textarea.value.substring(start, end);
-                let newText;
-
-                if (format === 'list') {
-                    const lineStart = textarea.value.lastIndexOf('\n', start - 1) + 1;
-                    const textBefore = textarea.value.substring(0, lineStart);
-                    const textAfter = textarea.value.substring(lineStart);
-                    newText = `${textBefore}• ${textAfter}`;
-                    textarea.value = newText;
-                    textarea.setSelectionRange(start + 2, end + 2);
-                } else {
-                    const tags = {
-                        'bold': { open: '<b>', close: '</b>' },
-                        'italic': { open: '<i>', close: '</i>' },
-                        'underline': { open: '<u>', close: '</u>' }
-                    };
-                    const { open, close } = tags[format];
-                    newText = `${open}${selectedText}${close}`;
-                    textarea.value = textarea.value.substring(0, start) + newText + textarea.value.substring(end);
-                    textarea.setSelectionRange(start + open.length, end + open.length);
-                }
-                textarea.focus();
+			function attachFormattingListener(editableElement) {
+                editableElement.addEventListener('keydown', e => {
+                    if (e.ctrlKey) {
+                        switch (e.key.toLowerCase()) {
+                            case 'b': e.preventDefault(); document.execCommand('bold', false, null); break;
+                            case 'i': e.preventDefault(); document.execCommand('italic', false, null); break;
+                            case 'u': e.preventDefault(); document.execCommand('underline', false, null); break;
+                            case 'l': e.preventDefault(); document.execCommand('insertText', false, '• '); break;
+                        }
+                    }
+                });
             }
-
+			
             function linkify(text) {
                 if (!text) return '';
                 const urlRegex = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
@@ -3513,6 +3481,7 @@
     </script>
 </body>
 </html>
+
 
 
 
