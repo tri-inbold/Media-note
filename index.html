@@ -690,12 +690,6 @@
             function onKeyUp(e) { if (e.key === ' ') { e.preventDefault(); state.spacebarPressed = false; app.body.classList.remove('spacebar-down', 'panning'); } }
 
             function onKeyDown(e) {
-				 if (e.key === 'Tab') {
-                    e.preventDefault();
-                    toggleSimpleMode();
-                    return;
-                }
-				
                 const activeEl = document.activeElement;
                 const isInputFocused = ['TEXTAREA', 'INPUT'].includes(activeEl.tagName);
 
@@ -706,13 +700,37 @@
                 }
                 
                 if (!isInputFocused) {
-                    if (e.key.toLowerCase() === 'v' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); selectTool('select'); return; }
-                    if (e.key.toLowerCase() === 'h' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); selectTool('pan'); return; }
-                    if (e.key.toLowerCase() === 'm' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); toggleMuteForSelected(); }
-                    if ('qwertyu'.includes(e.key.toLowerCase())) { const toolMap = {q:'comment', w:'rect', e:'circle', r:'line', t:'arrow', y:'image', u:'ocr'}; selectTool(toolMap[e.key]); }
+                    const key = e.key.toUpperCase();
+                    
+                    if (!e.ctrlKey && !e.metaKey && e.shiftKey && key === 'L') {
+                        e.preventDefault();
+                        selectTool('arrow');
+                        return;
+                    }
+
+                    if (!e.ctrlKey && !e.altKey && !e.shiftKey) {
+                        switch(key) {
+                            case 'V': e.preventDefault(); selectTool('select'); return;
+                            case 'H': e.preventDefault(); selectTool('pan'); return;
+                            case 'M': e.preventDefault(); toggleMuteForSelected(); return;
+                            case 'C': e.preventDefault(); selectTool('comment'); return;
+                            case 'R': e.preventDefault(); selectTool('rect'); return;
+                            case 'O': e.preventDefault(); selectTool('circle'); return;
+                            case 'L': e.preventDefault(); selectTool('line'); return;
+                            case 'I': e.preventDefault(); selectTool('image'); return;
+                            case 'S': e.preventDefault(); selectTool('ocr'); return;
+                        }
+                    }
                 }
                 
-                if (e.key === ' ' && !state.spacebarPressed && !isInputFocused) { e.preventDefault(); state.spacebarPressed = true; app.body.classList.add('spacebar-down'); if (state.artboards.some(b => b.type === 'video')) { global_togglePlayPause(!e.ctrlKey); } }
+                if (e.key === ' ' && !state.spacebarPressed && !isInputFocused) { 
+                    e.preventDefault(); 
+                    state.spacebarPressed = true; 
+                    app.body.classList.add('spacebar-down'); 
+                    if (state.artboards.some(b => b.type === 'video')) {
+                        global_togglePlayPause(!e.ctrlKey);
+                    }
+                }
 
                 if (e.ctrlKey || e.metaKey) {
                     const rect = app.workspaceContainer.getBoundingClientRect();
@@ -720,7 +738,7 @@
                     switch (e.key.toLowerCase()) {
                         case '=': e.preventDefault(); zoomAtPoint(1.1, centerX, centerY); return;
                         case '-': e.preventDefault(); zoomAtPoint(1 / 1.1, centerX, centerY); return;
-                        case 's': e.preventDefault(); e.shiftKey ? saveStateAs() : saveState(); return;
+                        case 's': if(!e.shiftKey) { e.preventDefault(); saveState(); return; } break; 
                         case 'z': e.preventDefault(); e.shiftKey ? historyManager.redo() : historyManager.undo(); return;
                         case 'f': e.preventDefault(); app.searchInput.focus(); app.searchInput.select(); return;
                         case 'a': if (!isInputFocused) { e.preventDefault(); state.selectedAnnotationIndices = state.annotations.map((_, i) => i); updateListSelection(); } return;
@@ -3303,6 +3321,7 @@
     </script>
 </body>
 </html>
+
 
 
 
