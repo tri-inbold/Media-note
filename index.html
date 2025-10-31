@@ -1981,7 +1981,7 @@
                 app.annotationPopup.classList.remove('hidden');
             }
 
-            function onCanvasMouseDown(e, artboardId) {
+			function onCanvasMouseDown(e, artboardId) {
                 hideContextMenu();
                 state.interaction.didDrag = false;
 
@@ -2063,7 +2063,17 @@
                         });
                     }
                 } else {
-                    if (state.selectedAnnotationIndices.length > 0) {
+                    
+                    const isSimpleMode = app.movableControls.classList.contains('simple-mode');
+                    const hasSelection = state.selectedAnnotationIndices.length > 0;
+                    
+                    if (isSimpleMode && hasSelection) {
+                        state.selectedAnnotationIndices = [];
+                        updateListSelection();
+                        return;
+                    }
+
+                    if (hasSelection) {
                         state.selectedAnnotationIndices = [];
                         updateListSelection();
                     }
@@ -2075,14 +2085,14 @@
                             state.interaction.mode = 'placingImage';
                             state.interaction.target = { artboardId };
                             app.imageToolInput.click();
-                        } else { // Các công cụ vẽ khác
+                        } else {
                             state.interaction.mode = 'drawing';
                             state.interaction.target = { artboardId };
                         }
                     }
                 }
             }
-
+			
             function getConstrainedPos(startPos, currentPos, tool, isShiftPressed, artboard) {
                 if (!isShiftPressed) return currentPos;
                 let finalPos = { ...currentPos }; let dx = currentPos.x - startPos.x; let dy = currentPos.y - startPos.y;
@@ -3439,6 +3449,7 @@
     </script>
 </body>
 </html>
+
 
 
 
