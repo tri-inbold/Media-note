@@ -375,15 +375,15 @@
                     </ul>
                 </div>
                  <div>
-                    <h4>Video Artboard</h4>
+                    <h4><strong>Video Artboard</strong></h4>
                     <ul>
+					   <li>Jump Between Comments<span>Alt + ←/→</span></li>
                        <li>Play/Pause Selected<span>Spacebar</span></li>
                        <li>Play/Pause All<span>Ctrl + Spacebar</span></li>
                        <li>Mute Selected<span>M</span></li>
 					   <li>Mute All<span>Ctrl+M</span></li>
                        <li>Previous / Next Frame<span>←/→</span></li>
                        <li>Jump 10 Frames<span>Shift + ←/→</span></li>
-                       <li>Jump Between Comments<span>Alt + ←/→</span></li>
                        <li>Go to Start / End of Video<span>↑/↓</span></li>
                        <li>Apply to All Videos<span>Ctrl+Arrow</span></li>
                    </ul>
@@ -692,7 +692,7 @@
             }
             function onKeyUp(e) { if (e.key === ' ') { e.preventDefault(); state.spacebarPressed = false; app.body.classList.remove('spacebar-down', 'panning'); } }
 
-            function onKeyDown(e) {
+			function onKeyDown(e) {
                 const activeEl = document.activeElement;
                 const isInputFocused = ['TEXTAREA', 'INPUT'].includes(activeEl.tagName);
 
@@ -705,24 +705,27 @@
                 if (!isInputFocused) {
                     const key = e.key.toUpperCase();
                     
+                    if (!e.ctrlKey && !e.altKey && !e.shiftKey) {
+                        switch(e.key) {
+                            case 'v': case 'V': e.preventDefault(); selectTool('select'); return;
+                            case 'h': case 'H': e.preventDefault(); selectTool('pan'); return;
+                            case 'm': case 'M': e.preventDefault(); toggleMuteForSelected(); return;
+                            case 'c': case 'C': e.preventDefault(); selectTool('comment'); return;
+                            case 'r': case 'R': e.preventDefault(); selectTool('rect'); return;
+                            case 'o': case 'O': e.preventDefault(); selectTool('circle'); return;
+                            case 'l': case 'L': e.preventDefault(); selectTool('line'); return;
+                            case 'a': case 'A': e.preventDefault(); selectTool('arrow'); return;
+                            case 'i': case 'I': e.preventDefault(); selectTool('image'); return;
+                            case 's': case 'S': e.preventDefault(); selectTool('ocr'); return;
+                            case ',': e.preventDefault(); navigateCommentMarkers(-1); return;
+                            case '.': e.preventDefault(); navigateCommentMarkers(1); return;
+                        }
+                    }
+
                     if (!e.ctrlKey && !e.metaKey && e.shiftKey && key === 'L') {
                         e.preventDefault();
                         selectTool('arrow');
                         return;
-                    }
-
-                    if (!e.ctrlKey && !e.altKey && !e.shiftKey) {
-                        switch(key) {
-                            case 'V': e.preventDefault(); selectTool('select'); return;
-                            case 'H': e.preventDefault(); selectTool('pan'); return;
-                            case 'M': e.preventDefault(); toggleMuteForSelected(); return;
-                            case 'C': e.preventDefault(); selectTool('comment'); return;
-                            case 'R': e.preventDefault(); selectTool('rect'); return;
-                            case 'O': e.preventDefault(); selectTool('circle'); return;
-                            case 'L': e.preventDefault(); selectTool('line'); return;
-                            case 'I': e.preventDefault(); selectTool('image'); return;
-                            case 'S': e.preventDefault(); selectTool('ocr'); return;
-                        }
                     }
                 }
                 
@@ -730,17 +733,12 @@
                     e.preventDefault(); 
                     state.spacebarPressed = true; 
                     app.body.classList.add('spacebar-down'); 
-                    if (state.artboards.some(b => b.type === 'video')) {
-                        global_togglePlayPause(!e.ctrlKey);
-                    }
                 }
 
                 if (e.ctrlKey || e.metaKey) {
-                    const rect = app.workspaceContainer.getBoundingClientRect();
-                    const centerX = rect.width / 2; const centerY = rect.height / 2;
                     switch (e.key.toLowerCase()) {
-                        case '=': e.preventDefault(); zoomAtPoint(1.1, centerX, centerY); return;
-                        case '-': e.preventDefault(); zoomAtPoint(1 / 1.1, centerX, centerY); return;
+                        case '=': e.preventDefault(); zoomAtPoint(1.1, e.clientX, e.clientY); return;
+                        case '-': e.preventDefault(); zoomAtPoint(1 / 1.1, e.clientX, e.clientY); return;
                         case 's': if(!e.shiftKey) { e.preventDefault(); saveState(); return; } break; 
                         case 'z': e.preventDefault(); e.shiftKey ? historyManager.redo() : historyManager.undo(); return;
                         case 'f': e.preventDefault(); app.searchInput.focus(); app.searchInput.select(); return;
@@ -756,11 +754,8 @@
                         case '0': if (e.altKey) { e.preventDefault(); fitAllArtboardsToView(); } else { e.preventDefault(); state.view = { ...state.view, scale: 1, offsetX: 0, offsetY: 0 }; updateWorkspaceTransform(); } return;
                         case ';':
                             e.preventDefault();
-                            if (e.shiftKey) {
-                                state.guides.locked = !state.guides.locked;
-                            } else {
-                                state.guides.visible = !state.guides.visible;
-                            }
+                            if (e.shiftKey) { state.guides.locked = !state.guides.locked; } 
+                            else { state.guides.visible = !state.guides.visible; }
                             drawGuides();
                             return;
                     }
@@ -770,18 +765,18 @@
                 
                 if (state.artboards.some(b => b.type === 'video') && !isInputFocused) {
                     let handled = true;
-                    const frameCount = e.shiftKey ? 10 : 1; const target = e.ctrlKey ? 'all' : 'selected';
+                    const frameCount = e.shiftKey ? 10 : 1; 
+                    const target = e.ctrlKey ? 'all' : 'selected';
                     switch(e.key) {
-                        case 'ArrowLeft': e.altKey ? navigateCommentMarkers(-1) : advancedSeek({ frameDelta: -frameCount, target }); break;
-                        case 'ArrowRight': e.altKey ? navigateCommentMarkers(1) : advancedSeek({ frameDelta: frameCount, target }); break;
+                        case 'ArrowLeft': advancedSeek({ frameDelta: -frameCount, target }); break;
+                        case 'ArrowRight': advancedSeek({ frameDelta: frameCount, target }); break;
                         case 'ArrowUp': advancedSeek({ position: 'start', target }); break;
                         case 'ArrowDown': advancedSeek({ position: 'end', target }); break;
                         default: handled = false;
                     }
                     if (handled) e.preventDefault();
                 }
-            }
-            
+            }			
             function startPanning(e) {
                 e.preventDefault(); e.stopPropagation();
                 state.interaction.mode = 'panning';
@@ -917,9 +912,17 @@
                 }
                 onCanvasMouseUp(e); state.interaction.mode = 'none'; state.interaction.target = null;
             }
-            function onWorkspaceWheel(e) {
-                e.preventDefault(); 
-                const rect = app.workspaceContainer.getBoundingClientRect(); zoomAtPoint(e.deltaY < 0 ? 1.1 : 1/1.1, e.clientX - rect.left, e.clientY - rect.top); 
+            
+			function onWorkspaceWheel(e) {
+                e.preventDefault();
+                
+				if (e.ctrlKey) {
+                    return; 
+                }
+
+                state.view.offsetX -= e.deltaX;
+                state.view.offsetY -= e.deltaY;
+                updateWorkspaceTransform();
             }
             
             function selectArtboard(artboardId, isShift) {
@@ -2037,7 +2040,6 @@
                     }
                     if (!state.selectedAnnotationIndices.includes(hit.index)) { 
                         if(e.shiftKey && state.lastClickedAnnIndex !== -1) {
-                           // Logic chọn nhiều mục bằng Shift (nếu cần)
                         } else {
                            state.selectedAnnotationIndices = [hit.index]; 
                         }
@@ -2053,7 +2055,7 @@
                         state.interaction.mode = 'placingImage';
                         state.interaction.target = { artboardId };
                         app.imageToolInput.click();
-                    } else { // rect, circle, line, arrow, ocr
+                    } else { 
                         state.interaction.mode = 'drawing';
                         state.interaction.target = { artboardId };
                     }
@@ -2228,15 +2230,79 @@
                 videos.forEach(v => { if (position === 'start') { v.currentTime = 0; } else if (position === 'end') { v.currentTime = v.duration; } else { v.currentTime = Math.max(0, Math.min(v.duration, v.currentTime + (frameDelta / FRAME_RATE))); } });
                 redrawAllAnnotations();
             }
-            function navigateCommentMarkers(direction) {
-                if (state.selectedArtboardIds.length !== 1) return;
-                const artboardId = state.selectedArtboardIds[0]; const video = document.querySelector(`.artboard[data-id="${artboardId}"] video`); if (!video) return;
-                const markerTimes = [...new Set(state.annotations.filter(a => a.artboardId === artboardId && a.videoTime !== undefined).map(a => a.videoTime))].sort((a,b) => a - b);
-                if (markerTimes.length === 0) return; const currentTime = video.currentTime; let nextTime;
-                if (direction > 0) { nextTime = markerTimes.find(t => t > currentTime + 0.01); if (nextTime === undefined) nextTime = markerTimes[0]; } 
-                else { const prevMarkers = markerTimes.filter(t => t < currentTime - 0.01); if (prevMarkers.length > 0) { nextTime = prevMarkers[prevMarkers.length - 1]; } else { nextTime = markerTimes[markerTimes.length - 1]; } }
-                video.currentTime = nextTime; video.pause();
+            
+			function navigateCommentMarkers(direction) {
+                if (state.selectedArtboardIds.length !== 1) {
+                    if (state.artboards.length > 0) {
+                        state.selectedArtboardIds = [state.artboards[0].id];
+                        updateArtboardSelection();
+                    } else {
+                        return;
+                    }
+                }
+                const artboardId = state.selectedArtboardIds[0];
+                const artboard = state.artboards.find(b => b.id === artboardId);
+                if (!artboard) return;
+
+                const getSortKey = (ann) => {
+                    let y = 0, x = 0;
+                    if (ann.type === 'comment' || ann.type === 'reply') { y = ann.data.y; x = ann.data.x; } 
+                    else if (ann.data && ann.data.p1) { y = Math.min(ann.data.p1.y, ann.data.p2.y); x = Math.min(ann.data.p1.x, ann.data.p2.x); }
+                    return { time: ann.videoTime, y, x };
+                };
+
+                const sortedAnnotations = state.annotations
+                    .filter(a => a.artboardId === artboardId)
+                    .sort((a,b) => {
+                        const keyA = getSortKey(a);
+                        const keyB = getSortKey(b);
+                        if (keyA.time !== undefined && keyB.time !== undefined) {
+                            if (Math.abs(keyA.time - keyB.time) > 0.001) return keyA.time - keyB.time;
+                        }
+                        if (Math.abs(keyA.y - keyB.y) > 0.01) return keyA.y - keyB.y;
+                        return keyA.x - keyB.x;
+                    });
+
+                if (sortedAnnotations.length === 0) return;
+
+                let currentIndex = -1;
+                if (state.selectedAnnotationIndices.length === 1) {
+                    const currentAnn = state.annotations[state.selectedAnnotationIndices[0]];
+                    if(currentAnn) {
+                        currentIndex = sortedAnnotations.findIndex(a => a.id === currentAnn.id);
+                    }
+                }
+
+                let nextIndex;
+                if (currentIndex === -1) {
+                    nextIndex = direction > 0 ? 0 : sortedAnnotations.length - 1;
+                } else {
+                    nextIndex = (currentIndex + direction + sortedAnnotations.length) % sortedAnnotations.length;
+                }
+
+                const nextAnnotation = sortedAnnotations[nextIndex];
+                const globalIndex = state.annotations.findIndex(a => a.id === nextAnnotation.id);
+
+                if (globalIndex !== -1) {
+                    state.selectedAnnotationIndices = [globalIndex];
+                    state.lastClickedAnnIndex = globalIndex;
+                    updateListSelection();
+
+                    const li = app.annotationList.querySelector(`li[data-id='${nextAnnotation.id}']`);
+                    if (li) {
+                        li.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+
+                    if (artboard.type === 'video' && nextAnnotation.videoTime !== undefined) {
+                        const video = document.querySelector(`.artboard[data-id="${artboardId}"] video`);
+                        if (video) {
+                            video.currentTime = nextAnnotation.videoTime;
+                            video.pause();
+                        }
+                    }
+                }
             }
+			
             function drawMasterRuler() {
                 const canvas = app.masterTimelineRuler;
                 if (!canvas.offsetParent) return;
@@ -3335,6 +3401,7 @@
     </script>
 </body>
 </html>
+
 
 
 
