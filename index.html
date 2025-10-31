@@ -466,9 +466,9 @@
                     selectedAnnotationIndices: [], selectedArtboardIds: [], lastClickedAnnIndex: -1,
                     currentFileHandle: null, hasUnsavedChanges: false,
                     currentUser: null, clipboard: [],
-                    interaction: { mode: 'none', target: null, startPos: { x: 0, y: 0 }, startWorkspacePos: {x:0, y:0}, startData: new Map() },
+                    interaction: { mode: 'none', target: null, startPos: { x: 0, y: 0 }, startWorkspacePos: {x:0, y:0}, startData: new Map(), didDrag: false },
                     view: { scale: 1, offsetX: 0, offsetY: 0, minScale: 0.1, maxScale: 10 },
-                    layout: { nextX: 50, nextY: 50, rowMaxHeight: 0, margin: 50, maxRowWidth: 4000, isPanelCollapsed: false, artboardBgColor: null },
+                    layout: { nextX: 50, nextY: 50, rowMaxHeight: 0, margin: 50, maxRowWidth: 4000, isPanelCollapsed: false, artboardBgColor: '#ffffff' },
                     spacebarPressed: false, isGlobalMuted: true, areVideosInSync: true,
                     guides: { visible: true, locked: false, color: '#00FFFF', workspace: [], artboard: {} },
                     toolbar: { x: 0, y: 0, isSimple: false, isDefault: true }
@@ -770,7 +770,8 @@
 
             function onWorkspaceMouseDown(e) {
                 hideContextMenu();
-                
+                state.interaction.didDrag = false;
+				
                 if (e.button === 2) {
                     e.preventDefault();
                     state.interaction.rightClickStartPos = { x: e.clientX, y: e.clientY };
@@ -797,10 +798,19 @@
                 updateListSelection(); updateArtboardSelection();
             }
 			
-            function onWindowMouseMove(e) { 
+            function onWindowMouseMove(e) {
                 if (e.altKey && state.interaction.mode === 'dragging') {
                     app.workspaceContainer.style.cursor = 'copy';
                 }
+                
+                if(state.interaction.mode === 'panning' && !state.interaction.didDrag) {
+                    const dx = Math.abs(e.clientX - state.interaction.startPos.x);
+                    const dy = Math.abs(e.clientY - state.interaction.startPos.y);
+                    if (dx > 5 || dy > 5) {
+                        state.interaction.didDrag = true;
+                    }
+                }
+
                 switch(state.interaction.mode) { 
                     case 'panning': { 
                         const dx = e.clientX - state.interaction.startPos.x; const dy = e.clientY - state.interaction.startPos.y; state.view.offsetX = state.interaction.startWorkspacePos.x + dx; state.view.offsetY = state.interaction.startWorkspacePos.y + dy; updateWorkspaceTransform(); break; 
@@ -812,6 +822,7 @@
                     default: onCanvasMouseMove(e); break; 
                 } 
             }
+			
             function onWindowMouseUp(e) {
                 app.workspaceContainer.style.cursor = '';
                 if (['panning'].includes(state.interaction.mode)) { app.workspaceContainer.classList.remove('panning'); app.body.classList.remove('panning'); } 
@@ -1939,6 +1950,9 @@
             }
 
             function onCanvasMouseDown(e, artboardId) {
+				hideContextMenu();
+                state.interaction.didDrag = false;
+				
                 if (e.button === 2) {
                     e.preventDefault();
                     state.interaction.rightClickStartPos = { x: e.clientX, y: e.clientY };
@@ -2989,14 +3003,9 @@
             function hideContextMenu() { app.contextMenu.classList.add('hidden'); }
             
             function onWorkspaceContextMenu(e) {
-                if (state.interaction.rightClickStartPos) {
-                    const dx = Math.abs(e.clientX - state.interaction.rightClickStartPos.x);
-                    const dy = Math.abs(e.clientY - state.interaction.rightClickStartPos.y);
-                    if (dx > 5 || dy > 5) { 
-                        e.preventDefault();
-                        state.interaction.rightClickStartPos = null;
-                        return;
-                    }
+                if (state.interaction.didDrag) {
+                    e.preventDefault();
+                    return;
                 }
                 
                 if (!e.target.closest('#workspace-container') || e.target.closest('.artboard')) return;
@@ -3017,14 +3026,9 @@
             }
             
             function onArtboardContextMenu(e, artboardId) {
-                if (state.interaction.rightClickStartPos) {
-                    const dx = Math.abs(e.clientX - state.interaction.rightClickStartPos.x);
-                    const dy = Math.abs(e.clientY - state.interaction.rightClickStartPos.y);
-                    if (dx > 5 || dy > 5) {
-                        e.preventDefault();
-                        state.interaction.rightClickStartPos = null;
-                        return;
-                    }
+                if (state.interaction.didDrag) {
+                    e.preventDefault();
+                    return;
                 }
                 
                 e.preventDefault(); e.stopPropagation();
@@ -3277,6 +3281,7 @@
     </script>
 </body>
 </html>
+
 
 
 
