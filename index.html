@@ -638,39 +638,42 @@
                 }
             }
 
-            async function autoLoadData() {
-                const dataScript = document.getElementById('app-data');
-                if (!dataScript || !dataScript.textContent.trim()) return;
-                try {
-                    const data = JSON.parse(dataScript.textContent.trim());
-                    if (!data.artboards || !data.annotations) return;
+			async function autoLoadData() {
+				const dataScript = document.getElementById('app-data');
+				if (!dataScript || !dataScript.textContent.trim()) return;
+				try {
+					const data = JSON.parse(dataScript.textContent.trim());
+					if (!data.artboards || !data.annotations) return;
 
-                    resetState();
-                    promptForUser();
-                    app.dropZone.classList.add('hidden');
-                    app.workspaceContainer.classList.remove('hidden');
-                    app.toolbarContainer.classList.remove('hidden');
-                    app.rightPanel.classList.remove('hidden');
-                    
-                    state.annotations = data.annotations || [];
-                    state.artboards = data.artboards || [];
-                    if(data.layout) Object.assign(state.layout, data.layout);
-                    if(data.guides) Object.assign(state.guides, data.guides);
-                    if(data.toolbar) Object.assign(state.toolbar, data.toolbar);
+					resetState();
+					promptForUser();
+					app.dropZone.classList.add('hidden');
+					app.workspaceContainer.classList.remove('hidden');
+					app.toolbarContainer.classList.remove('hidden');
+					app.rightPanel.classList.remove('hidden');
+					
+					state.annotations = data.annotations || [];
+					state.artboards = data.artboards || [];
+					
+					if(data.layout) Object.assign(state.layout, data.layout);
+					if(data.guides) Object.assign(state.guides, data.guides);
+					if(data.toolbar) Object.assign(state.toolbar, data.toolbar);
 
-                    document.getElementById('artboard-bg-color-picker').value = state.layout.artboardBgColor;
-                    document.getElementById('guide-color-picker').value = state.guides.color;
-                    
-                    applyToolbarState();
-                    applyRightPanelState();
-                    renderWorkspace(); 
-                    applyArtboardBackgroundColor();
-                    updateAnnotationList();
-                    updateSaveButtonState();
-                    global_updateTimeline();
+					document.getElementById('artboard-bg-color-picker').value = state.layout.artboardBgColor;
+					document.getElementById('guide-color-picker').value = state.guides.color;
+					
+					applyToolbarState();
+					applyRightPanelState();
+					renderWorkspace(); 
+					applyArtboardBackgroundColor();
+					updateAnnotationList();
+					updateSaveButtonState();
+					global_updateTimeline();
 
-                } catch (err) { console.error("Error auto-loading embedded data:", err); alert('Error loading embedded data. Please ensure any video files are in the same directory as the HTML file.'); }
-            }
+				} catch (err) { 
+					console.error("Error auto-loading embedded data:", err); 
+				}
+			}
             
             async function handleDrop(e) { e.preventDefault(); document.body.classList.remove('dragging'); if (e.dataTransfer.files.length) handleFiles(Array.from(e.dataTransfer.files)); }
             function handleFiles(files) { if (!files || files.length === 0) return; if (state.artboards.length === 0) { app.dropZone.classList.add('hidden'); app.workspaceContainer.classList.remove('hidden'); app.toolbarContainer.classList.remove('hidden'); app.rightPanel.classList.remove('hidden'); } const imageFiles = files.filter(f => f.type.startsWith('image/') && !f.name.endsWith('.gif')); const videoFiles = files.filter(f => f.type.startsWith('video/')); const gifFiles = files.filter(f => f.name.endsWith('.gif')); imageFiles.forEach(file => { const reader = new FileReader(); reader.onload = e => addArtboard(file.name, e.target.result, 'image', {width: 0, height: 0}); reader.readAsDataURL(file); }); videoFiles.forEach(file => { const url = URL.createObjectURL(file); addArtboard(file.name, url, 'video'); }); gifFiles.forEach(gifToVideo); }
@@ -1414,14 +1417,16 @@
                     artboardEl.classList.toggle('selected', state.selectedArtboardIds.includes(artboard.id));
                     let contentHTML = ''; let videoControlsHTML = '';
                     if (!artboard.isLoading) {
-                        let artboardSrc = artboard.src || artboard.name;
-                        if (!artboardSrc.startsWith('data:') && !artboardSrc.startsWith('blob:') && !artboardSrc.includes('://') && !artboardSrc.startsWith('/')) {
-                            artboardSrc = './' + artboardSrc;
-                        }
-                        switch(artboard.type) {
-                            case 'image': contentHTML = `<img src="${artboardSrc}" alt="${artboard.name}" crossOrigin="anonymous">`; break;
-                            case 'video': contentHTML = `<video src="${artboardSrc}" playsinline loop crossOrigin="anonymous"></video><img class="frame-backup hidden" alt="Backup Frame">`; break;
-                        }
+						const artboardSrc = artboard.src || artboard.name;
+						
+						switch(artboard.type) {
+							case 'image': 
+								contentHTML = `<img src="${artboardSrc}" alt="${artboard.name}">`;
+								break;
+							case 'video': 
+								contentHTML = `<video src="${artboardSrc}" playsinline loop></video><img class="frame-backup hidden" alt="Backup Frame">`;
+								break;
+						}
                         if(artboard.type === 'video') videoControlsHTML = `<div class="artboard-video-controls"><button class="vid-play-btn" title="Play/Pause">▶</button><button class="vid-mute-btn" title="Mute/Unmute">${MUTE_ICON_SVG}</button><input type="text" class="time-input vid-time" value="00:00:00"><div class="vid-timeline-wrapper"><div class="vid-timeline-bg"></div><canvas class="vid-timeline-markers"></canvas><input type="range" class="vid-timeline" value="0" step="0.01"></div><span class="vid-duration time-input">00:00:00</span></div>`;
                     }
                     const dimensionsDisplay = `<span class="artboard-info">(${artboard.originalWidth}x${artboard.originalHeight})</span>`;
@@ -2504,7 +2509,7 @@
                         if (src && src.startsWith('data:image')) {
                             artboardData.src = src;
                         } else {
-                            artboardData.src = name;
+                            artboardData.src = board.name;
                         }
                         return artboardData;
                     }),
@@ -2519,18 +2524,14 @@
                 const docClone = document.cloneNode(true);
                 
                 dataToSave.artboards.forEach(board => {
-                    const artboardEl = docClone.querySelector(`.artboard[data-id="${board.id}"]`);
-                    if (artboardEl) {
-                        const mediaEl = artboardEl.querySelector('video, img:not(.frame-backup)');
-                        if (mediaEl) {
-                            if (board.src && board.src.startsWith('data:image')) {
-                                mediaEl.setAttribute('src', board.src);
-                            } else {
-                                mediaEl.setAttribute('src', board.name); // Đặt src thành tên tệp
-                            }
-                        }
-                    }
-                });
+					const artboardEl = docClone.querySelector(`.artboard[data-id="${board.id}"]`);
+					if (artboardEl) {
+						const mediaEl = artboardEl.querySelector('video, img:not(.frame-backup)');
+						if (mediaEl) {
+							mediaEl.setAttribute('src', board.name);
+						}
+					}
+				});
 
                 docClone.getElementById('app-data').textContent = '\n' + dataStr + '\n';
                 
