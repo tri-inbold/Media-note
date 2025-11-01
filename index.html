@@ -1552,7 +1552,7 @@
                     }
                 };
 
-                if (video.readyState >= 1) {
+                if (video.readyState >= 1) { // HAVE_METADATA
                     updateDuration();
                 } else {
                     video.addEventListener('loadedmetadata', updateDuration);
@@ -2492,50 +2492,17 @@
             
             async function saveStateSilently() { if (!state.currentFileHandle) return; const htmlContent = await generateAnnotatedHTML(); try { const writable = await state.currentFileHandle.createWritable(); await writable.write(htmlContent); await writable.close(); state.hasUnsavedChanges = false; app.saveBtn.classList.remove('saving'); updateSaveButtonState(); } catch (err) { console.error('Auto-save failed:', err); app.saveBtn.classList.remove('saving', 'unsaved'); app.saveBtn.textContent = 'Save Error'; } }
             function triggerAutoSave() { clearTimeout(autoSaveTimeout); if (!state.currentFileHandle) return; autoSaveTimeout = setTimeout(() => { app.saveBtn.classList.remove('unsaved'); app.saveBtn.classList.add('saving'); app.saveBtn.textContent = 'Saving...'; saveStateSilently(); }, 2000); }
-			
-			async function generateAnnotatedHTML() {
-			    const dataToSave = {
-			        artboards: state.artboards.map(board => {
-			            const { id, name, type, htmlContent, x, y, width, height, originalWidth, originalHeight, scale, frameBackups, src } = board;
-			            const artboardData = { id, name, type, x, y, width, height, originalWidth, originalHeight, scale };
-			            if (htmlContent) artboardData.htmlContent = htmlContent;
-			            if (frameBackups) artboardData.frameBackups = frameBackups;
-			
-			            // SỬA ĐƠN GIẢN: Luôn lưu tên file
-			            artboardData.src = board.name;  // Thay vì lưu src phức tạp
-			            
-			            return artboardData;
-			        }),
-			        annotations: state.annotations,
-			        layout: state.layout,
-			        guides: state.guides,
-			        toolbar: state.toolbar,
-			    };
-			    
-			    const dataStr = JSON.stringify(dataToSave, null, 2);
-			    const docClone = document.cloneNode(true);
-			    
-			    // SỬA ĐƠN GIẢN: Set tên file vào src
-			    dataToSave.artboards.forEach(board => {
-			        const artboardEl = docClone.querySelector(`.artboard[data-id="${board.id}"]`);
-			        if (artboardEl) {
-			            const mediaEl = artboardEl.querySelector('video, img:not(.frame-backup)');
-			            if (mediaEl) {
-			                mediaEl.setAttribute('src', board.name); // Chỉ tên file thôi
-			            }
-			        }
-			    });
-			
-			    docClone.getElementById('app-data').textContent = '\n' + dataStr + '\n';
-			    
-			    const bodyTag = docClone.querySelector('body');
-			    if (bodyTag) {
-			        bodyTag.classList.remove('spacebar-down', 'panning', 'dragging');
-			    }
-			    
-			    return `<!DOCTYPE html>\n` + docClone.documentElement.outerHTML;
-			}
-			
+
+            async function generateAnnotatedHTML() {
+                const dataToSave = {
+                    artboards: state.artboards.map(board => { const { id, name, type, htmlContent, x, y, width, height, originalWidth, originalHeight, scale, frameBackups, src } = board; const artboardData = { id, name, type, x, y, width, height, originalWidth, originalHeight, scale }; if (htmlContent) artboardData.htmlContent = htmlContent; if (frameBackups) artboardData.frameBackups = frameBackups; if (src) { if (src.startsWith('data:')) { artboardData.src = src; } else if (src.startsWith('blob:')) { artboardData.src = name; } else { artboardData.src = src; } }  else { artboardData.src = name; } return artboardData; }),
+                    annotations: state.annotations, layout: state.layout, guides: state.guides, toolbar: state.toolbar,
+                };
+                const dataStr = JSON.stringify(dataToSave, null, 2);
+                const docClone = document.cloneNode(true); docClone.getElementById('app-data').textContent = '\n' + dataStr + '\n';
+                const bodyTag = docClone.querySelector('body'); if (bodyTag) { bodyTag.classList.remove('spacebar-down', 'panning', 'dragging'); }
+                return `<!DOCTYPE html>\n` + docClone.documentElement.outerHTML;
+            }
             async function saveState() { if (!state.currentFileHandle) { await saveStateAs(); return; } await saveStateSilently(); }
 
 			async function saveStateAs() {
