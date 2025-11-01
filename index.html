@@ -692,14 +692,14 @@
             function onKeyUp(e) { if (e.key === ' ') { e.preventDefault(); state.spacebarPressed = false; app.body.classList.remove('spacebar-down', 'panning'); } }
 
 			function onKeyDown(e) {
-				if (e.key === 'Tab') {
+                if (e.key === 'Tab') {
                     e.preventDefault();
                     toggleSimpleMode();
                     return;
                 }
 				
                 const activeEl = document.activeElement;
-                const isInputFocused = ['TEXTAREA', 'INPUT'].includes(activeEl.tagName);
+                const isInputFocused = ['TEXTAREA', 'INPUT'].includes(activeEl.tagName) || activeEl.isContentEditable;
 
                 if (e.ctrlKey && e.altKey && e.shiftKey && e.key.toLowerCase() === 'p') {
                     e.preventDefault();
@@ -710,27 +710,29 @@
                 if (!isInputFocused) {
                     const key = e.key.toUpperCase();
                     
-                    if (!e.ctrlKey && !e.altKey && !e.shiftKey) {
-                        switch(e.key) {
-                            case 'v': case 'V': e.preventDefault(); selectTool('select'); return;
-                            case 'h': case 'H': e.preventDefault(); selectTool('pan'); return;
-                            case 'm': case 'M': e.preventDefault(); toggleMuteForSelected(); return;
-                            case 'c': case 'C': e.preventDefault(); selectTool('comment'); return;
-                            case 'r': case 'R': e.preventDefault(); selectTool('rect'); return;
-                            case 'o': case 'O': e.preventDefault(); selectTool('circle'); return;
-                            case 'l': case 'L': e.preventDefault(); selectTool('line'); return;
-                            case 'a': case 'A': e.preventDefault(); selectTool('arrow'); return;
-                            case 'i': case 'I': e.preventDefault(); selectTool('image'); return;
-                            case 's': case 'S': e.preventDefault(); selectTool('ocr'); return;
-                            case ',': e.preventDefault(); navigateCommentMarkers(-1); return;
-                            case '.': e.preventDefault(); navigateCommentMarkers(1); return;
+                    if (!e.ctrlKey && !e.metaKey) {
+                        if (e.shiftKey && key === 'L') {
+                            e.preventDefault();
+                            selectTool('arrow');
+                            return;
                         }
-                    }
-
-                    if (!e.ctrlKey && !e.metaKey && e.shiftKey && key === 'L') {
-                        e.preventDefault();
-                        selectTool('arrow');
-                        return;
+                        
+                        if (!e.shiftKey) {
+                             switch(e.key.toLowerCase()) {
+                                case 'v': e.preventDefault(); selectTool('select'); return;
+                                case 'h': e.preventDefault(); selectTool('pan'); return;
+                                case 'm': e.preventDefault(); toggleMuteForSelected(); return;
+                                case 'c': e.preventDefault(); selectTool('comment'); return;
+                                case 'r': e.preventDefault(); selectTool('rect'); return;
+                                case 'o': e.preventDefault(); selectTool('circle'); return;
+                                case 'l': e.preventDefault(); selectTool('line'); return;
+                                case 'a': e.preventDefault(); selectTool('arrow'); return;
+                                case 'i': e.preventDefault(); selectTool('image'); return;
+                                case 's': e.preventDefault(); selectTool('ocr'); return;
+                                case ',': e.preventDefault(); navigateCommentMarkers(-1); return;
+                                case '.': e.preventDefault(); navigateCommentMarkers(1); return;
+                            }
+                        }
                     }
                 }
                 
@@ -741,9 +743,12 @@
                 }
 
                 if (e.ctrlKey || e.metaKey) {
+                    const rect = app.workspaceContainer.getBoundingClientRect();
+                    const centerX = rect.width / 2;
+                    const centerY = rect.height / 2;
                     switch (e.key.toLowerCase()) {
-                        case '=': e.preventDefault(); zoomAtPoint(1.1, e.clientX, e.clientY); return;
-                        case '-': e.preventDefault(); zoomAtPoint(1 / 1.1, e.clientX, e.clientY); return;
+                        case '=': e.preventDefault(); zoomAtPoint(1.1, centerX, centerY); return;
+                        case '-': e.preventDefault(); zoomAtPoint(1 / 1.1, centerX, centerY); return;
                         case 's': if(!e.shiftKey) { e.preventDefault(); saveState(); return; } break; 
                         case 'z': e.preventDefault(); e.shiftKey ? historyManager.redo() : historyManager.undo(); return;
                         case 'f': e.preventDefault(); app.searchInput.focus(); app.searchInput.select(); return;
@@ -781,7 +786,8 @@
                     }
                     if (handled) e.preventDefault();
                 }
-            }			
+            }
+			
             function startPanning(e) {
                 e.preventDefault(); e.stopPropagation();
                 state.interaction.mode = 'panning';
@@ -3522,5 +3528,6 @@
     </script>
 </body>
 </html>
+
 
 
