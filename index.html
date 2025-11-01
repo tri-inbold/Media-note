@@ -673,7 +673,8 @@
             }
             
             async function handleDrop(e) { e.preventDefault(); document.body.classList.remove('dragging'); if (e.dataTransfer.files.length) handleFiles(Array.from(e.dataTransfer.files)); }
-            function handleFiles(files) { if (!files || files.length === 0) return; if (state.artboards.length === 0) { app.dropZone.classList.add('hidden'); app.workspaceContainer.classList.remove('hidden'); app.toolbarContainer.classList.remove('hidden'); app.rightPanel.classList.remove('hidden'); } const imageFiles = files.filter(f => f.type.startsWith('image/') && !f.name.endsWith('.gif')); const videoFiles = files.filter(f => f.type.startsWith('video/')); const gifFiles = files.filter(f => f.name.endsWith('.gif')); imageFiles.forEach(file => { const reader = new FileReader(); reader.onload = e => addArtboard(file.name, e.target.result, 'image', {width: 0, height: 0}); reader.readAsDataURL(file); }); videoFiles.forEach(file => { const url = URL.createObjectURL(file); addArtboard(file.name, url, 'video'); }); gifFiles.forEach(gifToVideo); }
+            function handleFiles(files) { if (!files || files.length === 0) return; if (state.artboards.length === 0) { app.dropZone.classList.add('hidden'); app.workspaceContainer.classList.remove('hidden'); app.toolbarContainer.classList.remove('hidden'); app.rightPanel.classList.remove('hidden'); } const imageFiles = files.filter(f => f.type.startsWith('image/') && !f.name.endsWith('.gif')); const videoFiles = files.filter(f => f.type.startsWith('video/')); const gifFiles = files.filter(f => f.name.endsWith('.gif')); imageFiles.forEach(file => { const reader = new FileReader(); reader.onload = e => addArtboard(file.name, e.target.result, 'image', {width: 0, height: 0}); reader.readAsDataURL(file); }); 
+										 videoFiles.forEach(file => { const localPath = file.name; const relativePath = "./" + localPath; addArtboard(localPath, relativePath, 'video');}); gifFiles.forEach(gifToVideo); }
             async function handlePaste(e) {
                 const activeEl = document.activeElement; if (activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'INPUT') return;
                 const imageItem = Array.from(e.clipboardData.items).find(item => item.type.startsWith('image/'));
@@ -3567,6 +3568,7 @@
     </script>
 </body>
 </html>
+
 
 
 
