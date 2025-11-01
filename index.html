@@ -2493,7 +2493,7 @@
             async function saveStateSilently() { if (!state.currentFileHandle) return; const htmlContent = await generateAnnotatedHTML(); try { const writable = await state.currentFileHandle.createWritable(); await writable.write(htmlContent); await writable.close(); state.hasUnsavedChanges = false; app.saveBtn.classList.remove('saving'); updateSaveButtonState(); } catch (err) { console.error('Auto-save failed:', err); app.saveBtn.classList.remove('saving', 'unsaved'); app.saveBtn.textContent = 'Save Error'; } }
             function triggerAutoSave() { clearTimeout(autoSaveTimeout); if (!state.currentFileHandle) return; autoSaveTimeout = setTimeout(() => { app.saveBtn.classList.remove('unsaved'); app.saveBtn.classList.add('saving'); app.saveBtn.textContent = 'Saving...'; saveStateSilently(); }, 2000); }
 
-            async function generateAnnotatedHTML() {
+			async function generateAnnotatedHTML() {
                 const dataToSave = {
                     artboards: state.artboards.map(board => {
                         const { id, name, type, htmlContent, x, y, width, height, originalWidth, originalHeight, scale, frameBackups, src } = board;
@@ -2501,17 +2501,12 @@
                         if (htmlContent) artboardData.htmlContent = htmlContent;
                         if (frameBackups) artboardData.frameBackups = frameBackups;
 
-                        if (src) {
-                            if (src.startsWith('data:')) {
-                                artboardData.src = src;
-                            } else if (src.startsWith('blob:')) {
-                                artboardData.src = name; 
-                            } else {
-                                artboardData.src = src;
-                            }
+                        if (src && src.startsWith('data:image')) {
+                            artboardData.src = src;
                         } else {
-                            artboardData.src = name;
+                            artboardData.src = name; 
                         }
+
                         return artboardData;
                     }),
                     annotations: state.annotations,
@@ -3554,6 +3549,7 @@
     </script>
 </body>
 </html>
+
 
 
 
