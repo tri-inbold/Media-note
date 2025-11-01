@@ -639,38 +639,61 @@
             }
 
             async function autoLoadData() {
-                const dataScript = document.getElementById('app-data');
-                if (!dataScript || !dataScript.textContent.trim()) return;
-                try {
-                    const data = JSON.parse(dataScript.textContent.trim());
-                    if (!data.artboards || !data.annotations) return;
-
-                    resetState();
-                    promptForUser();
-                    app.dropZone.classList.add('hidden');
-                    app.workspaceContainer.classList.remove('hidden');
-                    app.toolbarContainer.classList.remove('hidden');
-                    app.rightPanel.classList.remove('hidden');
-                    
-                    state.annotations = data.annotations || [];
-                    state.artboards = data.artboards || [];
-                    if(data.layout) Object.assign(state.layout, data.layout);
-                    if(data.guides) Object.assign(state.guides, data.guides);
-                    if(data.toolbar) Object.assign(state.toolbar, data.toolbar);
-
-                    document.getElementById('artboard-bg-color-picker').value = state.layout.artboardBgColor;
-                    document.getElementById('guide-color-picker').value = state.guides.color;
-                    
-                    applyToolbarState();
-                    applyRightPanelState();
-                    renderWorkspace(); 
-                    applyArtboardBackgroundColor();
-                    updateAnnotationList();
-                    updateSaveButtonState();
-                    global_updateTimeline();
-
-                } catch (err) { console.error("Error auto-loading embedded data:", err); alert('Error loading embedded data. Please ensure any video files are in the same directory as the HTML file.'); }
-            }
+			    const dataScript = document.getElementById('app-data');
+			    if (!dataScript || !dataScript.textContent.trim()) return;
+			    try {
+			        const data = JSON.parse(dataScript.textContent.trim());
+			        if (!data.artboards || !data.annotations) return;
+			
+			        resetState();
+			        promptForUser();
+			        app.dropZone.classList.add('hidden');
+			        app.workspaceContainer.classList.remove('hidden');
+			        app.toolbarContainer.classList.remove('hidden');
+			        app.rightPanel.classList.remove('hidden');
+			        
+			        state.annotations = data.annotations || [];
+			        
+			        state.artboards = data.artboards.map(board => {
+			            const newBoard = { ...board };
+			            
+			            if (board.type === 'video' && board.src && 
+			                !board.src.startsWith('blob:') && 
+			                !board.src.startsWith('data:') &&
+			                !board.src.includes('://')) {
+			                
+			                const possiblePaths = [
+			                    board.src,
+			                    './' + board.src,
+			                    board.name
+			                ];
+			                
+			                newBoard.src = board.src;
+			            }
+			            
+			            return newBoard;
+			        });
+			        
+			        if(data.layout) Object.assign(state.layout, data.layout);
+			        if(data.guides) Object.assign(state.guides, data.guides);
+			        if(data.toolbar) Object.assign(state.toolbar, data.toolbar);
+			
+			        document.getElementById('artboard-bg-color-picker').value = state.layout.artboardBgColor;
+			        document.getElementById('guide-color-picker').value = state.guides.color;
+			        
+			        applyToolbarState();
+			        applyRightPanelState();
+			        renderWorkspace(); 
+			        applyArtboardBackgroundColor();
+			        updateAnnotationList();
+			        updateSaveButtonState();
+			        global_updateTimeline();
+			
+			    } catch (err) { 
+			        console.error("Error auto-loading embedded data:", err); 
+			        alert('Error loading embedded data. Please ensure video files are in the same directory as the HTML file.');
+			    }
+			}
             
             async function handleDrop(e) { e.preventDefault(); document.body.classList.remove('dragging'); if (e.dataTransfer.files.length) handleFiles(Array.from(e.dataTransfer.files)); }
             function handleFiles(files) { if (!files || files.length === 0) return; if (state.artboards.length === 0) { app.dropZone.classList.add('hidden'); app.workspaceContainer.classList.remove('hidden'); app.toolbarContainer.classList.remove('hidden'); app.rightPanel.classList.remove('hidden'); } const imageFiles = files.filter(f => f.type.startsWith('image/') && !f.name.endsWith('.gif')); const videoFiles = files.filter(f => f.type.startsWith('video/')); const gifFiles = files.filter(f => f.name.endsWith('.gif')); imageFiles.forEach(file => { const reader = new FileReader(); reader.onload = e => addArtboard(file.name, e.target.result, 'image', {width: 0, height: 0}); reader.readAsDataURL(file); }); 
@@ -2495,53 +2518,55 @@
             function triggerAutoSave() { clearTimeout(autoSaveTimeout); if (!state.currentFileHandle) return; autoSaveTimeout = setTimeout(() => { app.saveBtn.classList.remove('unsaved'); app.saveBtn.classList.add('saving'); app.saveBtn.textContent = 'Saving...'; saveStateSilently(); }, 2000); }
 
 			async function generateAnnotatedHTML() {
-                const dataToSave = {
-                    artboards: state.artboards.map(board => {
-                        const { id, name, type, htmlContent, x, y, width, height, originalWidth, originalHeight, scale, frameBackups, src } = board;
-                        const artboardData = { id, name, type, x, y, width, height, originalWidth, originalHeight, scale };
-                        if (htmlContent) artboardData.htmlContent = htmlContent;
-                        if (frameBackups) artboardData.frameBackups = frameBackups;
-
-                        if (src && src.startsWith('data:image')) {
-                            artboardData.src = src;
-                        } else {
-                            artboardData.src = name;
-                        }
-                        return artboardData;
-                    }),
-                    annotations: state.annotations,
-                    layout: state.layout,
-                    guides: state.guides,
-                    toolbar: state.toolbar,
-                };
-                
-                const dataStr = JSON.stringify(dataToSave, null, 2);
-                
-                const docClone = document.cloneNode(true);
-                
-                dataToSave.artboards.forEach(board => {
-                    const artboardEl = docClone.querySelector(`.artboard[data-id="${board.id}"]`);
-                    if (artboardEl) {
-                        const mediaEl = artboardEl.querySelector('video, img:not(.frame-backup)');
-                        if (mediaEl) {
-                            if (board.src && board.src.startsWith('data:image')) {
-                                mediaEl.setAttribute('src', board.src);
-                            } else {
-                                mediaEl.setAttribute('src', board.name); // Đặt src thành tên tệp
-                            }
-                        }
-                    }
-                });
-
-                docClone.getElementById('app-data').textContent = '\n' + dataStr + '\n';
-                
-                const bodyTag = docClone.querySelector('body');
-                if (bodyTag) {
-                    bodyTag.classList.remove('spacebar-down', 'panning', 'dragging');
-                }
-                
-                return `<!DOCTYPE html>\n` + docClone.documentElement.outerHTML;
-            }
+			    const dataToSave = {
+			        artboards: state.artboards.map(board => {
+			            const { id, name, type, htmlContent, x, y, width, height, originalWidth, originalHeight, scale, frameBackups } = board;
+			            const artboardData = { id, name, type, x, y, width, height, originalWidth, originalHeight, scale };
+			            if (htmlContent) artboardData.htmlContent = htmlContent;
+			            if (frameBackups) artboardData.frameBackups = frameBackups;
+			
+			            // QUAN TRỌNG: Chỉ lưu tên file, không lưu blob/data URL
+			            if (board.src && board.src.startsWith('data:image')) {
+			                artboardData.src = board.src; // Giữ data URL cho ảnh
+			            } else {
+			                artboardData.src = board.name; // Lưu tên file cho video
+			            }
+			            return artboardData;
+			        }),
+			        annotations: state.annotations,
+			        layout: state.layout,
+			        guides: state.guides,
+			        toolbar: state.toolbar,
+			    };
+			    
+			    const dataStr = JSON.stringify(dataToSave, null, 2);
+			    const docClone = document.cloneNode(true);
+			    
+			    // Cập nhật src trong DOM clone
+			    dataToSave.artboards.forEach(board => {
+			        const artboardEl = docClone.querySelector(`.artboard[data-id="${board.id}"]`);
+			        if (artboardEl) {
+			            const mediaEl = artboardEl.querySelector('video, img:not(.frame-backup)');
+			            if (mediaEl) {
+			                if (board.src && board.src.startsWith('data:image')) {
+			                    mediaEl.setAttribute('src', board.src);
+			                } else {
+			                    // Đặt src là tên file thôi, không có path
+			                    mediaEl.setAttribute('src', board.name);
+			                }
+			            }
+			        }
+			    });
+			
+			    docClone.getElementById('app-data').textContent = '\n' + dataStr + '\n';
+			    
+			    const bodyTag = docClone.querySelector('body');
+			    if (bodyTag) {
+			        bodyTag.classList.remove('spacebar-down', 'panning', 'dragging');
+			    }
+			    
+			    return `<!DOCTYPE html>\n` + docClone.documentElement.outerHTML;
+			}
 			
             async function saveState() { if (!state.currentFileHandle) { await saveStateAs(); return; } await saveStateSilently(); }
 
@@ -3568,6 +3593,7 @@
     </script>
 </body>
 </html>
+
 
 
 
