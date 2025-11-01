@@ -919,16 +919,7 @@
             }
             
 			function onWorkspaceWheel(e) {
-                e.preventDefault();
-                
-				if (e.ctrlKey) {
-                    return; 
-                }
-
-                state.view.offsetX -= e.deltaX;
-                state.view.offsetY -= e.deltaY;
-                updateWorkspaceTransform();
-
+                e.preventDefault(); 
                 const rect = app.workspaceContainer.getBoundingClientRect();
                 zoomAtPoint(e.deltaY < 0 ? 1.1 : 1 / 1.1, e.clientX - rect.left, e.clientY - rect.top); 
             }
@@ -3531,4 +3522,5 @@
     </script>
 </body>
 </html>
+
 
