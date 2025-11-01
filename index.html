@@ -2495,32 +2495,12 @@
 
 			async function generateAnnotatedHTML() {
                 const dataToSave = {
-                    artboards: state.artboards.map(board => {
-                        const { id, name, type, htmlContent, x, y, width, height, originalWidth, originalHeight, scale, frameBackups, src } = board;
-                        const artboardData = { id, name, type, x, y, width, height, originalWidth, originalHeight, scale };
-                        if (htmlContent) artboardData.htmlContent = htmlContent;
-                        if (frameBackups) artboardData.frameBackups = frameBackups;
-
-                        if (src && src.startsWith('data:image')) {
-                            artboardData.src = src;
-                        } else {
-                            artboardData.src = name; 
-                        }
-
-                        return artboardData;
-                    }),
-                    annotations: state.annotations,
-                    layout: state.layout,
-                    guides: state.guides,
-                    toolbar: state.toolbar,
+                    artboards: state.artboards.map(board => { const { id, name, type, htmlContent, x, y, width, height, originalWidth, originalHeight, scale, frameBackups, src } = board; const artboardData = { id, name, type, x, y, width, height, originalWidth, originalHeight, scale }; if (htmlContent) artboardData.htmlContent = htmlContent; if (frameBackups) artboardData.frameBackups = frameBackups; if (src) { if (src.startsWith('data:')) { artboardData.src = src; } else if (src.startsWith('blob:')) { artboardData.src = name; } else { artboardData.src = src; } }  else { artboardData.src = name; } return artboardData; }),
+                    annotations: state.annotations, layout: state.layout, guides: state.guides, toolbar: state.toolbar,
                 };
                 const dataStr = JSON.stringify(dataToSave, null, 2);
-                const docClone = document.cloneNode(true);
-                docClone.getElementById('app-data').textContent = '\n' + dataStr + '\n';
-                const bodyTag = docClone.querySelector('body');
-                if (bodyTag) {
-                    bodyTag.classList.remove('spacebar-down', 'panning', 'dragging');
-                }
+                const docClone = document.cloneNode(true); docClone.getElementById('app-data').textContent = '\n' + dataStr + '\n';
+                const bodyTag = docClone.querySelector('body'); if (bodyTag) { bodyTag.classList.remove('spacebar-down', 'panning', 'dragging'); }
                 return `<!DOCTYPE html>\n` + docClone.documentElement.outerHTML;
             }
 			
