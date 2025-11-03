@@ -471,7 +471,7 @@
                     interaction: { mode: 'none', target: null, startPos: { x: 0, y: 0 }, startWorkspacePos: {x:0, y:0}, startData: new Map(), didDrag: false },
                     view: { scale: 1, offsetX: 0, offsetY: 0, minScale: 0.1, maxScale: 10 },
                     layout: { nextX: 50, nextY: 50, rowMaxHeight: 0, margin: 50, maxRowWidth: 4000, isPanelCollapsed: false, artboardBgColor: '#ffffff' },
-                    spacebarPressed: false, isGlobalMuted: true, areVideosInSync: true,
+                    isGlobalMuted: true, areVideosInSync: true,
                     guides: { visible: true, locked: false, color: '#00FFFF', workspace: [], artboard: {} },
                     toolbar: { x: 0, y: 0, isSimple: false, isDefault: true }
                 };
@@ -692,7 +692,8 @@
                 }
                 if (state.clipboard.length > 0) { e.preventDefault(); pasteAnnotations(); }
             }
-            function onKeyUp(e) { if (e.key === ' ') { e.preventDefault(); state.spacebarPressed = false; app.body.classList.remove('spacebar-down', 'panning'); } }
+			
+			function onKeyUp(e) { if (e.key === ' ') { e.preventDefault(); } }
 
 			function onKeyDown(e) {
                 if (e.key === 'Tab') {
@@ -739,11 +740,30 @@
                     }
                 }
                 
-                if (e.key === ' ' && !state.spacebarPressed && !isInputFocused) { 
-                    e.preventDefault(); 
-                    state.spacebarPressed = true; 
-                    app.body.classList.add('spacebar-down'); 
-                }
+                 if (e.key === ' ' && !isInputFocused) {
+			        e.preventDefault();
+			        
+			        // Nếu nhấn Ctrl + Space, luôn play/pause tất cả
+			        if (e.ctrlKey || e.metaKey) {
+			            global_togglePlayPause(false);
+			            return;
+			        }
+			
+			        let videosToToggle;
+			        if (state.selectedArtboardIds.length > 0) {
+			            videosToToggle = state.selectedArtboardIds
+			                .map(id => document.querySelector(`.artboard[data-id="${id}"] video`))
+			                .filter(Boolean);
+			        }
+			
+			        if (videosToToggle && videosToToggle.length > 0) {
+			            const isAnyPaused = videosToToggle.some(v => v.paused);
+			            videosToToggle.forEach(v => isAnyPaused ? v.play() : v.pause());
+			        } else {
+			            global_togglePlayPause(false);
+			        }
+			        return;
+			    }
 
                 if (e.ctrlKey || e.metaKey) {
                     const rect = app.workspaceContainer.getBoundingClientRect();
@@ -820,10 +840,10 @@
                     return;
                 }
 
-                if (state.currentTool === 'pan' || state.spacebarPressed || e.button === 1 || e.button === 2) { 
-                    startPanning(e); 
-                    return; 
-                }
+                if (state.currentTool === 'pan' || e.button === 1 || e.button === 2) { 
+			        startPanning(e); 
+			        return; 
+			    }
                 
                 state.selectedAnnotationIndices = []; state.selectedArtboardIds = [];
                 updateListSelection(); updateArtboardSelection();
@@ -1533,7 +1553,7 @@
                 controlsEl.addEventListener('mousedown', e => {
                     hideContextMenu();
                     state.interaction.didDrag = false;
-                    if (e.button === 1 || e.button === 2 || state.spacebarPressed) {
+                    if (e.button === 1 || e.button === 2) {
                         e.preventDefault();
                         if (!e.target.closest('button, input')) {
                             startPanning(e);
@@ -2766,7 +2786,7 @@
                 hideContextMenu();
                 state.interaction.didDrag = false;
 
-                if (e.button === 1 || e.button === 2 || state.spacebarPressed) {
+                if (e.button === 1 || e.button === 2) {
                     e.preventDefault();
                     startPanning(e);
                     return;
