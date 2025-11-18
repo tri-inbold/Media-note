@@ -677,13 +677,14 @@
 					updateSaveButtonState();
 					global_updateTimeline();
 
+					setTimeout(() => fitAllArtboardsToView(), 300);
 				} catch (err) { 
 					console.error("Error auto-loading embedded data:", err); 
 				}
 			}
             
             async function handleDrop(e) { e.preventDefault(); document.body.classList.remove('dragging'); if (e.dataTransfer.files.length) handleFiles(Array.from(e.dataTransfer.files)); }
-            function handleFiles(files) { if (!files || files.length === 0) return; if (state.artboards.length === 0) { app.dropZone.classList.add('hidden'); app.workspaceContainer.classList.remove('hidden'); app.toolbarContainer.classList.remove('hidden'); app.rightPanel.classList.remove('hidden'); } const imageFiles = files.filter(f => f.type.startsWith('image/') && !f.name.endsWith('.gif')); const videoFiles = files.filter(f => f.type.startsWith('video/')); const gifFiles = files.filter(f => f.name.endsWith('.gif')); imageFiles.forEach(file => { const reader = new FileReader(); reader.onload = e => addArtboard(file.name, e.target.result, 'image', {width: 0, height: 0}); reader.readAsDataURL(file); }); videoFiles.forEach(file => { const url = URL.createObjectURL(file); addArtboard(file.name, url, 'video'); }); gifFiles.forEach(gifToVideo); }
+            function handleFiles(files) { if (!files || files.length === 0) return; if (state.artboards.length === 0) { app.dropZone.classList.add('hidden'); app.workspaceContainer.classList.remove('hidden'); app.toolbarContainer.classList.remove('hidden'); app.rightPanel.classList.remove('hidden'); } const imageFiles = files.filter(f => f.type.startsWith('image/') && !f.name.endsWith('.gif')); const videoFiles = files.filter(f => f.type.startsWith('video/')); const gifFiles = files.filter(f => f.name.endsWith('.gif')); imageFiles.forEach(file => { const reader = new FileReader(); reader.onload = e => addArtboard(file.name, e.target.result, 'image', {width: 0, height: 0}); reader.readAsDataURL(file); }); videoFiles.forEach(file => { const url = URL.createObjectURL(file); addArtboard(file.name, url, 'video'); }); gifFiles.forEach(gifToVideo); setTimeout(() => fitAllArtboardsToView(), 500); }
             async function handlePaste(e) {
                 const activeEl = document.activeElement; if (activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'INPUT') return;
                 const imageItem = Array.from(e.clipboardData.items).find(item => item.type.startsWith('image/'));
@@ -2933,7 +2934,7 @@
                 const videos = state.artboards.filter(b => b.type === 'video'); const images = state.artboards.filter(b => b.type === 'image');
                 if (videos.length > 0) currentY = layoutGroup(videos, currentY) + margin;
                 if (images.length > 0) currentY = layoutGroup(images, currentY) + margin;
-                renderWorkspace(); markAsChanged();
+                renderWorkspace(); markAsChanged(); setTimeout(() => fitAllArtboardsToView(), 100);
             }
             function copyAnnotations() { if (state.selectedAnnotationIndices.length === 0) return; const allIdsToCopy = new Set(); const queue = state.selectedAnnotationIndices.map(index => state.annotations[index].id); queue.forEach(id => allIdsToCopy.add(id)); const traversalQueue = [...queue]; while (traversalQueue.length > 0) { const parentId = traversalQueue.shift(); const children = state.annotations.filter(ann => ann.parentId === parentId); for (const child of children) { if (!allIdsToCopy.has(child.id)) { allIdsToCopy.add(child.id); traversalQueue.push(child.id); } } } state.clipboard = state.annotations.filter(ann => allIdsToCopy.has(ann.id)).map(ann => JSON.parse(JSON.stringify(ann))); }
             
@@ -3657,6 +3658,7 @@
     </script>
 </body>
 </html>
+
 
 
 
