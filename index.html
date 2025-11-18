@@ -71,14 +71,17 @@
 		.vid-timeline-bg { position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 100%; height: 4px; background: rgba(255,255,255,0.3); border-radius: 4px;}
 
 		.vid-timeline-markers { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; }		
-		.vid-timeline-marker { position: absolute; width: 5px; height: 5px; background: var(--highlight-color); opacity: 0.5; transform: translateX(-50%) rotate(45deg); cursor: pointer; transition: all 0.2s; top: 50%; margin-top: -2px; border: 1px solid rgba(0,0,0,0.2); pointer-events: auto; }
-		.vid-timeline-marker:hover { width: 10px; height: 10px; margin-top: -5px; transform: translateX(-50%) rotate(0deg); border-radius: 50%; opacity: 1; box-shadow: 0 0 6px var(--highlight-color);}
+		.vid-timeline-marker{ position: absolute; width: 5px; height: 5px; background: var(--highlight-color); opacity: 0.3; transform:translateX(-50%) translateY(-50%) rotate(45deg); cursor: pointer; transition:.2s; top: 50%; border: 1px solid rgba(0,0,0,.2); pointer-events: auto}
+		.vid-timeline-marker:hover{ width: 10px; height: 10px; transform: translateX(-50%) translateY(-50%) rotate(0); border-radius: 50%; opacity: 0.8; box-shadow: 0 0 6px var(--highlight-color)}
 		
 		.vid-duration { width: auto; padding: 2px 0 2px 8px; user-select: none; }
 		.artboard-video-controls .vid-timeline { flex-grow:1; -webkit-appearance: none; appearance: none; height: 100%; background: transparent; cursor: pointer; position: relative; z-index: 2; width: 100%;}
-        .artboard-video-controls .vid-timeline::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 10px; height: 10px; background: var(--button-controler-color); border-radius: 50%; margin-top: -3px; }
+		.artboard-video-controls .vid-timeline::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 10px; height: 10px; background: var(--button-controler-color); border-radius: 50%; margin-top: -3px; cursor: pointer; }
 		.artboard-video-controls .vid-timeline::-webkit-slider-thumb:hover { transform: scale(1.2); }
-		.artboard-video-controls .vid-timeline::-webkit-slider-runnable-track { height: 4px; background: color-mix(in srgb, var(--button-controler-color) 5%, transparent); border-radius: 2px; }
+		.artboard-video-controls .vid-timeline::-webkit-slider-runnable-track{height:4px;background:color-mix(in srgb,var(--button-controler-color) 5%,transparent);border-radius:2px}
+		.artboard-video-controls .vid-timeline::-moz-range-thumb{width:10px;height:10px;background:var(--button-controler-color);border-radius:50%;border:none;cursor:pointer}
+		.artboard-video-controls .vid-timeline::-moz-range-track{height:4px;background:color-mix(in srgb,var(--button-controler-color) 5%,transparent);border-radius:2px}
+
         .time-input { background: transparent; border: none; color: var(--button-controler-color); font-size:13px; margin: 0px 2px 0px 0px; font-variant-numeric: tabular-nums; text-align: center; padding: 2px; width: 60px; border-radius: 3px; }
         .time-input:focus { background: transparent; outline: 1px solid var(--highlight-color); }
         #time-display { width: 80px; font-size: 1em; color: var(--text-color); }
@@ -747,7 +750,6 @@
                  if (e.key === ' ' && !isInputFocused) {
 			        e.preventDefault();
 			        
-			        // Nếu nhấn Ctrl + Space, luôn play/pause tất cả
 			        if (e.ctrlKey || e.metaKey) {
 			            global_togglePlayPause(false);
 			            return;
@@ -2741,9 +2743,12 @@
 				        markerTimes.forEach(time => { 
 				            const timelineWidth = timeline.offsetWidth;
 				            
-				            const x = (time / duration) * timelineWidth;
+				            const thumbWidth = 10;
+				            const effectiveWidth = timelineWidth - thumbWidth;
+				            const offset = thumbWidth / 2;
 				            
-				            // Tạo nút hình thoi
+				            const x = offset + (time / duration) * effectiveWidth;
+				            
 				            const marker = document.createElement('div');
 				            marker.className = 'vid-timeline-marker';
 				            marker.style.left = `${x}px`;
@@ -3630,6 +3635,7 @@
     </script>
 </body>
 </html>
+
 
 
 
