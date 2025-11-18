@@ -67,15 +67,15 @@
         .artboard-video-controls { position: relative; width: 100%; background: var(--artboard-header-color); display: flex; align-items: center; padding: 4px 8px; box-sizing: border-box; height: 32px; z-index: 5; flex-shrink: 0; }
         .artboard-video-controls button { background:none; border:none; color: var(--button-controler-color); cursor:pointer; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; padding:0; font-size: 1em;}
         .artboard-video-controls button svg { width: 18px; height: 18px; fill: currentColor; }
-        .vid-timeline-wrapper { position: relative; flex-grow: 1; height: 100%; display: flex; align-items: center;}
-        .vid-timeline-bg { position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 100%; height: 4px; background: rgba(255,255,255,0.3); border-radius: 4px;}
+		.vid-timeline-wrapper { position: relative; flex-grow: 1; height: 100%; display: flex; align-items: center;}
+		.vid-timeline-bg { position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 100%; height: 4px; background: rgba(255,255,255,0.3); border-radius: 4px;}
 
-		.vid-timeline-markers { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3;}
+		.vid-timeline-markers { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; }		
 		.vid-timeline-marker { position: absolute; width: 5px; height: 5px; background: var(--highlight-color); opacity: 0.5; transform: translateX(-50%) rotate(45deg); cursor: pointer; transition: all 0.2s; top: 50%; margin-top: -2px; border: 1px solid rgba(0,0,0,0.2); pointer-events: auto; }
 		.vid-timeline-marker:hover { width: 10px; height: 10px; margin-top: -5px; transform: translateX(-50%) rotate(0deg); border-radius: 50%; opacity: 1; box-shadow: 0 0 6px var(--highlight-color);}
 		
 		.vid-duration { width: auto; padding: 2px 0 2px 8px; user-select: none; }
-		.artboard-video-controls .vid-timeline { flex-grow:1; -webkit-appearance: none; appearance: none; height: 100%; background: transparent; cursor: pointer; position: relative; z-index: 2;}
+		.artboard-video-controls .vid-timeline { flex-grow:1; -webkit-appearance: none; appearance: none; height: 100%; background: transparent; cursor: pointer; position: relative; z-index: 2; width: 100%;}
         .artboard-video-controls .vid-timeline::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 10px; height: 10px; background: var(--button-controler-color); border-radius: 50%; margin-top: -3px; }
 		.artboard-video-controls .vid-timeline::-webkit-slider-thumb:hover { transform: scale(1.2); }
 		.artboard-video-controls .vid-timeline::-webkit-slider-runnable-track { height: 4px; background: color-mix(in srgb, var(--button-controler-color) 5%, transparent); border-radius: 2px; }
@@ -2731,9 +2731,6 @@
 				    
 				    markerContainer.innerHTML = '';
 				    
-				    const timelineRect = timeline.getBoundingClientRect();
-				    const containerRect = markerContainer.getBoundingClientRect();
-				    
 				    const markerTimes = [...new Set(state.annotations
 				        .filter(a => a.artboardId === artboardId && a.videoTime !== undefined)
 				        .map(a => a.videoTime))];
@@ -2742,11 +2739,11 @@
 				        const duration = isNaN(videoEl.duration) ? 100 : videoEl.duration; 
 				        
 				        markerTimes.forEach(time => { 
-				            const offsetLeft = timelineRect.left - containerRect.left;
-				            const timelineWidth = timelineRect.width;
+				            const timelineWidth = timeline.offsetWidth;
 				            
-				            const x = offsetLeft + (time / duration) * timelineWidth;
+				            const x = (time / duration) * timelineWidth;
 				            
+				            // Tạo nút hình thoi
 				            const marker = document.createElement('div');
 				            marker.className = 'vid-timeline-marker';
 				            marker.style.left = `${x}px`;
@@ -3633,6 +3630,7 @@
     </script>
 </body>
 </html>
+
 
 
 
