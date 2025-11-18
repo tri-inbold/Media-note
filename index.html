@@ -69,9 +69,11 @@
         .artboard-video-controls button svg { width: 18px; height: 18px; fill: currentColor; }
         .vid-timeline-wrapper { position: relative; flex-grow: 1; height: 100%; display: flex; align-items: center;}
         .vid-timeline-bg { position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 100%; height: 4px; background: rgba(255,255,255,0.3); border-radius: 4px;}
-        .vid-timeline-markers { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: auto; z-index: 3;}
-		.vid-timeline-marker { position: absolute; width: 10px; height: 10px; background: #ffc107; transform: translateX(-50%) translateY(-50%) rotate(45deg); cursor: pointer; transition: all 0.2s; top: 50%; border: 1px solid rgba(0,0,0,0.3);}
-        .vid-timeline-marker:hover { transform: translateX(-50%) translateY(-50%) rotate(45deg) scale(1.3); background: #ffeb3b; box-shadow: 0 0 8px rgba(255, 193, 7, 0.8);}
+
+		.vid-timeline-markers { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3;}
+		.vid-timeline-marker { position: absolute; width: 5px; height: 5px; background: var(--highlight-color); opacity: 0.3; transform: translateX(-50%) rotate(45deg); cursor: pointer; transition: all 0.2s; top: 50%; margin-top: -2.5px; border: 1px solid rgba(0,0,0,0.2); pointer-events: auto; }
+		.vid-timeline-marker:hover { width: 10px; height: 10px; margin-top: -5px; transform: translateX(-50%) rotate(0deg); border-radius: 50%; opacity: 0.8; box-shadow: 0 0 6px var(--highlight-color);}
+		
 		.vid-duration { width: auto; padding: 2px 0 2px 8px; user-select: none; }
 		.artboard-video-controls .vid-timeline { flex-grow:1; -webkit-appearance: none; appearance: none; height: 100%; background: transparent; cursor: pointer; position: relative; z-index: 2;}
         .artboard-video-controls .vid-timeline::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 10px; height: 10px; background: var(--button-controler-color); border-radius: 50%; margin-top: -3px; }
@@ -2725,6 +2727,7 @@
                 });
 				if (videoEl) {
 				    const markerCanvas = artboardEl.querySelector('.vid-timeline-markers'); 
+				    
 				    markerCanvas.innerHTML = '';
 				    
 				    const w = markerCanvas.offsetWidth; 
@@ -2751,6 +2754,14 @@
 				                videoEl.currentTime = time;
 				                videoEl.pause();
 				                redrawArtboardAnnotations(artboardId);
+				            });
+				            
+				            marker.addEventListener('mouseenter', (e) => {
+				                markerCanvas.style.pointerEvents = 'auto';
+				            });
+				            
+				            marker.addEventListener('mouseleave', (e) => {
+				                markerCanvas.style.pointerEvents = 'none';
 				            });
 				            
 				            markerCanvas.appendChild(marker);
@@ -3618,4 +3629,5 @@
     </script>
 </body>
 </html>
+
 
