@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Media QC v22.5</title>
+    <title>Media QC v22.6</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
@@ -69,8 +69,10 @@
         .artboard-video-controls button svg { width: 18px; height: 18px; fill: currentColor; }
         .vid-timeline-wrapper { position: relative; flex-grow: 1; height: 100%; display: flex; align-items: center;}
         .vid-timeline-bg { position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 100%; height: 4px; background: rgba(255,255,255,0.3); border-radius: 4px;}
-        .vid-timeline-markers { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none;}
-        .vid-duration { width: auto; padding: 2px 0 2px 8px; user-select: none; }
+        .vid-timeline-markers { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: auto; z-index: 3;}
+		.vid-timeline-marker { position: absolute; width: 10px; height: 10px; background: #ffc107; transform: translateX(-50%) translateY(-50%) rotate(45deg); cursor: pointer; transition: all 0.2s; top: 50%; border: 1px solid rgba(0,0,0,0.3);}
+        .vid-timeline-marker:hover { transform: translateX(-50%) translateY(-50%) rotate(45deg) scale(1.3); background: #ffeb3b; box-shadow: 0 0 8px rgba(255, 193, 7, 0.8);}
+		.vid-duration { width: auto; padding: 2px 0 2px 8px; user-select: none; }
 		.artboard-video-controls .vid-timeline { flex-grow:1; -webkit-appearance: none; appearance: none; height: 100%; background: transparent; cursor: pointer; position: relative; z-index: 2;}
         .artboard-video-controls .vid-timeline::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 10px; height: 10px; background: var(--button-controler-color); border-radius: 50%; margin-top: -3px; }
 		.artboard-video-controls .vid-timeline::-webkit-slider-thumb:hover { transform: scale(1.2); }
@@ -1447,7 +1449,7 @@
 								contentHTML = `<video src="${artboardSrc}" playsinline loop></video><img class="frame-backup hidden" alt="Backup Frame">`;
 								break;
 						}
-                        if(artboard.type === 'video') videoControlsHTML = `<div class="artboard-video-controls"><button class="vid-play-btn" title="Play/Pause">▶</button><button class="vid-mute-btn" title="Mute/Unmute">${MUTE_ICON_SVG}</button><input type="text" class="time-input vid-time" value="00:00:00"><div class="vid-timeline-wrapper"><div class="vid-timeline-bg"></div><canvas class="vid-timeline-markers"></canvas><input type="range" class="vid-timeline" value="0" step="0.01"></div><span class="vid-duration time-input">00:00:00</span></div>`;
+                        if(artboard.type === 'video') videoControlsHTML = `<div class="artboard-video-controls"><button class="vid-play-btn" title="Play/Pause">▶</button><button class="vid-mute-btn" title="Mute/Unmute">${MUTE_ICON_SVG}</button><input type="text" class="time-input vid-time" value="00:00:00"><div class="vid-timeline-wrapper"><div class="vid-timeline-bg"></div><div class="vid-timeline-markers"></div><input type="range" class="vid-timeline" value="0" step="0.01"></div><span class="vid-duration time-input">00:00:00</span></div>`;
                     }
                     const dimensionsDisplay = `<span class="artboard-info">(${artboard.originalWidth}x${artboard.originalHeight})</span>`;
                     const headerToolsHTML = `<div class="artboard-header-tools"><button class="header-icon-btn fit-view-btn" title="Fit to View (Ctrl+1)"><svg viewBox="0 0 24 24"><path d="M15 3h6v6l-2-2-4 4-2-2 4-4-2-2zM9 21H3v-6l2 2 4-4 2 2-4 4 2 2z"/></svg></button><button class="artboard-close-btn" title="Close Artboard (Ctrl+W)">&times;</button></div>`;
@@ -2721,12 +2723,40 @@
                         if(shouldDraw) { const isSelected = state.selectedAnnotationIndices.includes(index); drawShape(ctx, ann, artboard, isSelected); if (isSelected && ann.type !== 'comment' && ann.type !== 'reply') { drawHandles(ctx, ann, artboard); } }
                     }
                 });
-                if (videoEl) {
-                    const markerCanvas = artboardEl.querySelector('.vid-timeline-markers'); const mCtx = markerCanvas.getContext('2d');
-                    const w = markerCanvas.offsetWidth; const h = markerCanvas.offsetHeight; markerCanvas.width = w; markerCanvas.height = h; mCtx.clearRect(0, 0, w, h);
-                    const markerTimes = [...new Set(state.annotations.filter(a => a.artboardId === artboardId && a.videoTime !== undefined).map(a => a.videoTime))];
-                    if(markerTimes.length > 0) { mCtx.fillStyle = '#ffc107'; const duration = isNaN(videoEl.duration) ? 100 : videoEl.duration; markerTimes.forEach(time => { const x = (time / duration) * w; mCtx.fillRect(x - 1, 0, 2, h); }); }
-                }
+				if (videoEl) {
+				    const markerCanvas = artboardEl.querySelector('.vid-timeline-markers'); 
+				    markerCanvas.innerHTML = '';
+				    
+				    const w = markerCanvas.offsetWidth; 
+				    const h = markerCanvas.offsetHeight; 
+				    
+				    const markerTimes = [...new Set(state.annotations
+				        .filter(a => a.artboardId === artboardId && a.videoTime !== undefined)
+				        .map(a => a.videoTime))];
+				    
+				    if(markerTimes.length > 0) { 
+				        const duration = isNaN(videoEl.duration) ? 100 : videoEl.duration; 
+				        
+				        markerTimes.forEach(time => { 
+				            const x = (time / duration) * w; 
+				            
+				            const marker = document.createElement('div');
+				            marker.className = 'vid-timeline-marker';
+				            marker.style.left = `${x}px`;
+				            marker.title = `Jump to ${formatTime(time)}`;
+				            marker.dataset.time = time;
+				            
+				            marker.addEventListener('click', (e) => {
+				                e.stopPropagation();
+				                videoEl.currentTime = time;
+				                videoEl.pause();
+				                redrawArtboardAnnotations(artboardId);
+				            });
+				            
+				            markerCanvas.appendChild(marker);
+				        }); 
+				    }
+				}
             }
             function redrawAllAnnotations() { state.artboards.forEach(artboard => redrawArtboardAnnotations(artboard.id)); }
             
@@ -3588,3 +3618,4 @@
     </script>
 </body>
 </html>
+
