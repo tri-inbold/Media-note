@@ -71,8 +71,8 @@
         .vid-timeline-bg { position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 100%; height: 4px; background: rgba(255,255,255,0.3); border-radius: 4px;}
 
 		.vid-timeline-markers { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3;}
-		.vid-timeline-marker { position: absolute; width: 5px; height: 5px; background: var(--highlight-color); opacity: 0.3; transform: translateX(-50%) rotate(45deg); cursor: pointer; transition: all 0.2s; top: 50%; margin-top: -2.5px; border: 1px solid rgba(0,0,0,0.2); pointer-events: auto; }
-		.vid-timeline-marker:hover { width: 10px; height: 10px; margin-top: -5px; transform: translateX(-50%) rotate(0deg); border-radius: 50%; opacity: 0.8; box-shadow: 0 0 6px var(--highlight-color);}
+		.vid-timeline-marker { position: absolute; width: 5px; height: 5px; background: var(--highlight-color); opacity: 0.5; transform: translateX(-50%) rotate(45deg); cursor: pointer; transition: all 0.2s; top: 50%; margin-top: -2px; border: 1px solid rgba(0,0,0,0.2); pointer-events: auto; }
+		.vid-timeline-marker:hover { width: 10px; height: 10px; margin-top: -5px; transform: translateX(-50%) rotate(0deg); border-radius: 50%; opacity: 1; box-shadow: 0 0 6px var(--highlight-color);}
 		
 		.vid-duration { width: auto; padding: 2px 0 2px 8px; user-select: none; }
 		.artboard-video-controls .vid-timeline { flex-grow:1; -webkit-appearance: none; appearance: none; height: 100%; background: transparent; cursor: pointer; position: relative; z-index: 2;}
@@ -2726,12 +2726,13 @@
                     }
                 });
 				if (videoEl) {
-				    const markerCanvas = artboardEl.querySelector('.vid-timeline-markers'); 
+				    const markerContainer = artboardEl.querySelector('.vid-timeline-markers'); 
+				    const timeline = artboardEl.querySelector('.vid-timeline');
 				    
-				    markerCanvas.innerHTML = '';
+				    markerContainer.innerHTML = '';
 				    
-				    const w = markerCanvas.offsetWidth; 
-				    const h = markerCanvas.offsetHeight; 
+				    const timelineRect = timeline.getBoundingClientRect();
+				    const containerRect = markerContainer.getBoundingClientRect();
 				    
 				    const markerTimes = [...new Set(state.annotations
 				        .filter(a => a.artboardId === artboardId && a.videoTime !== undefined)
@@ -2741,7 +2742,10 @@
 				        const duration = isNaN(videoEl.duration) ? 100 : videoEl.duration; 
 				        
 				        markerTimes.forEach(time => { 
-				            const x = (time / duration) * w; 
+				            const offsetLeft = timelineRect.left - containerRect.left;
+				            const timelineWidth = timelineRect.width;
+				            
+				            const x = offsetLeft + (time / duration) * timelineWidth;
 				            
 				            const marker = document.createElement('div');
 				            marker.className = 'vid-timeline-marker';
@@ -2757,14 +2761,14 @@
 				            });
 				            
 				            marker.addEventListener('mouseenter', (e) => {
-				                markerCanvas.style.pointerEvents = 'auto';
+				                markerContainer.style.pointerEvents = 'auto';
 				            });
 				            
 				            marker.addEventListener('mouseleave', (e) => {
-				                markerCanvas.style.pointerEvents = 'none';
+				                markerContainer.style.pointerEvents = 'none';
 				            });
 				            
-				            markerCanvas.appendChild(marker);
+				            markerContainer.appendChild(marker);
 				        }); 
 				    }
 				}
@@ -3629,5 +3633,6 @@
     </script>
 </body>
 </html>
+
 
 
