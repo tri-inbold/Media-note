@@ -84,7 +84,7 @@
 
         .time-input { background: transparent; border: none; color: var(--button-controler-color); font-size:13px; margin: 0px 2px 0px 0px; font-variant-numeric: tabular-nums; text-align: center; padding: 2px; width: 60px; border-radius: 3px; }
         .time-input:focus { background: transparent; outline: 1px solid var(--highlight-color); }
-        #time-display { width: 80px; font-size: 1em; color: var(--text-color); }
+        #time-display { width: 60px; font-size: 0.8em; color: var(--text-color); }
         #time-display:focus { color: var(--text-color); }
 
         #toolbar-container { position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); z-index: 30; }
@@ -108,18 +108,18 @@
         #color-palette-popup { position: absolute; bottom: 170%; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; padding: 8px; border-radius: 8px; background: var(--bg-color); border: 1px solid var(--border-color); z-index: 25; }
         .color-btn { width: 16px; height: 16px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: all 0.2s; }
         .color-btn:hover { transform: scale(1.2); }
-        #play-pause-btn, #mute-btn { background: none; border: none; color: var(--text-color); cursor: pointer; padding: 5px; display: flex; align-items: center; }
+        #play-pause-btn, #mute-btn { background: none; border: none; color: var(--text-color); cursor: pointer; padding: 0 2px; display: flex; align-items: center; }
         #play-pause-btn svg, #mute-btn svg { width: 20px; height: 20px; fill: currentColor; }
-        #timeline-wrapper { position: relative; flex-grow: 1; display: flex; align-items: center; height: 25px; }
+        #timeline-wrapper { position: relative; flex-grow: 1; display: flex; align-items: center; height: 20px; }
         #timeline-bg { position: absolute; left: 0; top: 50%; transform: translateY(-50%); height: 5px; border-radius: 5px; pointer-events: none; width: 100%; background: rgba(255, 255, 255, 0.3); }
         body.theme-light #timeline-bg { background: rgba(0,0,0,0.1); }
         #timeline-slider { position: relative; z-index: 1; flex-grow: 1; -webkit-appearance: none; appearance: none; width: 100%; height: 100%; background: transparent !important; border-radius: 5px; outline: none; }
-        #timeline-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 2.5px; height: 30px; background: var(--highlight-color); cursor: pointer; border-radius: 0; margin-top: -1px;}
+        #timeline-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 2px; height: 20px; background: var(--highlight-color); cursor: pointer; border-radius: 0; margin-top: -6px;}
         #timeline-slider::-moz-range-thumb { width: 2.5x; height: 30px; background: var(--highlight-color); cursor: pointer; border-radius: 0;}
         #speed-controls { display: flex; background: rgba(0,0,0,0.2); border-radius: 8px; margin-left: 10px; }
         body.theme-light #speed-controls { background: rgba(0,0,0,0.05); }
-        .speed-btn { background: none; border: none; color: var(--text-color-light); padding: 4px 8px; cursor: pointer; font-size: 0.9em;}
-        .speed-btn.active { color: #fff; background: var(--text-color-light); border-radius: 8px; }
+        .speed-btn { background: none; border: none; color: var(--text-color-light); padding: 2px 8px; cursor: pointer; font-size: 0.7em; font-weight: 500;}
+        .speed-btn.active { color: #fff; background: var(--text-color-light); border-radius: 4px; font-weight: 600; }
         body.theme-light .speed-btn.active { color: #fff; }
         
         #zoom-controls { position: relative; }
@@ -219,7 +219,7 @@
         #timeline-panel { display: flex; flex-direction: column; width: 100%; padding: 8px; box-sizing: border-box; background: var(--bg-color); border-top: 1px solid var(--border-color);}
         #master-timeline-controls { width: 100%; }
         .timeline-header { display: flex; align-items: center; gap: 10px; padding: 0 5px; }
-        .timeline-title { font-weight: bold; font-size: 0.9em; flex-shrink: 0; color: var(--text-color-light); margin-right: 10px; }
+        .timeline-title { font-weight: 600; font-size: 0.9em; flex-shrink: 0; color: var(--text-color-light); margin-right: 10px; }
         #master-timeline-ruler { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
 
         #ocr-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.5); cursor: crosshair; z-index: 1000; }
@@ -3658,6 +3658,7 @@
     </script>
 </body>
 </html>
+
 
 
 
