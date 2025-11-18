@@ -2828,8 +2828,30 @@
                 state.view.offsetY = (container.offsetHeight - artboardHeight * newScale) / 2 - artboard.y * newScale;
                 updateWorkspaceTransform();
             }
-            function fitAllArtboardsToView() { if (state.artboards.length === 0) return; const PADDING = 0; let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity; state.artboards.forEach(b => { const artboardEl = document.querySelector(`.artboard[data-id="${b.id}"]`); const height = artboardEl ? artboardEl.offsetHeight : (b.height + 30 + (b.type==='video' ? 32:0)); minX = Math.min(minX, b.x); minY = Math.min(minY, b.y); maxX = Math.max(maxX, b.x + b.width); maxY = Math.max(maxY, b.y + height); }); const totalWidth = maxX - minX; const totalHeight = maxY - minY; if (totalWidth === 0 || totalHeight === 0) return; const container = app.workspaceContainer; const scaleX = (container.offsetWidth - 2 * PADDING) / totalWidth; const scaleY = (container.offsetHeight - 2 * PADDING) / totalHeight; const newScale = Math.min(scaleX, scaleY, 1); state.view.scale = newScale; state.view.offsetX = (container.offsetWidth - totalWidth * newScale) / 2 - minX * newScale; state.view.offsetY = (container.offsetHeight - totalHeight * newScale) / 2 - minY * newScale; updateWorkspaceTransform(); }
-            function onArtboardHeaderMouseDown(e, artboardId) {
+			function fitAllArtboardsToView() { 
+			    if (state.artboards.length === 0) return; 
+			    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity; 
+			    state.artboards.forEach(b => { 
+			        const artboardEl = document.querySelector(`.artboard[data-id="${b.id}"]`); 
+			        const height = artboardEl ? artboardEl.offsetHeight : (b.height + 30 + (b.type==='video' ? 32:0)); 
+			        minX = Math.min(minX, b.x); 
+			        minY = Math.min(minY, b.y); 
+			        maxX = Math.max(maxX, b.x + b.width); 
+			        maxY = Math.max(maxY, b.y + height); 
+			    }); 
+			    const totalWidth = maxX - minX; 
+			    const totalHeight = maxY - minY; 
+			    if (totalWidth === 0 || totalHeight === 0) return; 
+			    const container = app.workspaceContainer; 
+			    const scaleX = container.offsetWidth / totalWidth; 
+			    const scaleY = container.offsetHeight / totalHeight; 
+			    const newScale = Math.min(scaleX, scaleY, 1); 
+			    state.view.scale = newScale; 
+			    state.view.offsetX = (container.offsetWidth - totalWidth * newScale) / 2 - minX * newScale; 
+			    state.view.offsetY = (container.offsetHeight - totalHeight * newScale) / 2 - minY * newScale; 
+			    updateWorkspaceTransform(); 
+			}            
+			function onArtboardHeaderMouseDown(e, artboardId) {
                 hideContextMenu();
                 state.interaction.didDrag = false;
 
@@ -3635,6 +3657,7 @@
     </script>
 </body>
 </html>
+
 
 
 
