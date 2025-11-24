@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Media QC v22.6</title>
+    <title>Media QC v22.7</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
@@ -74,11 +74,11 @@
 		.vid-timeline-marker { position: absolute; width: 5px; height: 5px; background: var(--highlight-color); opacity: 1; transform: translateX(calc(-50% + 2px)) translateY(-50%) rotate(45deg); cursor: pointer; transition:.2s; top: 50%; border: 1px solid rgba(0,0,0,0); pointer-events: auto;}
 		.vid-timeline-marker:hover{ width: 10px; height: 10px; transform: translateX(calc(-50% + 2px)) translateY(-50%) rotate(0); border-radius: 50%; opacity: 1; box-shadow: 0 0 6px var(--highlight-color)}
 
-        #timeline-trigger { position: absolute; bottom: 10px;
+        #timeline-trigger {
+            position: absolute;
+            bottom: 10px;
             left: 10px;
             z-index: 40;
-            background: rgba(0, 0, 0, 0.5);
-            color: rgba(255, 255, 255, 0.5);
             padding: 5px 10px;
             border-radius: 4px;
             font-size: 0.85em;
@@ -86,13 +86,70 @@
             cursor: pointer;
             transition: all 0.2s ease;
             user-select: none;
-            border: 1px solid transparent;
+            background: rgba(0, 0, 0, 0.6);
+            color: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(4px);
         }
-        #timeline-trigger:hover { background: var(--highlight-color); color: #fff; opacity: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        #timeline-trigger:hover {
+            background: var(--highlight-color);
+            color: #fff;
+            border-color: var(--highlight-color);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            opacity: 1;
+        }
+
+        body.theme-light #timeline-trigger {
+            background: rgba(255, 255, 255, 0.85);
+            color: #555;
+            border: 1px solid #ccc;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        body.theme-light #timeline-trigger:hover {
+            background: var(--highlight-color);
+            color: #fff;
+            border-color: var(--highlight-color);
+        }
         #timeline-trigger.hidden { display: none !important; }
-        #timeline-close-btn { background: none; border: none; color: var(--text-color-light); cursor: pointer; font-size: 1.4em; line-height: 1; padding: 0 8px; margin-right: 5px; order: 10; }
-        #timeline-close-btn:hover { color: var(--text-color); }
         #timeline-panel { flex-shrink: 0; z-index: 35; }
+        #timeline-close-btn {
+            background: none;
+            border: none;
+            color: var(--text-color-light);
+            cursor: pointer;
+            font-size: 1.4em;
+            line-height: 1;
+            padding: 0 8px 0 0;
+            margin-right: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s;
+        }
+        #timeline-close-btn:hover { color: var(--text-color); }
+        
+        .playback-controls {
+            position: relative;
+            z-index: 10;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+        }
+        
+        #play-pause-btn, #mute-btn {
+            position: relative;
+            z-index: 10;
+            pointer-events: auto;
+        }
+        
+        .timeline-header {
+            display: flex;
+            align-items: center;
+            padding: 0 5px;
+            position: relative;
+        }
+        #timeline-panel { flex-shrink: 0; z-index: 35; }
+
 		
 		.vid-duration { width: auto; padding: 2px 0 2px 8px; user-select: none; }
 		.artboard-video-controls .vid-timeline { flex-grow:1; -webkit-appearance: none; appearance: none; height: 100%; background: transparent; cursor: pointer; position: relative; z-index: 2; width: 100%;}
@@ -114,7 +171,6 @@
         #help-panel { padding: 0; background: none; border: none; display: flex; align-items: center; gap: 8px;}
 		#help-panel.simple-mode { display: none; }
         #help-btn { background: var(--panel-bg); border: 1px solid var(--border-color); color: var(--text-color-light); cursor: pointer; display: flex; align-items: center; justify-content: center; padding-top: 2px; height: 24px; width: 24px; border-radius: 50%; font-weight: bold; font-size: 1em; }
-        .playback-controls { display: flex; align-items: center; gap: 4px; }
         .tool-btn { width: 28px; height: 28px; border-radius: 8px; border: none; background: transparent; color: var(--text-color-light); cursor: pointer; display: flex; justify-content: center; align-items: center; transition: all 0.2s; padding: 0; }
         .tool-btn:hover { color: var(--text-color); background-color: rgba(255,255,255,0.1); }
         body.theme-light .tool-btn:hover { background-color: rgba(0,0,0,0.05); }
@@ -128,7 +184,6 @@
         #color-palette-popup { position: absolute; bottom: 170%; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; padding: 8px; border-radius: 8px; background: var(--bg-color); border: 1px solid var(--border-color); z-index: 25; }
         .color-btn { width: 16px; height: 16px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: all 0.2s; }
         .color-btn:hover { transform: scale(1.2); }
-        #play-pause-btn, #mute-btn { background: none; border: none; color: var(--text-color); cursor: pointer; padding: 0 2px; display: flex; align-items: center; }
         #play-pause-btn svg, #mute-btn svg { width: 20px; height: 20px; fill: currentColor; }
         #timeline-wrapper { position: relative; flex-grow: 1; display: flex; align-items: center; height: 20px; }
         #timeline-bg { position: absolute; left: 0; top: 50%; transform: translateY(-50%); height: 5px; border-radius: 5px; pointer-events: none; width: 100%; background: rgba(255, 255, 255, 0.3); }
@@ -238,7 +293,6 @@
         
         #timeline-panel { display: flex; flex-direction: column; width: 100%; padding: 8px; box-sizing: border-box; background: var(--bg-color); border-top: 1px solid var(--border-color);}
         #master-timeline-controls { width: 100%; }
-        .timeline-header { display: flex; align-items: center; gap: 10px; padding: 0 5px; }
         .timeline-title { font-weight: 600; font-size: 0.9em; flex-shrink: 0; color: var(--text-color-light); margin-right: 10px; }
         #master-timeline-ruler { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
 
@@ -330,11 +384,13 @@
                 </div>
             </div>
             
-            <div id="timeline-panel" class="hidden">
+			<div id="timeline-panel" class="hidden">
                 <div id="master-timeline-controls">
                     <div class="timeline-header">
+                        <button id="timeline-close-btn" title="Close Timeline">&times;</button>
+                        
                         <span class="timeline-title">Master Timeline</span>
-						<button id="timeline-close-btn" title="Close Timeline">&times;</button> 
+                        
                         <div class="playback-controls">
                             <button id="play-pause-btn" title="Play/Pause (Spacebar/Ctrl+Spacebar)"><svg id="play-icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><svg id="pause-icon" class="hidden" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg></button>
                             <button id="mute-btn" title="Mute/Unmute (M/Ctrl+M)"><svg id="unmute-icon" class="hidden" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg><svg id="mute-icon" viewBox="0 0 24 24"><path d="M19,12c0,.9-.2,1.8-.5,2.6l1.5,1.5c.7-1.2,1-2.6,1-4.1,0-4.3-3-7.9-7-8.8v2.1c2.9.9,5,3.5,5,6.7Z"/><path d="M16.5,12c0-1.8-1-3.3-2.5-4v2.1l2.5,2.5v-.6Z"/><path d="M4.3,3l-1.3,1.3,4.7,4.7H3v6h4l5,5v-6.7l4.2,4.2c-.7.5-1.4.9-2.2,1.2v2.1c1.4-.3,2.6-1,3.7-1.8l2,2,1.3-1.3-9-9L4.3,3Z"/><polygon points="12 4 9.9 6.1 12 8.1 12 4"/></svg></button>
@@ -344,6 +400,7 @@
                                 <button class="speed-btn" data-speed="2">2x</button>
                             </div>
                         </div>
+                        
                         <input type="text" id="time-display" class="time-input" value="00:00:00">
                         <div id="timeline-wrapper">
                             <div id="timeline-bg"></div>
@@ -352,6 +409,7 @@
                         </div>
                     </div>
                 </div>
+            </div>
             </div>
         </div>
 
@@ -472,7 +530,7 @@
                 toolCursorIcon: document.getElementById('tool-cursor-icon'),
                 contextMenu: document.getElementById('context-menu'),
                 masterTimelineRuler: document.getElementById('master-timeline-ruler'),
-				timelineTrigger: document.getElementById('timeline-trigger'),
+                timelineTrigger: document.getElementById('timeline-trigger'),
                 timelineCloseBtn: document.getElementById('timeline-close-btn'),
                 annotationPopup: null,
             };
@@ -2542,8 +2600,8 @@
                 let maxDuration = 0; 
                 const videos = Array.from(document.querySelectorAll('#workspace video')); 
                 
-                if (videos.length === 0) { 
-                    app.timelinePanel.classList.add('hidden');
+				if (videos.length === 0) { 
+                    app.timelinePanel.classList.add('hidden'); 
                     app.timelineTrigger.classList.add('hidden');
                     return; 
                 } 
@@ -3753,6 +3811,7 @@
     </script>
 </body>
 </html>
+
 
 
 
