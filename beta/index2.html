@@ -73,6 +73,26 @@
 		.vid-timeline-markers { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; }		
 		.vid-timeline-marker { position: absolute; width: 5px; height: 5px; background: var(--highlight-color); opacity: 1; transform: translateX(calc(-50% + 2px)) translateY(-50%) rotate(45deg); cursor: pointer; transition:.2s; top: 50%; border: 1px solid rgba(0,0,0,0); pointer-events: auto;}
 		.vid-timeline-marker:hover{ width: 10px; height: 10px; transform: translateX(calc(-50% + 2px)) translateY(-50%) rotate(0); border-radius: 50%; opacity: 1; box-shadow: 0 0 6px var(--highlight-color)}
+
+        #timeline-trigger { position: absolute; bottom: 10px;
+            left: 10px;
+            z-index: 40;
+            background: rgba(0, 0, 0, 0.5);
+            color: rgba(255, 255, 255, 0.5);
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+            border: 1px solid transparent;
+        }
+        #timeline-trigger:hover { background: var(--highlight-color); color: #fff; opacity: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        #timeline-trigger.hidden { display: none !important; }
+        #timeline-close-btn { background: none; border: none; color: var(--text-color-light); cursor: pointer; font-size: 1.4em; line-height: 1; padding: 0 8px; margin-right: 5px; order: 10; }
+        #timeline-close-btn:hover { color: var(--text-color); }
+        #timeline-panel { flex-shrink: 0; z-index: 35; }
 		
 		.vid-duration { width: auto; padding: 2px 0 2px 8px; user-select: none; }
 		.artboard-video-controls .vid-timeline { flex-grow:1; -webkit-appearance: none; appearance: none; height: 100%; background: transparent; cursor: pointer; position: relative; z-index: 2; width: 100%;}
@@ -252,7 +272,8 @@
     <a id="frame-download-link" class="hidden"></a>
     
     <div id="app-container">
-        <div id="main-content">
+		<div id="main-content">
+            <div id="timeline-trigger" class="hidden">Master Timeline</div> <!-- NEW TRIGGER -->
             <div id="drop-zone">
                 <p style="-webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; pointer-events: none; ">Drag & drop Video, Image files here<br>Or double-click / Ctrl+D to select files</p>
             </div>
@@ -313,6 +334,7 @@
                 <div id="master-timeline-controls">
                     <div class="timeline-header">
                         <span class="timeline-title">Master Timeline</span>
+						<button id="timeline-close-btn" title="Close Timeline">&times;</button> 
                         <div class="playback-controls">
                             <button id="play-pause-btn" title="Play/Pause (Spacebar/Ctrl+Spacebar)"><svg id="play-icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><svg id="pause-icon" class="hidden" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg></button>
                             <button id="mute-btn" title="Mute/Unmute (M/Ctrl+M)"><svg id="unmute-icon" class="hidden" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg><svg id="mute-icon" viewBox="0 0 24 24"><path d="M19,12c0,.9-.2,1.8-.5,2.6l1.5,1.5c.7-1.2,1-2.6,1-4.1,0-4.3-3-7.9-7-8.8v2.1c2.9.9,5,3.5,5,6.7Z"/><path d="M16.5,12c0-1.8-1-3.3-2.5-4v2.1l2.5,2.5v-.6Z"/><path d="M4.3,3l-1.3,1.3,4.7,4.7H3v6h4l5,5v-6.7l4.2,4.2c-.7.5-1.4.9-2.2,1.2v2.1c1.4-.3,2.6-1,3.7-1.8l2,2,1.3-1.3-9-9L4.3,3Z"/><polygon points="12 4 9.9 6.1 12 8.1 12 4"/></svg></button>
@@ -450,6 +472,8 @@
                 toolCursorIcon: document.getElementById('tool-cursor-icon'),
                 contextMenu: document.getElementById('context-menu'),
                 masterTimelineRuler: document.getElementById('master-timeline-ruler'),
+				timelineTrigger: document.getElementById('timeline-trigger'),
+                timelineCloseBtn: document.getElementById('timeline-close-btn'),
                 annotationPopup: null,
             };
 
@@ -488,17 +512,9 @@
 
 			function toggleSimpleMode() {
                 toggleRightPanel();
-
                 const isPanelCollapsed = state.layout.isPanelCollapsed;
-
                 state.toolbar.isSimple = isPanelCollapsed;
                 applyToolbarState();
-
-                if (isPanelCollapsed) {
-                    app.timelinePanel.classList.add('hidden');
-                } else {
-                    global_updateTimeline();
-                }
             }
 			
             async function initTesseract() {
@@ -586,6 +602,21 @@
                 app.panelResizer.addEventListener('dblclick', toggleRightPanel);
                 app.panelResizer.addEventListener('contextmenu', e => e.preventDefault());
 
+				app.timelineTrigger.addEventListener('click', () => {
+                    app.timelinePanel.classList.remove('hidden');
+                    app.timelineTrigger.classList.add('hidden');
+                    drawMasterRuler();
+                });
+
+                app.timelineCloseBtn.addEventListener('click', () => {
+                    app.timelinePanel.classList.add('hidden');
+                    const hasVideos = state.artboards.some(b => b.type === 'video');
+                    if (hasVideos) {
+                        app.timelineTrigger.classList.remove('hidden');
+                    }
+                });
+
+                app.playPauseBtn.addEventListener('click', () => global_togglePlayPause(false));
                 app.playPauseBtn.addEventListener('click', () => global_togglePlayPause(false));
                 document.getElementById('mute-btn').addEventListener('click', global_toggleMute);
                 document.querySelectorAll('.speed-btn').forEach(btn => btn.addEventListener('click', () => global_setPlaybackSpeed(parseFloat(btn.dataset.speed))));
@@ -1638,6 +1669,7 @@
                             app.toolbarContainer.classList.add('hidden');
                             app.rightPanel.classList.add('hidden');
                             app.timelinePanel.classList.add('hidden');
+							app.timelineTrigger.classList.add('hidden');
                         } else {
                             rearrangeArtboards(); 
                         }
@@ -2506,28 +2538,41 @@
                 requestAnimationFrame(masterTimelineUpdater);
             }
 
-            function global_updateTimeline() { 
+			function global_updateTimeline() { 
                 let maxDuration = 0; 
                 const videos = Array.from(document.querySelectorAll('#workspace video')); 
+                
                 if (videos.length === 0) { 
-                    app.timelinePanel.classList.add('hidden'); 
+                    app.timelinePanel.classList.add('hidden');
+                    app.timelineTrigger.classList.add('hidden');
                     return; 
                 } 
-                app.timelinePanel.classList.remove('hidden');
+
                 videos.forEach(v => { 
                     if (isFinite(v.duration) && v.duration > maxDuration) { 
                         maxDuration = v.duration; 
                     } 
                 }); 
                 app.timelineSlider.max = maxDuration > 0 ? maxDuration : 100; 
+
+                if (app.timelinePanel.classList.contains('hidden')) {
+                    app.timelineTrigger.classList.remove('hidden');
+                } else {
+                    app.timelineTrigger.classList.add('hidden');
+                }
+
                 if (app.timelineSlider.oninput) {
                     app.timelineSlider.oninput = null;
                 }
                 app.timelineSlider.oninput = () => {
                     global_seekTo(parseFloat(app.timelineSlider.value));
                 };
-                drawMasterRuler();
+                
+                if (!app.timelinePanel.classList.contains('hidden')) {
+                    drawMasterRuler();
+                }
             }
+		
             const formatTime = (secs) => { if (isNaN(secs)) return '00:00'; const s = Math.floor(secs % 60); const m = Math.floor((secs / 60) % 60); return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; };
             const formatTimeHHMMSSFF = (seconds, duration = 0) => {
                 if (isNaN(seconds)) seconds = 0; const totalFrames = Math.round(seconds * FRAME_RATE); const ff = String(totalFrames % FRAME_RATE).padStart(2, '0'); const ss = String(Math.floor(totalFrames / FRAME_RATE) % 60).padStart(2, '0'); const mm = String(Math.floor(totalFrames / (FRAME_RATE*60)) % 60).padStart(2, '0'); const hh = Math.floor(totalFrames / (FRAME_RATE*3600));
@@ -3708,5 +3753,6 @@
     </script>
 </body>
 </html>
+
 
 
