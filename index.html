@@ -293,6 +293,8 @@
 						<div id="zoom-controls">
                             <button id="zoom-display-btn">100%</button>
                             <ul id="zoom-dropdown" class="hidden">
+								<li id="zoom-fit-btn">Fit</li>
+						        <li id="zoom-full-btn" style="border-bottom: 1px solid var(--border-color);">Full</li>
                                 <li data-zoom="4">400%</li>
                                 <li data-zoom="2">200%</li>
                                 <li data-zoom="1.5">150%</li>
@@ -608,6 +610,24 @@
                 document.getElementById('zoom-display-btn').addEventListener('click', (e) => {
                     e.stopPropagation();
                     document.getElementById('zoom-dropdown').classList.toggle('hidden');
+                });
+				 document.getElementById('zoom-fit-btn').addEventListener('click', () => {
+                    if (state.selectedArtboardIds.length > 0) {
+                        fitArtboardToView(state.selectedArtboardIds[0]);
+                    } else if (state.artboards.length > 0) {
+                        fitArtboardToView(state.artboards[0].id);
+                    }
+                    document.getElementById('zoom-dropdown').classList.add('hidden');
+                });
+                document.getElementById('zoom-full-btn').addEventListener('click', () => {
+                    fitAllArtboardsToView();
+                    document.getElementById('zoom-dropdown').classList.add('hidden');
+                });
+                document.querySelectorAll('#zoom-dropdown li[data-zoom]').forEach(item => {
+                    item.addEventListener('click', () => {
+                        const newScale = parseFloat(item.dataset.zoom);
+                        setZoom(newScale);
+                    });
                 });
                 document.querySelectorAll('#zoom-dropdown li').forEach(item => {
                     item.addEventListener('click', () => {
@@ -3708,5 +3728,6 @@
     </script>
 </body>
 </html>
+
 
 
