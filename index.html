@@ -67,11 +67,11 @@
         .artboard-video-controls { position: relative; width: 100%; background: var(--artboard-header-color); display: flex; align-items: center; padding: 4px 8px; box-sizing: border-box; height: 32px; z-index: 5; flex-shrink: 0; }
         .artboard-video-controls button { background:none; border:none; color: var(--button-controler-color); cursor:pointer; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; padding:0; font-size: 1em;}
         .artboard-video-controls button svg { width: 18px; height: 18px; fill: currentColor; }
-		.vid-timeline-wrapper { position: relative; flex-grow: 1; height: 100%; display: flex; align-items: center;}
+		.vid-timeline-wrapper { position: relative; flex-grow: 1; height: 100%; display: flex; align-items: center; width: 100%; }
 		.vid-timeline-bg { position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 100%; height: 4px; background: rgba(255,255,255,0.3); border-radius: 4px;}
 
 		.vid-timeline-markers { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; }		
-		.vid-timeline-marker{ position: absolute; width: 5px; height: 5px; background: var(--highlight-color); opacity: 1; transform: translateX(calc(-50% + 2px)) translateY(-50%) rotate(45deg); cursor: pointer; transition:.2s; top: 50%; border: 1px solid rgba(0,0,0,0); pointer-events: auto}
+		.vid-timeline-marker { position: absolute; width: 5px; height: 5px; background: var(--highlight-color); opacity: 1; transform: translateX(calc(-50% + 2px)) translateY(-50%) rotate(45deg); cursor: pointer; transition:.2s; top: 50%; border: 1px solid rgba(0,0,0,0); pointer-events: auto;}
 		.vid-timeline-marker:hover{ width: 10px; height: 10px; transform: translateX(calc(-50% + 2px)) translateY(-50%) rotate(0); border-radius: 50%; opacity: 1; box-shadow: 0 0 6px var(--highlight-color)}
 		
 		.vid-duration { width: auto; padding: 2px 0 2px 8px; user-select: none; }
@@ -1392,26 +1392,27 @@
             function addArtboard(name, src, type, size = {width:0, height:0}, options = {}) {
                 const { isLoading = false, id = crypto.randomUUID() } = options;
                 const onMediaReady = () => {
-                    if (type === 'image' && !isLoading) {
-                        const mediaElement = new Image();
-                        mediaElement.onload = () => {
-                           createArtboardObject(id, name, src, type, { width: mediaElement.naturalWidth, height: mediaElement.naturalHeight }, isLoading);
-                        };
-                        mediaElement.src = src;
-                    } else if (type === 'video' && !isLoading) {
-                         const mediaElement = document.createElement('video');
-                         mediaElement.onloadedmetadata = () => {
-                            createArtboardObject(id, name, src, type, { width: mediaElement.videoWidth, height: mediaElement.videoHeight }, isLoading);
-                         };
-                         mediaElement.src = src;
-                    } else {
-                        createArtboardObject(id, name, src, type, size, isLoading);
-                    }
-                };
+				    if (type === 'image' && !isLoading) {
+				        const mediaElement = new Image();
+				        mediaElement.onload = () => {
+				           createArtboardObject(id, name, src, type, { width: mediaElement.naturalWidth, height: mediaElement.naturalHeight }, isLoading);
+				        };
+				        mediaElement.src = src;
+				    } else if (type === 'video' && !isLoading) {
+				         const mediaElement = document.createElement('video');
+				         mediaElement.onloadedmetadata = () => {
+				            const vidDuration = mediaElement.duration;
+				            createArtboardObject(id, name, src, type, { width: mediaElement.videoWidth, height: mediaElement.videoHeight }, isLoading, vidDuration);
+				         };
+				         mediaElement.src = src;
+				    } else {
+				        createArtboardObject(id, name, src, type, size, isLoading);
+				    }
+				};
 
-                const createArtboardObject = (id, name, src, type, size, isLoading) => {
-                    const artboard = { id, name, type, src, x: 50, y: 50, width: size.width, height: size.height, originalWidth: size.width, originalHeight: size.height, scale: 1, isLoading };
-                    
+				const createArtboardObject = (id, name, src, type, size, isLoading, duration = 0) => {
+				    const artboard = { id, name, type, src, x: 50, y: 50, width: size.width, height: size.height, originalWidth: size.width, originalHeight: size.height, scale: 1, isLoading };					
+					
                     if ((type === 'video' || type === 'image') && !isLoading && artboard.originalHeight > 720) {
                         const targetHeight = 720;
                         const aspectRatio = artboard.originalWidth / artboard.originalHeight;
@@ -1421,6 +1422,7 @@
                     }
 
                     if (type === 'video') { 
+						artboard.duration = duration;
                         artboard.frameBackups = {}; 
                         artboard.videoFailedToLoad = false;
                     }
@@ -2526,50 +2528,52 @@
             function triggerAutoSave() { clearTimeout(autoSaveTimeout); if (!state.currentFileHandle) return; autoSaveTimeout = setTimeout(() => { app.saveBtn.classList.remove('unsaved'); app.saveBtn.classList.add('saving'); app.saveBtn.textContent = 'Saving...'; saveStateSilently(); }, 2000); }
 
 			async function generateAnnotatedHTML() {
-                const dataToSave = {
-                    artboards: state.artboards.map(board => {
-                        const { id, name, type, htmlContent, x, y, width, height, originalWidth, originalHeight, scale, frameBackups, src } = board;
-                        const artboardData = { id, name, type, x, y, width, height, originalWidth, originalHeight, scale };
-                        if (htmlContent) artboardData.htmlContent = htmlContent;
-                        if (frameBackups) artboardData.frameBackups = frameBackups;
-
-                        if (src && src.startsWith('data:image')) {
-                            artboardData.src = src;
-                        } else {
-                            artboardData.src = board.name;
-                        }
-                        return artboardData;
-                    }),
-                    annotations: state.annotations,
-                    layout: state.layout,
-                    guides: state.guides,
-                    toolbar: state.toolbar,
-                };
-                
-                const dataStr = JSON.stringify(dataToSave, null, 2);
-                
-                const docClone = document.cloneNode(true);
-                
-                dataToSave.artboards.forEach(board => {
-					const artboardEl = docClone.querySelector(`.artboard[data-id="${board.id}"]`);
-					if (artboardEl) {
-						const mediaEl = artboardEl.querySelector('video, img:not(.frame-backup)');
-						if (mediaEl) {
-							mediaEl.setAttribute('src', board.name);
-						}
-					}
-				});
-
-                docClone.getElementById('app-data').textContent = '\n' + dataStr + '\n';
-                
-                const bodyTag = docClone.querySelector('body');
-                if (bodyTag) {
-                    bodyTag.classList.remove('spacebar-down', 'panning', 'dragging');
-                }
-                
-                return `<!DOCTYPE html>\n` + docClone.documentElement.outerHTML;
-            }
+			    const dataToSave = {
+			        artboards: state.artboards.map(board => {
+			            const { id, name, type, htmlContent, x, y, width, height, originalWidth, originalHeight, scale, frameBackups, src } = board;
+			            const artboardData = { id, name, type, x, y, width, height, originalWidth, originalHeight, scale };
+			            
+			            if (type === 'video') {
+			                const videoEl = document.querySelector(`.artboard[data-id="${id}"] video`);
+			                if (videoEl && isFinite(videoEl.duration)) {
+			                    artboardData.duration = videoEl.duration;
+			                } else if (board.duration) {
+			                    artboardData.duration = board.duration;
+			                }
+			            }
 			
+			            if (htmlContent) artboardData.htmlContent = htmlContent;
+			            if (frameBackups) artboardData.frameBackups = frameBackups;
+			
+			            if (src && src.startsWith('data:image')) {
+			                artboardData.src = src;
+			            } else {
+			                artboardData.src = board.name;
+			            }
+			            return artboardData;
+			        }),
+			        annotations: state.annotations,
+			        layout: state.layout,
+			        guides: state.guides,
+			        toolbar: state.toolbar,
+			    };
+			    
+			    const dataStr = JSON.stringify(dataToSave, null, 2);
+			    
+			    const docClone = document.cloneNode(true);
+			    
+			    const workspaceClone = docClone.getElementById('workspace');
+			    if (workspaceClone) workspaceClone.innerHTML = '';
+			
+			    docClone.getElementById('app-data').textContent = '\n' + dataStr + '\n';
+			    
+			    const bodyTag = docClone.querySelector('body');
+			    if (bodyTag) {
+			        bodyTag.classList.remove('spacebar-down', 'panning', 'dragging');
+			    }
+			    
+			    return `<!DOCTYPE html>\n` + docClone.documentElement.outerHTML;
+			}			
             async function saveState() { if (!state.currentFileHandle) { await saveStateAs(); return; } await saveStateSilently(); }
 
 			async function saveStateAs() {
@@ -2739,11 +2743,14 @@
 				        .map(a => a.videoTime))];
 				    
 				    if(markerTimes.length > 0) { 
-				        const duration = isNaN(videoEl.duration) ? 100 : videoEl.duration; 
-				        
+						let duration = videoEl.duration;
+				        if (!isFinite(duration) || duration === 0) {
+				            duration = artboard.duration || 100; // Fallback
+				        }
+				        if (parseFloat(timeline.max) !== duration) timeline.max = duration;
 				        markerTimes.forEach(time => { 
 				            const timelineWidth = timeline.offsetWidth;
-				            
+			            
 				            const thumbWidth = 10;
 				            const effectiveWidth = timelineWidth - thumbWidth;
 				            const offset = thumbWidth / 2;
@@ -3658,13 +3665,3 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
