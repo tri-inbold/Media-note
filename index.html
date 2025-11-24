@@ -2735,6 +2735,7 @@
 				if (videoEl) {
 				    const markerContainer = artboardEl.querySelector('.vid-timeline-markers'); 
 				    const timeline = artboardEl.querySelector('.vid-timeline');
+				    const timeInput = artboardEl.querySelector('.vid-time');
 				    
 				    markerContainer.innerHTML = '';
 				    
@@ -2743,14 +2744,16 @@
 				        .map(a => a.videoTime))];
 				    
 				    if(markerTimes.length > 0) { 
-						let duration = videoEl.duration;
+				        let duration = videoEl.duration;
 				        if (!isFinite(duration) || duration === 0) {
-				            duration = artboard.duration || 100; // Fallback
+				            duration = artboard.duration || 100;
 				        }
+				        
 				        if (parseFloat(timeline.max) !== duration) timeline.max = duration;
+				
 				        markerTimes.forEach(time => { 
 				            const timelineWidth = timeline.offsetWidth;
-			            
+				            
 				            const thumbWidth = 10;
 				            const effectiveWidth = timelineWidth - thumbWidth;
 				            const offset = thumbWidth / 2;
@@ -2765,8 +2768,15 @@
 				            
 				            marker.addEventListener('click', (e) => {
 				                e.stopPropagation();
-				                videoEl.currentTime = time;
-				                videoEl.pause();
+				                
+				                timeline.value = time;
+				                timeInput.value = formatTimeHHMMSSFF(time, duration);
+				
+				                if (isFinite(videoEl.duration)) {
+				                    videoEl.currentTime = time;
+				                    videoEl.pause();
+				                } else {
+				                }
 				                redrawArtboardAnnotations(artboardId);
 				            });
 				            
@@ -3665,3 +3675,4 @@
     </script>
 </body>
 </html>
+
