@@ -1768,11 +1768,28 @@
                     if (clickedAnn && clickedAnn.artboardId) {
                          selectArtboard(clickedAnn.artboardId, false); 
                          const artboard = state.artboards.find(b => b.id === clickedAnn.artboardId);
+                         
                          if (artboard && artboard.type === 'video' && clickedAnn.videoTime !== undefined) {
                              const artboardEl = document.querySelector(`.artboard[data-id="${artboard.id}"]`);
-                             const videoEl = artboardEl ? artboardEl.querySelector('video') : null;
-                             if(videoEl && !artboard.videoFailedToLoad) { videoEl.currentTime = clickedAnn.videoTime; videoEl.pause(); }
+                             if (artboardEl) {
+                                 const videoEl = artboardEl.querySelector('video');
+                                 const timeline = artboardEl.querySelector('.vid-timeline');
+                                 const timeInput = artboardEl.querySelector('.vid-time');
+
+                                 if (timeline) timeline.value = clickedAnn.videoTime;
+                                 
+                                 let currentDuration = (videoEl && isFinite(videoEl.duration) && videoEl.duration > 0) ? videoEl.duration : (artboard.duration || 100);
+                                 if (timeInput) timeInput.value = formatTimeHHMMSSFF(clickedAnn.videoTime, currentDuration);
+
+                                 if(videoEl && !artboard.videoFailedToLoad && isFinite(videoEl.duration)) { 
+                                     videoEl.currentTime = clickedAnn.videoTime; 
+                                     videoEl.pause(); 
+                                 }
+                                 
+                                 redrawArtboardAnnotations(artboard.id);
+                             }
                          }
+                         // ---------------------------------------------------------------
                     }
                 });
                 li.addEventListener('dblclick', (e) => { if (!e.target.closest('a')) makeListItemEditable(li, index); });
@@ -1782,7 +1799,8 @@
                 li.querySelector('.icon-btn[title="Reply"]').addEventListener('click', e => { e.stopPropagation(); addAnnotation({ type: 'reply', artboardId: ann.artboardId, text: '', parentId: ann.id }, true); });
                 return li;
             }
-            function updateAnnotationList() {
+			
+			function updateAnnotationList() {
                 const listScrollTop = app.annotationList.scrollTop;
                 app.annotationList.innerHTML = '';
                 const searchTerm = app.searchInput.value.toLowerCase();
@@ -2380,7 +2398,7 @@
                 }
             }
 
-            function selectAnnotation(annotation) {
+			function selectAnnotation(annotation) {
                 if (!annotation) return;
                 const globalIndex = state.annotations.findIndex(a => a.id === annotation.id);
                 if (globalIndex === -1) return;
@@ -2395,14 +2413,29 @@
                 }
 
                 const artboard = state.artboards.find(b => b.id === annotation.artboardId);
+                
                 if (artboard && artboard.type === 'video' && annotation.videoTime !== undefined) {
-                    const video = document.querySelector(`.artboard[data-id="${artboard.id}"] video`);
-                    if (video) {
-                        video.currentTime = annotation.videoTime;
-                        video.pause();
+                    const artboardEl = document.querySelector(`.artboard[data-id="${artboard.id}"]`);
+                    if (artboardEl) {
+                        const videoEl = artboardEl.querySelector('video');
+                        const timeline = artboardEl.querySelector('.vid-timeline');
+                        const timeInput = artboardEl.querySelector('.vid-time');
+
+                        if (timeline) timeline.value = annotation.videoTime;
+                        
+                        let currentDuration = (videoEl && isFinite(videoEl.duration) && videoEl.duration > 0) ? videoEl.duration : (artboard.duration || 100);
+                        if (timeInput) timeInput.value = formatTimeHHMMSSFF(annotation.videoTime, currentDuration);
+
+                        if (videoEl && !artboard.videoFailedToLoad && isFinite(videoEl.duration)) {
+                            videoEl.currentTime = annotation.videoTime;
+                            videoEl.pause();
+                        }
+                        
+                        redrawArtboardAnnotations(artboard.id);
                     }
                 }
-            }			
+            }
+			
             function drawMasterRuler() {
                 const canvas = app.masterTimelineRuler;
                 if (!canvas.offsetParent) return;
@@ -3675,4 +3708,5 @@
     </script>
 </body>
 </html>
+
 
