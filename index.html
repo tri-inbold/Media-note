@@ -539,19 +539,20 @@
             }
 
             function init() {
-                resetState();
-                promptForUser();
-                initTheme();
-                initTesseract();
-                autoLoadData();
-                selectTool('select');
+				resetState();
+				promptForUser();
+				initTheme();
+				initTesseract();
 
-                app.annotationPopup = document.getElementById('annotation-popup');
-                app.annotationPopup.addEventListener('dblclick', (e) => {
-                    if (state.selectedAnnotationIndices.length === 1 && !e.target.closest('.header-tools, .complete-checkbox')) {
-                        updateAnnotationPopup(state.selectedAnnotationIndices[0]);
-                    }
-                });
+				app.annotationPopup = document.getElementById('annotation-popup');
+				app.annotationPopup.addEventListener('dblclick', (e) => {
+					if (state.selectedAnnotationIndices.length === 1 && !e.target.closest('.header-tools, .complete-checkbox')) {
+						updateAnnotationPopup(state.selectedAnnotationIndices[0]);
+					}
+				});
+
+				autoLoadData();
+				selectTool('select');
 
                 app.mainContent.addEventListener('dblclick', (e) => { if (e.target === app.dropZone || e.target === app.workspaceContainer) app.fileInput.click(); });
                 window.addEventListener('dragover', e => { e.preventDefault(); document.body.classList.add('dragging'); });
