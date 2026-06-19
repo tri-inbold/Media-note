@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Media QC v22.6</title>
+    <title>Media QC v22.7</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
@@ -83,6 +83,9 @@
 		.artboard-video-controls .vid-timeline::-moz-range-track{ height: 4px; background: color-mix(in srgb,var(--button-controler-color) 5%,transparent); border-radius: 2px}
 
         .time-input { background: transparent; border: none; color: var(--button-controler-color); font-size:13px; margin: 0px 2px 0px 0px; font-variant-numeric: tabular-nums; text-align: center; padding: 2px; width: 60px; border-radius: 3px; }
+		.vid-speed { background: transparent; border: none; color: var(--button-controler-color); font-size: 12px; margin: 0 4px; padding: 2px; border-radius: 3px; cursor: pointer; outline: none; -webkit-appearance: none; -moz-appearance: none; appearance: none; text-align: center; text-align-last: center; }
+		.vid-speed:focus { outline: 1px solid var(--highlight-color); }
+		.vid-speed option { color: #000; }
         .time-input:focus { background: transparent; outline: 1px solid var(--highlight-color); }
         #time-display { width: 60px; font-size: 0.8em; color: var(--text-color); }
         #time-display:focus { color: var(--text-color); }
@@ -217,6 +220,13 @@
         .artboard.loading .artboard-content > * { display: none; }
         
         #timeline-panel { display: flex; flex-direction: column; width: 100%; padding: 8px; box-sizing: border-box; background: var(--bg-color); border-top: 1px solid var(--border-color);}
+		#timeline-panel { position: relative; }
+		#timeline-panel.tl-collapsed { padding: 0; border-top: none; height: 0; overflow: visible; }
+		#timeline-panel.tl-collapsed #master-timeline-controls { display: none; }
+		#timeline-toggle-btn { position: absolute; left: 6px; top: -34px; width: 26px; height: 26px; border-radius: 4px; background: var(--panel-bg); border: 1px solid var(--border-color); color: var(--text-color); cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 20; transition: transform 0.2s; }
+		#timeline-panel.tl-collapsed #timeline-toggle-btn { top: 6px; }
+		#timeline-toggle-btn svg { width: 16px; height: 16px; fill: currentColor; }
+		#timeline-panel:not(.tl-collapsed) #timeline-toggle-btn svg { transform: rotate(180deg); }
         #master-timeline-controls { width: 100%; }
         .timeline-header { display: flex; align-items: center; gap: 10px; padding: 0 5px; }
         .timeline-title { font-weight: 600; font-size: 0.9em; flex-shrink: 0; color: var(--text-color-light); margin-right: 10px; }
@@ -309,8 +319,9 @@
                 </div>
             </div>
             
-            <div id="timeline-panel" class="hidden">
-                <div id="master-timeline-controls">
+            <div id="timeline-panel" class="hidden tl-collapsed">
+				<button id="timeline-toggle-btn" title="Show/Hide Master Timeline"><svg viewBox="0 0 24 24"><path d="M8.59,16.59L13.17,12L8.59,7.41L10,6l6,6l-6,6L8.59,16.59z"/></svg></button>
+				<div id="master-timeline-controls">
                     <div class="timeline-header">
                         <span class="timeline-title">Master Timeline</span>
                         <div class="playback-controls">
@@ -626,6 +637,11 @@
                 app.annotationList.addEventListener('contextmenu', onAnnotationListContextMenu);
 
                 document.getElementById('toolbar-drag-handle').addEventListener('mousedown', onToolbarDragStart);
+
+				document.getElementById('timeline-toggle-btn').addEventListener('click', () => {
+					app.timelinePanel.classList.toggle('tl-collapsed');
+					drawMasterRuler();
+				});
 
                 new ResizeObserver(drawMasterRuler).observe(app.timelinePanel);
                 new ResizeObserver(drawAnnotationConnectorLines).observe(app.workspaceContainer);
@@ -1456,7 +1472,7 @@
 								contentHTML = `<video src="${artboardSrc}" playsinline loop></video><img class="frame-backup hidden" alt="Backup Frame">`;
 								break;
 						}
-                        if(artboard.type === 'video') videoControlsHTML = `<div class="artboard-video-controls"><button class="vid-play-btn" title="Play/Pause">▶</button><button class="vid-mute-btn" title="Mute/Unmute">${MUTE_ICON_SVG}</button><input type="text" class="time-input vid-time" value="00:00:00"><div class="vid-timeline-wrapper"><div class="vid-timeline-bg"></div><div class="vid-timeline-markers"></div><input type="range" class="vid-timeline" value="0" step="0.01"></div><span class="vid-duration time-input">00:00:00</span></div>`;
+                        if(artboard.type === 'video') videoControlsHTML = `<div class="artboard-video-controls"><button class="vid-play-btn" title="Play/Pause">▶</button><button class="vid-mute-btn" title="Mute/Unmute">${MUTE_ICON_SVG}</button><select class="vid-speed" title="Playback speed"><option value="0.25">0.25x</option><option value="0.5">0.5x</option><option value="1" selected>1x</option><option value="1.5">1.5x</option><option value="2">2x</option><option value="2.5">2.5x</option><option value="3">3x</option></select><input type="text" class="time-input vid-time" value="00:00:00"><div class="vid-timeline-wrapper"><div class="vid-timeline-bg"></div><div class="vid-timeline-markers"></div><input type="range" class="vid-timeline" value="0" step="0.01"></div><span class="vid-duration time-input">00:00:00</span></div>`;
                     }
                     const dimensionsDisplay = `<span class="artboard-info">(${artboard.originalWidth}x${artboard.originalHeight})</span>`;
                     const headerToolsHTML = `<div class="artboard-header-tools"><button class="header-icon-btn fit-view-btn" title="Fit to View (Ctrl+1)"><svg viewBox="0 0 24 24"><path d="M15 3h6v6l-2-2-4 4-2-2 4-4-2-2zM9 21H3v-6l2 2 4-4 2 2-4 4 2 2z"/></svg></button><button class="artboard-close-btn" title="Close Artboard (Ctrl+W)">&times;</button></div>`;
@@ -1556,6 +1572,7 @@
                 const controlsEl = artboardEl.querySelector('.artboard-video-controls');
                 const playBtn = artboardEl.querySelector('.vid-play-btn'); 
                 const muteBtn = artboardEl.querySelector('.vid-mute-btn'); 
+				const speedSelect = artboardEl.querySelector('.vid-speed');
                 const timeInput = artboardEl.querySelector('.vid-time'); 
                 const timeline = artboardEl.querySelector('.vid-timeline');
 
@@ -1573,18 +1590,29 @@
                 video.muted = state.isGlobalMuted; muteBtn.innerHTML = video.muted ? MUTE_ICON_SVG : UNMUTE_ICON_SVG;
                 playBtn.addEventListener('click', e => { e.stopPropagation(); video.paused ? video.play() : video.pause(); });
                 muteBtn.addEventListener('click', e => { e.stopPropagation(); video.muted = !video.muted; muteBtn.innerHTML = video.muted ? MUTE_ICON_SVG : UNMUTE_ICON_SVG; });
+				video.playbackRate = parseFloat(speedSelect.value);
+				speedSelect.addEventListener('mousedown', e => e.stopPropagation());
+				speedSelect.addEventListener('click', e => e.stopPropagation());
+				speedSelect.addEventListener('change', e => { e.stopPropagation(); video.playbackRate = parseFloat(e.target.value); });
                 video.addEventListener('play', () => { playBtn.textContent = '❚❚'; global_updatePlayButtonState(); });
                 video.addEventListener('pause', () => { playBtn.textContent = '▶'; global_updatePlayButtonState(); });
                 
                 const updateDuration = () => {
-                    if (!isFinite(video.duration)) return;
-                    timeline.max = video.duration;
-                    global_updateTimeline();
-                    const durationEl = artboardEl.querySelector('.vid-duration');
-                    if (durationEl) {
-                        durationEl.textContent = formatTimeHHMMSSFF(video.duration, video.duration);
-                    }
-                };
+					if (!isFinite(video.duration)) return;
+					timeline.max = video.duration;
+					global_updateTimeline();
+					const durationEl = artboardEl.querySelector('.vid-duration');
+					if (durationEl) {
+						durationEl.textContent = formatTimeHHMMSSFF(video.duration, video.duration);
+					}
+					if (artboard.savedTime !== undefined && isFinite(artboard.savedTime)) {
+						video.currentTime = artboard.savedTime;
+						timeline.value = artboard.savedTime;
+						timeInput.value = formatTimeHHMMSSFF(artboard.savedTime, video.duration);
+						delete artboard.savedTime;
+						redrawArtboardAnnotations(artboard.id);
+					}
+				};
 
                 if (video.readyState >= 1) {
                     updateDuration();
@@ -2567,13 +2595,16 @@
 			            const artboardData = { id, name, type, x, y, width, height, originalWidth, originalHeight, scale };
 			            
 			            if (type === 'video') {
-			                const videoEl = document.querySelector(`.artboard[data-id="${id}"] video`);
-			                if (videoEl && isFinite(videoEl.duration)) {
-			                    artboardData.duration = videoEl.duration;
-			                } else if (board.duration) {
-			                    artboardData.duration = board.duration;
-			                }
-			            }
+							const videoEl = document.querySelector(`.artboard[data-id="${id}"] video`);
+							if (videoEl && isFinite(videoEl.duration)) {
+								artboardData.duration = videoEl.duration;
+							} else if (board.duration) {
+								artboardData.duration = board.duration;
+							}
+							if (videoEl && isFinite(videoEl.currentTime)) {
+								artboardData.savedTime = videoEl.currentTime;
+							}
+						}
 			
 			            if (htmlContent) artboardData.htmlContent = htmlContent;
 			            if (frameBackups) artboardData.frameBackups = frameBackups;
