@@ -3781,93 +3781,96 @@
             }
             
             let ffmpeg = null;
-			const MAX_VIDEO_DURATION = 20; // giây
 
-			function setFFmpegProgress(text, percent) {
-			    const overlay = document.querySelector('.embed-progress-overlay');
-			    if(!overlay) return;
-			    overlay.classList.remove('hidden');
-			    overlay.querySelector('.embed-progress-label').textContent = text;
-			    overlay.querySelector('.embed-progress-fill').style.width = (percent || 0) + '%';
-			}
+function setFFmpegProgress(text, percent) {
+    const overlay = document.querySelector('.embed-progress-overlay');
+    if(!overlay) return;
+    overlay.classList.remove('hidden');
+    overlay.querySelector('.embed-progress-label').textContent = text;
+    overlay.querySelector('.embed-progress-fill').style.width = (percent || 0) + '%';
+}
 
-			function hideFFmpegProgress() {
-			    const overlay = document.querySelector('.embed-progress-overlay');
-			    if(overlay) overlay.classList.add('hidden');
-			}
+function hideFFmpegProgress() {
+    const overlay = document.querySelector('.embed-progress-overlay');
+    if(overlay) overlay.classList.add('hidden');
+}
 
-			async function convertVideoToWebM(blob) {
-			    // Check COOP/COEP isolation for SharedArrayBuffer
-			    if (!window.crossOriginIsolated) {
-			        throw new Error('Trang chưa kích hoạt Cross-Origin Isolation. Hãy tải lại trang (F5) một lần rồi thử lại.');
-			    }
+async function convertVideoToWebM(blob) {
+    // Check COOP/COEP isolation for SharedArrayBuffer
+    if (!window.crossOriginIsolated) {
+        throw new Error('Trang chưa kích hoạt Cross-Origin Isolation. Hãy tải lại trang (F5) một lần rồi thử lại.');
+    }
 
-			    setFFmpegProgress("Loading Video Engine...", 5);
+    setFFmpegProgress("Loading Video Engine...", 5);
 
-			    if (!window.FFmpeg || !window.FFmpeg.createFFmpeg) {
-			        await new Promise((resolve, reject) => {
-			            const script = document.createElement('script');
-			            script.src = 'https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js';
-			            script.onload = () => {
-			                setTimeout(() => {
-			                    if (window.FFmpeg && window.FFmpeg.createFFmpeg) resolve();
-			                    else reject(new Error('FFmpeg script loaded but createFFmpeg missing'));
-			                }, 0);
-			            };
-			            script.onerror = () => reject(new Error('Failed to load FFmpeg script'));
-			            document.head.appendChild(script);
-			        });
-			    }
+    if (!window.FFmpeg || !window.FFmpeg.createFFmpeg) {
+        await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js';
+            script.onload = () => {
+                setTimeout(() => {
+                    if (window.FFmpeg && window.FFmpeg.createFFmpeg) resolve();
+                    else reject(new Error('FFmpeg script loaded but createFFmpeg missing'));
+                }, 0);
+            };
+            script.onerror = () => reject(new Error('Failed to load FFmpeg script'));
+            document.head.appendChild(script);
+        });
+    }
 
-			    if (!ffmpeg) {
-			        const { createFFmpeg } = window.FFmpeg;
-			        ffmpeg = createFFmpeg({
-			            corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js',
-			            log: false
-			        });
+    if (!ffmpeg) {
+        const { createFFmpeg } = window.FFmpeg;
+        ffmpeg = createFFmpeg({
+            corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js',
+            log: false
+        });
 
-			        ffmpeg.setProgress(({ ratio }) => {
-			            const pct = ratio >= 0 ? Math.max(15, Math.min(99, Math.round(ratio * 100))) : 15;
-			            setFFmpegProgress(`Compressing Video to 240p... ${pct}%`, pct);
-			        });
-			    }
+        ffmpeg.setProgress(({ ratio }) => {
+            const pct = ratio >= 0 ? Math.max(15, Math.min(99, Math.round(ratio * 100))) : 15;
+            setFFmpegProgress(`Compressing Video to 720p... ${pct}%`, pct);
+        });
+    }
 
-			    if (!ffmpeg.isLoaded()) {
-			        setFFmpegProgress("Downloading FFmpeg Core...", 10);
-			        await ffmpeg.load();
-			    }
+    if (!ffmpeg.isLoaded()) {
+        setFFmpegProgress("Downloading FFmpeg Core...", 10);
+        await ffmpeg.load();
+    }
 
-			    const { fetchFile } = window.FFmpeg;
+    const { fetchFile } = window.FFmpeg;
 
-			    const inputName = 'input.mp4';
-			    const outputName = 'output.webm';
+    const inputName = 'input.mp4';
+    const outputName = 'output.webm';
 
-			    ffmpeg.FS('writeFile', inputName, await fetchFile(blob));
-			    setFFmpegProgress("Starting compression...", 15);
+    ffmpeg.FS('writeFile', inputName, await fetchFile(blob));
+    setFFmpegProgress("Starting compression...", 15);
 
-			    await ffmpeg.run(
-			        '-i', inputName,
-			        '-t', String(MAX_VIDEO_DURATION),
-			        '-vf', 'scale=-2:240',
-			        '-an',
-			        '-c:v', 'libvpx',
-			        '-b:v', '400k',
-			        '-deadline', 'realtime',
-			        '-cpu-used', '8',
-			        outputName
-			    );
+    // Convert to 720p WebM with average bitrate (no duration limit)
+    await ffmpeg.run(
+        '-i', inputName,
+        '-vf', 'scale=-2:720',                    // 720p height, maintain aspect ratio
+        '-c:v', 'libvpx',                         // VP8 codec
+        '-crf', '20',                             // Quality level (0-50, lower=better, 20=high quality)
+        '-b:v', '1500k',                          // Average bitrate ~1.5Mbps for 720p
+        '-minrate', '800k',                       // Minimum bitrate
+        '-maxrate', '2500k',                      // Maximum bitrate  
+        '-deadline', 'good',                      // Balance speed/quality (realtime/good/best)
+        '-cpu-used', '4',                         // CPU usage (0-16, higher=faster but lower quality)
+        '-c:a', 'libopus',                        // Audio codec
+        '-b:a', '128k',                           // Audio bitrate
+        outputName
+    );
 
-			    setFFmpegProgress("Finishing...", 99);
+    setFFmpegProgress("Finishing...", 99);
 
-			    const data = ffmpeg.FS('readFile', outputName);
-			    const outBlob = new Blob([data.buffer], { type: 'video/webm' });
+    const data = ffmpeg.FS('readFile', outputName);
+    const outBlob = new Blob([data.buffer], { type: 'video/webm' });
 
-			    ffmpeg.FS('unlink', inputName);
-			    ffmpeg.FS('unlink', outputName);
-			    hideFFmpegProgress();
+    ffmpeg.FS('unlink', inputName);
+    ffmpeg.FS('unlink', outputName);
+    hideFFmpegProgress();
 
-			    return outBlob;
-			}
+    return outBlob;
+}
 
 			function showEmbedProgress(artboardId, label, progress) {
 			    const artboardEl = document.querySelector(`.artboard[data-id="${artboardId}"]`);
@@ -3899,28 +3902,28 @@
 			async function embedVideo(artboardId) {
 			    const artboard = state.artboards.find(b => b.id === artboardId);
 			    if (!artboard || artboard.type !== 'video') return;
-			    if (artboard.embedded) { alert('Video này đã được embed rồi.'); return; }
+			    if (artboard.embedded) { alert('Video have been embed.'); return; }
 
 			    const artboardEl = document.querySelector(`.artboard[data-id="${artboardId}"]`);
 			    const videoEl = artboardEl ? artboardEl.querySelector('video') : null;
 			    if (!videoEl || !videoEl.src || artboard.videoFailedToLoad) {
-			        alert('Không thể embed: video đang lỗi hoặc chưa có nguồn. Hãy Relink Video trước.');
+			        alert('Can not embed: Video have some trouble or missing link, please relink and try again.');
 			        return;
 			    }
 			    const savedTime = videoEl.currentTime;
 
 			    let fileBlob;
 			    try {
-			        showEmbedProgress(artboardId, 'Đang đọc video...');
+			        showEmbedProgress(artboardId, 'Processing...');
 			        const res = await fetch(videoEl.src);
 			        fileBlob = await res.blob();
 			    } catch (err) {
 			        hideEmbedProgress(artboardId);
-			        alert('Không lấy được dữ liệu video để embed.'); return;
+			        alert('Video is null, can not embed.'); return;
 			    }
 
 			    try {
-			        showEmbedProgress(artboardId, 'Đang chuyển đổi video...');
+			        showEmbedProgress(artboardId, 'Converting...');
 			        const outBlob = await convertVideoToWebM(fileBlob);
 			        const dataUrl = await blobToDataURL(outBlob);
 
@@ -3934,11 +3937,10 @@
 
 			        markAsChanged();
 			        hideEmbedProgress(artboardId);
-			        alert('Embed video thành công! Nhớ Save HTML File để lưu lại.');
 			    } catch (err) {
 			        console.error(err);
 			        hideEmbedProgress(artboardId);
-			        alert('Embed video thất bại: ' + err.message);
+			        alert('Embed video fail: ' + err.message);
 			    }
 			}
 
