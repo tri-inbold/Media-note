@@ -314,6 +314,7 @@
                         </div>
                     </div>
                      <div id="help-panel">
+                        <button id="toggle-master-timeline-btn" title="Show/Hide Master Timeline">⏱</button>
                         <button id="help-btn" title="Help & Shortcuts">?</button>
                     </div>
                 </div>
@@ -642,6 +643,11 @@
 				document.getElementById('timeline-toggle-btn').addEventListener('click', () => {
 					app.timelinePanel.classList.toggle('tl-collapsed');
 					drawMasterRuler();
+				});
+				
+				document.getElementById('toggle-master-timeline-btn').addEventListener('click', () => {
+					app.timelinePanel.classList.remove('hidden');
+					app.timelinePanel.classList.toggle('tl-collapsed');
 				});
 
                 new ResizeObserver(drawMasterRuler).observe(app.timelinePanel);
