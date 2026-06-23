@@ -57,7 +57,12 @@
         .artboard-content { position: relative; width: 100%; flex-grow: 1; }
         .artboard-content.transparent-guide { background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0px; }
         body.theme-dark .artboard-content.transparent-guide { background-image: linear-gradient(45deg, #444 25%, transparent 25%), linear-gradient(-45deg, #444 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #444 75%), linear-gradient(-45deg, transparent 75%, #444 75%); }
-        .artboard img, .artboard video, .artboard iframe { display: block; width: 100%; height: 100%; user-select: none; -webkit-user-drag: none; object-fit: contain; background-color: transparent; position: absolute; top:0; left:0; border: none;}
+        .embed-progress-overlay { position: absolute; left: 0; right: 0; bottom: 0; z-index: 50; padding: 8px 10px; background: rgba(0,0,0,0.65); backdrop-filter: blur(4px); display: flex; flex-direction: column; gap: 5px; pointer-events: none; }
+		.embed-progress-overlay.hidden { display: none; }
+		.embed-progress-label { color: #fff; font-size: 11px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+		.embed-progress-track { width: 100%; height: 5px; border-radius: 3px; background: rgba(255,255,255,0.25); overflow: hidden; }
+		.embed-progress-fill { height: 100%; width: 0%; background: var(--highlight-color); transition: width 0.2s ease; }
+		.artboard img, .artboard video, .artboard iframe { display: block; width: 100%; height: 100%; user-select: none; -webkit-user-drag: none; object-fit: contain; background-color: transparent; position: absolute; top:0; left:0; border: none;}
         .artboard video, .artboard .frame-backup { z-index: 1; }
         .artboard canvas.guide-canvas { z-index: 2; pointer-events: auto; }
         .artboard canvas.display-canvas { z-index: 3; }
@@ -98,7 +103,7 @@
         #help-panel { padding: 0; background: none; border: none; display: flex; align-items: center; gap: 8px;}
 		#help-panel.simple-mode { display: none; }
         #help-btn { background: var(--panel-bg); border: 1px solid var(--border-color); color: var(--text-color-light); cursor: pointer; display: flex; align-items: center; justify-content: center; padding-top: 2px; height: 24px; width: 24px; border-radius: 50%; font-weight: bold; font-size: 1em; }
-		#toggle-master-timeline-btn { background: var(--panel-bg); border: 1px solid var(--border-color); color: var(--text-color-light); cursor: pointer; display: flex; align-items: center; justify-content: center; padding-top: 2px; height: 24px; width: 24px; border-radius: 50%; font-weight: bold; font-size: 1em; padding: 6px; border-radius: 8px; display: flex; align-items: center; }
+		#toggle-master-timeline-btn { background: var(--panel-bg); border: 1px solid var(--border-color); color: var(--text-color-light); cursor: pointer; display: flex; align-items: center; justify-content: center; padding-top: 2px; height: 24px; width: 24px; border-radius: 50%; font-weight: bold; font-size: 0.6em; padding: 6px; display: flex; align-items: center; }
         .playback-controls { display: flex; align-items: center; gap: 4px; }
         .tool-btn { width: 28px; height: 28px; border-radius: 8px; border: none; background: transparent; color: var(--text-color-light); cursor: pointer; display: flex; justify-content: center; align-items: center; transition: all 0.2s; padding: 0; }
         .tool-btn:hover { color: var(--text-color); background-color: rgba(255,255,255,0.1); }
@@ -1480,8 +1485,8 @@
 								contentHTML = `<img src="${artboardSrc}" alt="${artboard.name}">`;
 								break;
 							case 'video': 
-								contentHTML = `<video src="${artboardSrc}" playsinline loop></video><img class="frame-backup hidden" alt="Backup Frame">`;
-								break;
+							    contentHTML = `<video src="${artboardSrc}" playsinline loop></video><img class="frame-backup hidden" alt="Backup Frame"><div class="embed-progress-overlay hidden"><div class="embed-progress-label">Đang xử lý...</div><div class="embed-progress-track"><div class="embed-progress-fill" style="width:0%"></div></div></div>`;
+							    break;
 						}
                         if(artboard.type === 'video') videoControlsHTML = `<div class="artboard-video-controls"><button class="vid-play-btn" title="Play/Pause">▶</button><button class="vid-mute-btn" title="Mute/Unmute">${MUTE_ICON_SVG}</button><select class="vid-speed" title="Playback speed"><option value="0.25">0.25x</option><option value="0.5">0.5x</option><option value="1" selected>1x</option><option value="1.5">1.5x</option><option value="2">2x</option><option value="2.5">2.5x</option><option value="3">3x</option></select><input type="text" class="time-input vid-time" value="00:00:00"><div class="vid-timeline-wrapper"><div class="vid-timeline-bg"></div><div class="vid-timeline-markers"></div><input type="range" class="vid-timeline" value="0" step="0.01"></div><span class="vid-duration time-input">00:00:00</span></div>`;
                     }
@@ -3535,15 +3540,7 @@
                 const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return;
                 const pos = getMousePosOnArtboard(e, artboard);
                 let items = [{ label: 'Add Comment', action: () => { addAnnotation({ type: 'comment', artboardId, data: pos, color: state.activeColor, text: '' }, true); } }];
-                if (artboard.type === 'video') {
-					items.push({ label: 'Save Frame', action: () => saveVideoFrame(artboardId) });
-					items.push({
-						label: artboard.embedded ? 'Video Already Embedded' : 'Embed Video',
-						disabled: !!artboard.embedded,
-						action: () => embedVideo(artboardId)
-					});
-					items.push({ label: 'Relink Video', action: () => relinkVideo(artboardId) });
-				}
+                if (artboard.type === 'video') { items.push({ label: 'Save Frame', action: () => saveVideoFrame(artboardId) });	}
                 items.push(
 					{ divider: true },
                     { label: 'Add Horizontal Guide', action: () => { if(!state.guides.artboard[artboardId]) state.guides.artboard[artboardId] = []; state.guides.artboard[artboardId].push({type: 'horizontal', position: pos.y, id: crypto.randomUUID()}); drawGuides(); markAsChanged(); } },
@@ -3552,8 +3549,8 @@
                     { divider: true }, { label: 'Copy File Name', action: () => navigator.clipboard.writeText(artboard.name) }
                 );
                 if (artboard.type === 'video') { items.push({ label: 'Fit Video to 720p', action: () => { resizeAllVideosTo720p(); } }); items.push({ label: 'Zoom to 100%', action: () => { resetArtboardScale(artboardId); }}); }
-                if (artboard.type === 'image' && artboard.name.match(/\.(png|webp|gif)$/i)) { items.push({ label: 'Change Background Color', action: () => { document.getElementById('artboard-bg-color-picker').click(); }}); }
-                items.push({ divider: true }); items.push({ label: 'Close Artboard', action: deleteSelectedArtboards });
+				if (artboard.type === 'video') { items.push({label: artboard.embedded ? 'Video Already Embedded' : 'Embed Video',disabled: !!artboard.embedded,	action: () => embedVideo(artboardId)});	items.push({ label: 'Relink Video', action: () => relinkVideo(artboardId) });
+                if (artboard.type === 'image' && artboard.name.match(/\.(png|webp|gif)$/i)) { items.push({ label: 'Change Background Color', action: () => { document.getElementById('artboard-bg-color-picker').click(); }}); } items.push({ divider: true }); items.push({ label: 'Close Artboard', action: deleteSelectedArtboards });
                 showContextMenu(e, items);
             }
 
@@ -3786,8 +3783,9 @@
             init();
         });
 
-	// ---- FFmpeg.wasm: chỉ load khi cần ----
 let ffmpegInstance = null;
+let activeEmbedArtboardId = null; 
+		
 function loadScript(src) {
     return new Promise((resolve, reject) => {
         const s = document.createElement('script');
@@ -3795,14 +3793,16 @@ function loadScript(src) {
         document.head.appendChild(s);
     });
 }
-async function loadFFmpeg() {
+async function loadFFmpeg(artboardId) {
     if (ffmpegInstance) return ffmpegInstance;
-    showEmbedProgress('Đang tải FFmpeg (lần đầu)...');
+    showEmbedProgress(artboardId, 'Đang tải FFmpeg (lần đầu)...');
     await loadScript('https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js');
     await loadScript('https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/util.js');
     const { FFmpeg } = FFmpegWASM;
     const ffmpeg = new FFmpeg();
-    ffmpeg.on('progress', ({ progress }) => showEmbedProgress('Đang chuyển đổi video...', progress));
+    ffmpeg.on('progress', ({ progress }) => {
+        if (activeEmbedArtboardId) showEmbedProgress(activeEmbedArtboardId, 'Đang chuyển đổi video...', progress);
+    });
     await ffmpeg.load({
         coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
         wasmURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm',
@@ -3811,13 +3811,23 @@ async function loadFFmpeg() {
     return ffmpeg;
 }
 
-function showEmbedProgress(text, progress) {
-    const el = document.getElementById('embed-progress');
-    el.classList.remove('hidden');
-    document.getElementById('embed-progress-text').textContent =
-        (progress !== undefined) ? `${text} (${Math.round(progress * 100)}%)` : text;
+function showEmbedProgress(artboardId, label, progress) {
+    const artboardEl = document.querySelector(`.artboard[data-id="${artboardId}"]`);
+    if (!artboardEl) return;
+    const overlay = artboardEl.querySelector('.embed-progress-overlay');
+    if (!overlay) return;
+    overlay.classList.remove('hidden');
+    overlay.querySelector('.embed-progress-label').textContent =
+        (progress !== undefined) ? `${label} (${Math.round(progress * 100)}%)` : label;
+    overlay.querySelector('.embed-progress-fill').style.width =
+        `${progress !== undefined ? Math.round(progress * 100) : 0}%`;
 }
-function hideEmbedProgress() { document.getElementById('embed-progress').classList.add('hidden'); }
+function hideEmbedProgress(artboardId) {
+    const artboardEl = document.querySelector(`.artboard[data-id="${artboardId}"]`);
+    if (!artboardEl) return;
+    const overlay = artboardEl.querySelector('.embed-progress-overlay');
+    if (overlay) overlay.classList.add('hidden');
+}
 
 function blobToDataURL(blob) {
     return new Promise((resolve, reject) => {
@@ -3828,7 +3838,6 @@ function blobToDataURL(blob) {
     });
 }
 
-// ---- Embed Video: convert sang webm 720p, nhúng base64 vào artboard.src ----
 async function embedVideo(artboardId) {
     const artboard = state.artboards.find(b => b.id === artboardId);
     if (!artboard || artboard.type !== 'video') return;
@@ -3840,53 +3849,56 @@ async function embedVideo(artboardId) {
         alert('Không thể embed: video đang lỗi hoặc chưa có nguồn. Hãy Relink Video trước.');
         return;
     }
-    // Lưu lại frame đang xem để hiện đúng vị trí sau khi embed xong
     const savedTime = videoEl.currentTime;
+    activeEmbedArtboardId = artboardId;
 
     let fileBlob;
     try {
-        showEmbedProgress('Đang đọc video...');
+        showEmbedProgress(artboardId, 'Đang đọc video...');
         const res = await fetch(videoEl.src);
         fileBlob = await res.blob();
     } catch (err) {
-        hideEmbedProgress(); alert('Không lấy được dữ liệu video để embed.'); return;
+        hideEmbedProgress(artboardId); activeEmbedArtboardId = null;
+        alert('Không lấy được dữ liệu video để embed.'); return;
     }
 
     try {
-        const ffmpeg = await loadFFmpeg();
+        const ffmpeg = await loadFFmpeg(artboardId);
         const { fetchFile } = FFmpegUtil;
 
         await ffmpeg.writeFile('input', await fetchFile(fileBlob));
-        showEmbedProgress('Đang chuyển đổi video...', 0);
+        showEmbedProgress(artboardId, 'Đang chuyển đổi video...', 0);
 
         await ffmpeg.exec([
             '-i', 'input',
-            '-vf', "scale='if(gt(ih,720),-2,iw)':'min(ih,720)'",   // 720p (same ratio)
-            '-c:v', 'libvpx-vp9', '-b:v', '0', '-crf', '32', '-row-mt', '1', // VP9+Opus, medium (crf 32)
+            '-vf', "scale='if(gt(ih,720),-2,iw)':'min(ih,720)'",
+            '-c:v', 'libvpx-vp9', '-b:v', '0', '-crf', '32', '-row-mt', '1',
             '-c:a', 'libopus', '-b:a', '96k',
             'output.webm'
         ]);
 
+        showEmbedProgress(artboardId, 'Đang nhúng dữ liệu...', 1);
         const data = await ffmpeg.readFile('output.webm');
         const outBlob = new Blob([data.buffer], { type: 'video/webm' });
         const dataUrl = await blobToDataURL(outBlob);
 
         artboard.src = dataUrl;
         artboard.embedded = true;
-        artboard.savedTime = savedTime; 
+        artboard.savedTime = savedTime;
         videoEl.src = dataUrl;
         videoEl.load();
         videoEl.classList.remove('hidden');
         artboardEl.classList.remove('video-missing');
 
         markAsChanged();
-        hideEmbedProgress();
+        hideEmbedProgress(artboardId);
         alert('Embed video thành công! Nhớ Save HTML File để lưu lại.');
     } catch (err) {
         console.error(err);
-        hideEmbedProgress();
+        hideEmbedProgress(artboardId);
         alert('Embed video thất bại: ' + err.message);
     } finally {
+        activeEmbedArtboardId = null;
         try { ffmpegInstance && ffmpegInstance.deleteFile('input'); } catch (e) {}
     }
 }
