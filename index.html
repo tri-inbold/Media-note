@@ -3801,8 +3801,21 @@
 			    // FFmpeg Util
 			    await loadScript('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/umd/index.js');
 			
-			    const { FFmpeg } = FFmpegWASM;
-			    const { toBlobURL } = FFmpegUtil;
+			    console.log("FFmpegWASM =", window.FFmpegWASM);
+console.log("FFmpegUtil =", window.FFmpegUtil);
+console.log("window =", Object.keys(window).filter(k => k.toLowerCase().includes("ffmpeg")));
+
+const { FFmpeg } = FFmpegWASM;
+
+// thử nhiều version export khác nhau
+const toBlobURL =
+    window.FFmpegUtil?.toBlobURL ||
+    window.FFmpegWASM?.toBlobURL ||
+    window.toBlobURL;
+
+if (!toBlobURL) {
+    throw new Error("Không tìm thấy toBlobURL");
+}
 			
 			    const ffmpeg = new FFmpeg();
 			
