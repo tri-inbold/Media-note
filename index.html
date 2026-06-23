@@ -3780,157 +3780,156 @@
                 }
             }
             
-            init();
+            let ffmpegInstance = null;
+			let activeEmbedArtboardId = null; 
+					
+			function loadScript(src) {
+			    return new Promise((resolve, reject) => {
+			        const s = document.createElement('script');
+			        s.src = src; s.onload = resolve; s.onerror = () => reject(new Error('Load script failed: ' + src));
+			        document.head.appendChild(s);
+			    });
+			}
+			async function loadFFmpeg(artboardId) {
+			    if (ffmpegInstance) return ffmpegInstance;
+			    showEmbedProgress(artboardId, 'Đang tải FFmpeg (lần đầu)...');
+			    await loadScript('https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js');
+			    await loadScript('https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/util.js');
+			    const { FFmpeg } = FFmpegWASM;
+			    const ffmpeg = new FFmpeg();
+			    ffmpeg.on('progress', ({ progress }) => {
+			        if (activeEmbedArtboardId) showEmbedProgress(activeEmbedArtboardId, 'Đang chuyển đổi video...', progress);
+			    });
+			    await ffmpeg.load({
+			        coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
+			        wasmURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm',
+			    });
+			    ffmpegInstance = ffmpeg;
+			    return ffmpeg;
+			}
+			
+			function showEmbedProgress(artboardId, label, progress) {
+			    const artboardEl = document.querySelector(`.artboard[data-id="${artboardId}"]`);
+			    if (!artboardEl) return;
+			    const overlay = artboardEl.querySelector('.embed-progress-overlay');
+			    if (!overlay) return;
+			    overlay.classList.remove('hidden');
+			    overlay.querySelector('.embed-progress-label').textContent =
+			        (progress !== undefined) ? `${label} (${Math.round(progress * 100)}%)` : label;
+			    overlay.querySelector('.embed-progress-fill').style.width =
+			        `${progress !== undefined ? Math.round(progress * 100) : 0}%`;
+			}
+			function hideEmbedProgress(artboardId) {
+			    const artboardEl = document.querySelector(`.artboard[data-id="${artboardId}"]`);
+			    if (!artboardEl) return;
+			    const overlay = artboardEl.querySelector('.embed-progress-overlay');
+			    if (overlay) overlay.classList.add('hidden');
+			}
+			
+			function blobToDataURL(blob) {
+			    return new Promise((resolve, reject) => {
+			        const reader = new FileReader();
+			        reader.onload = () => resolve(reader.result);
+			        reader.onerror = reject;
+			        reader.readAsDataURL(blob);
+			    });
+			}
+			
+			async function embedVideo(artboardId) {
+			    const artboard = state.artboards.find(b => b.id === artboardId);
+			    if (!artboard || artboard.type !== 'video') return;
+			    if (artboard.embedded) { alert('Video này đã được embed rồi.'); return; }
+			
+			    const artboardEl = document.querySelector(`.artboard[data-id="${artboardId}"]`);
+			    const videoEl = artboardEl ? artboardEl.querySelector('video') : null;
+			    if (!videoEl || !videoEl.src || artboard.videoFailedToLoad) {
+			        alert('Không thể embed: video đang lỗi hoặc chưa có nguồn. Hãy Relink Video trước.');
+			        return;
+			    }
+			    const savedTime = videoEl.currentTime;
+			    activeEmbedArtboardId = artboardId;
+			
+			    let fileBlob;
+			    try {
+			        showEmbedProgress(artboardId, 'Đang đọc video...');
+			        const res = await fetch(videoEl.src);
+			        fileBlob = await res.blob();
+			    } catch (err) {
+			        hideEmbedProgress(artboardId); activeEmbedArtboardId = null;
+			        alert('Không lấy được dữ liệu video để embed.'); return;
+			    }
+			
+			    try {
+			        const ffmpeg = await loadFFmpeg(artboardId);
+			        const { fetchFile } = FFmpegUtil;
+			
+			        await ffmpeg.writeFile('input', await fetchFile(fileBlob));
+			        showEmbedProgress(artboardId, 'Đang chuyển đổi video...', 0);
+			
+			        await ffmpeg.exec([
+			            '-i', 'input',
+			            '-vf', "scale='if(gt(ih,720),-2,iw)':'min(ih,720)'",
+			            '-c:v', 'libvpx-vp9', '-b:v', '0', '-crf', '32', '-row-mt', '1',
+			            '-c:a', 'libopus', '-b:a', '96k',
+			            'output.webm'
+			        ]);
+			
+			        showEmbedProgress(artboardId, 'Đang nhúng dữ liệu...', 1);
+			        const data = await ffmpeg.readFile('output.webm');
+			        const outBlob = new Blob([data.buffer], { type: 'video/webm' });
+			        const dataUrl = await blobToDataURL(outBlob);
+			
+			        artboard.src = dataUrl;
+			        artboard.embedded = true;
+			        artboard.savedTime = savedTime;
+			        videoEl.src = dataUrl;
+			        videoEl.load();
+			        videoEl.classList.remove('hidden');
+			        artboardEl.classList.remove('video-missing');
+			
+			        markAsChanged();
+			        hideEmbedProgress(artboardId);
+			        alert('Embed video thành công! Nhớ Save HTML File để lưu lại.');
+			    } catch (err) {
+			        console.error(err);
+			        hideEmbedProgress(artboardId);
+			        alert('Embed video thất bại: ' + err.message);
+			    } finally {
+			        activeEmbedArtboardId = null;
+			        try { ffmpegInstance && ffmpegInstance.deleteFile('input'); } catch (e) {}
+			    }
+			}
+			
+			function relinkVideo(artboardId) {
+			    const artboard = state.artboards.find(b => b.id === artboardId);
+			    if (!artboard) return;
+			
+			    const input = document.createElement('input');
+			    input.type = 'file'; input.accept = 'video/*';
+			    input.onchange = () => {
+			        const file = input.files[0];
+			        if (!file) return;
+			        const artboardEl = document.querySelector(`.artboard[data-id="${artboardId}"]`);
+			        const videoEl = artboardEl.querySelector('video');
+			
+			        const url = URL.createObjectURL(file);
+			        artboard.src = url;
+			        artboard.name = file.name;
+			        artboard.embedded = false;
+			        artboard.videoFailedToLoad = false;
+			
+			        videoEl.src = url;
+			        videoEl.load();
+			        videoEl.classList.remove('hidden');
+			        artboardEl.classList.remove('video-missing');
+			
+			        renderWorkspace();
+			        markAsChanged();
+			    };
+			    input.click();
+			}
+			init();
         });
-
-let ffmpegInstance = null;
-let activeEmbedArtboardId = null; 
-		
-function loadScript(src) {
-    return new Promise((resolve, reject) => {
-        const s = document.createElement('script');
-        s.src = src; s.onload = resolve; s.onerror = () => reject(new Error('Load script failed: ' + src));
-        document.head.appendChild(s);
-    });
-}
-async function loadFFmpeg(artboardId) {
-    if (ffmpegInstance) return ffmpegInstance;
-    showEmbedProgress(artboardId, 'Đang tải FFmpeg (lần đầu)...');
-    await loadScript('https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js');
-    await loadScript('https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/util.js');
-    const { FFmpeg } = FFmpegWASM;
-    const ffmpeg = new FFmpeg();
-    ffmpeg.on('progress', ({ progress }) => {
-        if (activeEmbedArtboardId) showEmbedProgress(activeEmbedArtboardId, 'Đang chuyển đổi video...', progress);
-    });
-    await ffmpeg.load({
-        coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
-        wasmURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm',
-    });
-    ffmpegInstance = ffmpeg;
-    return ffmpeg;
-}
-
-function showEmbedProgress(artboardId, label, progress) {
-    const artboardEl = document.querySelector(`.artboard[data-id="${artboardId}"]`);
-    if (!artboardEl) return;
-    const overlay = artboardEl.querySelector('.embed-progress-overlay');
-    if (!overlay) return;
-    overlay.classList.remove('hidden');
-    overlay.querySelector('.embed-progress-label').textContent =
-        (progress !== undefined) ? `${label} (${Math.round(progress * 100)}%)` : label;
-    overlay.querySelector('.embed-progress-fill').style.width =
-        `${progress !== undefined ? Math.round(progress * 100) : 0}%`;
-}
-function hideEmbedProgress(artboardId) {
-    const artboardEl = document.querySelector(`.artboard[data-id="${artboardId}"]`);
-    if (!artboardEl) return;
-    const overlay = artboardEl.querySelector('.embed-progress-overlay');
-    if (overlay) overlay.classList.add('hidden');
-}
-
-function blobToDataURL(blob) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-    });
-}
-
-async function embedVideo(artboardId) {
-    const artboard = state.artboards.find(b => b.id === artboardId);
-    if (!artboard || artboard.type !== 'video') return;
-    if (artboard.embedded) { alert('Video này đã được embed rồi.'); return; }
-
-    const artboardEl = document.querySelector(`.artboard[data-id="${artboardId}"]`);
-    const videoEl = artboardEl ? artboardEl.querySelector('video') : null;
-    if (!videoEl || !videoEl.src || artboard.videoFailedToLoad) {
-        alert('Không thể embed: video đang lỗi hoặc chưa có nguồn. Hãy Relink Video trước.');
-        return;
-    }
-    const savedTime = videoEl.currentTime;
-    activeEmbedArtboardId = artboardId;
-
-    let fileBlob;
-    try {
-        showEmbedProgress(artboardId, 'Đang đọc video...');
-        const res = await fetch(videoEl.src);
-        fileBlob = await res.blob();
-    } catch (err) {
-        hideEmbedProgress(artboardId); activeEmbedArtboardId = null;
-        alert('Không lấy được dữ liệu video để embed.'); return;
-    }
-
-    try {
-        const ffmpeg = await loadFFmpeg(artboardId);
-        const { fetchFile } = FFmpegUtil;
-
-        await ffmpeg.writeFile('input', await fetchFile(fileBlob));
-        showEmbedProgress(artboardId, 'Đang chuyển đổi video...', 0);
-
-        await ffmpeg.exec([
-            '-i', 'input',
-            '-vf', "scale='if(gt(ih,720),-2,iw)':'min(ih,720)'",
-            '-c:v', 'libvpx-vp9', '-b:v', '0', '-crf', '32', '-row-mt', '1',
-            '-c:a', 'libopus', '-b:a', '96k',
-            'output.webm'
-        ]);
-
-        showEmbedProgress(artboardId, 'Đang nhúng dữ liệu...', 1);
-        const data = await ffmpeg.readFile('output.webm');
-        const outBlob = new Blob([data.buffer], { type: 'video/webm' });
-        const dataUrl = await blobToDataURL(outBlob);
-
-        artboard.src = dataUrl;
-        artboard.embedded = true;
-        artboard.savedTime = savedTime;
-        videoEl.src = dataUrl;
-        videoEl.load();
-        videoEl.classList.remove('hidden');
-        artboardEl.classList.remove('video-missing');
-
-        markAsChanged();
-        hideEmbedProgress(artboardId);
-        alert('Embed video thành công! Nhớ Save HTML File để lưu lại.');
-    } catch (err) {
-        console.error(err);
-        hideEmbedProgress(artboardId);
-        alert('Embed video thất bại: ' + err.message);
-    } finally {
-        activeEmbedArtboardId = null;
-        try { ffmpegInstance && ffmpegInstance.deleteFile('input'); } catch (e) {}
-    }
-}
-
-function relinkVideo(artboardId) {
-    const artboard = state.artboards.find(b => b.id === artboardId);
-    if (!artboard) return;
-
-    const input = document.createElement('input');
-    input.type = 'file'; input.accept = 'video/*';
-    input.onchange = () => {
-        const file = input.files[0];
-        if (!file) return;
-        const artboardEl = document.querySelector(`.artboard[data-id="${artboardId}"]`);
-        const videoEl = artboardEl.querySelector('video');
-
-        const url = URL.createObjectURL(file);
-        artboard.src = url;
-        artboard.name = file.name;
-        artboard.embedded = false;
-        artboard.videoFailedToLoad = false;
-
-        videoEl.src = url;
-        videoEl.load();
-        videoEl.classList.remove('hidden');
-        artboardEl.classList.remove('video-missing');
-
-        renderWorkspace();
-        markAsChanged();
-    };
-    input.click();
-}
     </script>
 </body>
 </html>
