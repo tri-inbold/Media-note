@@ -3549,8 +3549,8 @@
                     { divider: true }, { label: 'Copy File Name', action: () => navigator.clipboard.writeText(artboard.name) }
                 );
                 if (artboard.type === 'video') { items.push({ label: 'Fit Video to 720p', action: () => { resizeAllVideosTo720p(); } }); items.push({ label: 'Zoom to 100%', action: () => { resetArtboardScale(artboardId); }}); }
-				if (artboard.type === 'video') { items.push({label: artboard.embedded ? 'Video Already Embedded' : 'Embed Video',disabled: !!artboard.embedded,	action: () => embedVideo(artboardId)});	items.push({ label: 'Relink Video', action: () => relinkVideo(artboardId) });
-                if (artboard.type === 'image' && artboard.name.match(/\.(png|webp|gif)$/i)) { items.push({ label: 'Change Background Color', action: () => { document.getElementById('artboard-bg-color-picker').click(); }}); } items.push({ divider: true }); items.push({ label: 'Close Artboard', action: deleteSelectedArtboards });
+				if (artboard.type === 'video') { items.push({label: artboard.embedded ? 'Video Already Embedded' : 'Embed Video', disabled: !!artboard.embedded, action: () => embedVideo(artboardId)}); items.push({ label: 'Relink Video', action: () => relinkVideo(artboardId) }); }
+				if (artboard.type === 'image' && artboard.name.match(/\.(png|webp|gif)$/i)) { items.push({ label: 'Change Background Color', action: () => { document.getElementById('artboard-bg-color-picker').click(); }}); } items.push({ divider: true }); items.push({ label: 'Close Artboard', action: deleteSelectedArtboards });
                 showContextMenu(e, items);
             }
 
