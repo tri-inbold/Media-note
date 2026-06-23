@@ -3794,7 +3794,7 @@
 			    if (ffmpegInstance) return ffmpegInstance;
 			    showEmbedProgress(artboardId, 'Đang tải FFmpeg (lần đầu)...');
 			    await loadScript('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js');
-			    await loadScript('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js');
+await loadScript('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/util.js');
 			
 			    const { FFmpeg } = FFmpegWASM;
 			    const { toBlobURL } = FFmpegUtil;
