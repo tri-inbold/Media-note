@@ -8,6 +8,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
 	<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+	<script src="coi-serviceworker.js"></script>
 
     <style>
         /* --- COMBINED AND NORMALIZED CSS --- */
@@ -202,7 +203,10 @@
         .context-menu-item.disabled { color: var(--text-color-light); cursor: default; }
         .context-menu-item.disabled:hover { background-color: transparent; }
         .context-menu-divider { height: 1px; background-color: var(--border-color); margin: 5px 0; }
-        		
+
+		#embed-progress { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--panel-bg); border: 1px solid var(--border-color); padding: 10px 18px; border-radius: 8px; z-index: 2000; font-size: 13px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+		#embed-progress.hidden { display: none; }
+		
         #workspace-guide-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 15; }
 
         #toolbar-drag-handle { cursor: grab; padding-left: 1px; margin-right: 6px; align-self: stretch; display: flex; align-items: center; justify-content: center; }
@@ -214,9 +218,7 @@
         #movable-controls.simple-mode #tools-panel .divider,
         #movable-controls.simple-mode #tools-panel #color-picker { display: none; }
 
-        .artboard.loading .artboard-content::after {
-            content: ''; position: absolute; top: 50%; left: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; border: 4px solid var(--border-color); border-top-color: var(--highlight-color); border-radius: 50%; animation: spin 1s linear infinite;
-        }
+        .artboard.loading .artboard-content::after {content: ''; position: absolute; top: 50%; left: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; border: 4px solid var(--border-color); border-top-color: var(--highlight-color); border-radius: 50%; animation: spin 1s linear infinite;}
         @keyframes spin { to { transform: rotate(360deg); } }
         .artboard.loading .artboard-content > * { display: none; }
         
@@ -429,6 +431,7 @@
     
     <div id="tool-cursor-icon" class="hidden"></div>
     <div id="context-menu" class="hidden glass-panel"></div>
+	<div id="embed-progress" class="hidden"><span id="embed-progress-text"></span></div>
 	<div id="annotation-popup" class="hidden"></div>
 
     <script id="app-data" type="application/json"></script>
@@ -3532,7 +3535,15 @@
                 const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return;
                 const pos = getMousePosOnArtboard(e, artboard);
                 let items = [{ label: 'Add Comment', action: () => { addAnnotation({ type: 'comment', artboardId, data: pos, color: state.activeColor, text: '' }, true); } }];
-                if (artboard.type === 'video') { items.push({ label: 'Save Frame', action: () => saveVideoFrame(artboardId) }); }
+                if (artboard.type === 'video') {
+					items.push({ label: 'Save Frame', action: () => saveVideoFrame(artboardId) });
+					items.push({
+						label: artboard.embedded ? 'Video Already Embedded' : 'Embed Video',
+						disabled: !!artboard.embedded,
+						action: () => embedVideo(artboardId)
+					});
+					items.push({ label: 'Relink Video', action: () => relinkVideo(artboardId) });
+				}
                 items.push(
 					{ divider: true },
                     { label: 'Add Horizontal Guide', action: () => { if(!state.guides.artboard[artboardId]) state.guides.artboard[artboardId] = []; state.guides.artboard[artboardId].push({type: 'horizontal', position: pos.y, id: crypto.randomUUID()}); drawGuides(); markAsChanged(); } },
@@ -3774,6 +3785,140 @@
             
             init();
         });
+
+	// ---- FFmpeg.wasm: chỉ load khi cần ----
+let ffmpegInstance = null;
+function loadScript(src) {
+    return new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = src; s.onload = resolve; s.onerror = () => reject(new Error('Load script failed: ' + src));
+        document.head.appendChild(s);
+    });
+}
+async function loadFFmpeg() {
+    if (ffmpegInstance) return ffmpegInstance;
+    showEmbedProgress('Đang tải FFmpeg (lần đầu)...');
+    await loadScript('https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js');
+    await loadScript('https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/util.js');
+    const { FFmpeg } = FFmpegWASM;
+    const ffmpeg = new FFmpeg();
+    ffmpeg.on('progress', ({ progress }) => showEmbedProgress('Đang chuyển đổi video...', progress));
+    await ffmpeg.load({
+        coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
+        wasmURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm',
+    });
+    ffmpegInstance = ffmpeg;
+    return ffmpeg;
+}
+
+function showEmbedProgress(text, progress) {
+    const el = document.getElementById('embed-progress');
+    el.classList.remove('hidden');
+    document.getElementById('embed-progress-text').textContent =
+        (progress !== undefined) ? `${text} (${Math.round(progress * 100)}%)` : text;
+}
+function hideEmbedProgress() { document.getElementById('embed-progress').classList.add('hidden'); }
+
+function blobToDataURL(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+}
+
+// ---- Embed Video: convert sang webm 720p, nhúng base64 vào artboard.src ----
+async function embedVideo(artboardId) {
+    const artboard = state.artboards.find(b => b.id === artboardId);
+    if (!artboard || artboard.type !== 'video') return;
+    if (artboard.embedded) { alert('Video này đã được embed rồi.'); return; }
+
+    const artboardEl = document.querySelector(`.artboard[data-id="${artboardId}"]`);
+    const videoEl = artboardEl ? artboardEl.querySelector('video') : null;
+    if (!videoEl || !videoEl.src || artboard.videoFailedToLoad) {
+        alert('Không thể embed: video đang lỗi hoặc chưa có nguồn. Hãy Relink Video trước.');
+        return;
+    }
+    // Lưu lại frame đang xem để hiện đúng vị trí sau khi embed xong
+    const savedTime = videoEl.currentTime;
+
+    let fileBlob;
+    try {
+        showEmbedProgress('Đang đọc video...');
+        const res = await fetch(videoEl.src);
+        fileBlob = await res.blob();
+    } catch (err) {
+        hideEmbedProgress(); alert('Không lấy được dữ liệu video để embed.'); return;
+    }
+
+    try {
+        const ffmpeg = await loadFFmpeg();
+        const { fetchFile } = FFmpegUtil;
+
+        await ffmpeg.writeFile('input', await fetchFile(fileBlob));
+        showEmbedProgress('Đang chuyển đổi video...', 0);
+
+        await ffmpeg.exec([
+            '-i', 'input',
+            '-vf', "scale='if(gt(ih,720),-2,iw)':'min(ih,720)'",   // 720p (same ratio)
+            '-c:v', 'libvpx-vp9', '-b:v', '0', '-crf', '32', '-row-mt', '1', // VP9+Opus, medium (crf 32)
+            '-c:a', 'libopus', '-b:a', '96k',
+            'output.webm'
+        ]);
+
+        const data = await ffmpeg.readFile('output.webm');
+        const outBlob = new Blob([data.buffer], { type: 'video/webm' });
+        const dataUrl = await blobToDataURL(outBlob);
+
+        artboard.src = dataUrl;
+        artboard.embedded = true;
+        artboard.savedTime = savedTime; 
+        videoEl.src = dataUrl;
+        videoEl.load();
+        videoEl.classList.remove('hidden');
+        artboardEl.classList.remove('video-missing');
+
+        markAsChanged();
+        hideEmbedProgress();
+        alert('Embed video thành công! Nhớ Save HTML File để lưu lại.');
+    } catch (err) {
+        console.error(err);
+        hideEmbedProgress();
+        alert('Embed video thất bại: ' + err.message);
+    } finally {
+        try { ffmpegInstance && ffmpegInstance.deleteFile('input'); } catch (e) {}
+    }
+}
+
+function relinkVideo(artboardId) {
+    const artboard = state.artboards.find(b => b.id === artboardId);
+    if (!artboard) return;
+
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = 'video/*';
+    input.onchange = () => {
+        const file = input.files[0];
+        if (!file) return;
+        const artboardEl = document.querySelector(`.artboard[data-id="${artboardId}"]`);
+        const videoEl = artboardEl.querySelector('video');
+
+        const url = URL.createObjectURL(file);
+        artboard.src = url;
+        artboard.name = file.name;
+        artboard.embedded = false;
+        artboard.videoFailedToLoad = false;
+
+        videoEl.src = url;
+        videoEl.load();
+        videoEl.classList.remove('hidden');
+        artboardEl.classList.remove('video-missing');
+
+        renderWorkspace();
+        markAsChanged();
+    };
+    input.click();
+}
     </script>
 </body>
 </html>
