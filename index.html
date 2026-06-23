@@ -3792,56 +3792,22 @@
 			}
 			async function loadFFmpeg(artboardId) {
 			    if (ffmpegInstance) return ffmpegInstance;
-			
 			    showEmbedProgress(artboardId, 'Đang tải FFmpeg (lần đầu)...');
-			
-			    // FFmpeg
 			    await loadScript('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js');
+			    await loadScript('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js');
 			
-			    // FFmpeg Util
-			    await loadScript('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/umd/index.js');
-			
-			    console.log("FFmpegWASM =", window.FFmpegWASM);
-console.log("FFmpegUtil =", window.FFmpegUtil);
-console.log("window =", Object.keys(window).filter(k => k.toLowerCase().includes("ffmpeg")));
-
-const { FFmpeg } = FFmpegWASM;
-
-// thử nhiều version export khác nhau
-const toBlobURL =
-    window.FFmpegUtil?.toBlobURL ||
-    window.FFmpegWASM?.toBlobURL ||
-    window.toBlobURL;
-
-if (!toBlobURL) {
-    throw new Error("Không tìm thấy toBlobURL");
-}
-			
+			    const { FFmpeg } = FFmpegWASM;
+			    const { toBlobURL } = FFmpegUtil;
 			    const ffmpeg = new FFmpeg();
-			
 			    ffmpeg.on('progress', ({ progress }) => {
-			        if (activeEmbedArtboardId) {
-			            showEmbedProgress(
-			                activeEmbedArtboardId,
-			                'Đang chuyển đổi video...',
-			                progress
-			            );
-			        }
+			        if (activeEmbedArtboardId) showEmbedProgress(activeEmbedArtboardId, 'Đang chuyển đổi video...', progress);
 			    });
 			
 			    const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
-			
 			    await ffmpeg.load({
-			        coreURL: await toBlobURL(
-			            `${baseURL}/ffmpeg-core.js`,
-			            'text/javascript'
-			        ),
-			        wasmURL: await toBlobURL(
-			            `${baseURL}/ffmpeg-core.wasm`,
-			            'application/wasm'
-			        ),
+			        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+			        wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
 			    });
-			
 			    ffmpegInstance = ffmpeg;
 			    return ffmpeg;
 			}
