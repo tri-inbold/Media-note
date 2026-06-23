@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Media QC v22.8</title>
+    <title>Media QC v22.7</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
@@ -262,6 +262,112 @@
         #annotation-popup .header-tools { display: flex; align-items: center; gap: 2px; }
         #annotation-popup .content { margin: 0; font-size: 0.9em; white-space: pre-wrap; word-break: break-word; min-height: 1em; }
         #annotation-popup textarea { width: 100%; background: var(--input-bg); border: none; border-radius: 4px; color: var(--text-color); font-family: inherit; font-size: 1em; resize: none; overflow-y: hidden; box-sizing: border-box; outline: none; }
+    
+        /* ═══════════════════════════════════════════════════════════ */
+        /* RULER & GUIDE STYLES */
+        /* ═══════════════════════════════════════════════════════════ */
+        .artboard-ruler-top, .artboard-ruler-left {
+            position: absolute;
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            cursor: crosshair;
+            transition: opacity 0.2s;
+            opacity: 0.3;
+            z-index: 10;
+        }
+
+        body.theme-dark .artboard-ruler-top, body.theme-dark .artboard-ruler-left {
+            background: #3a3a3a;
+            border-color: #555;
+        }
+
+        .artboard-ruler-top {
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 30px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        body.theme-dark .artboard-ruler-top {
+            border-bottom-color: #555;
+        }
+
+        .artboard-ruler-left {
+            top: 0;
+            left: 0;
+            width: 30px;
+            height: 100%;
+            border-right: 1px solid #ddd;
+        }
+
+        body.theme-dark .artboard-ruler-left {
+            border-right-color: #555;
+        }
+
+        .ruler-canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .guides-container {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .guide {
+            position: absolute;
+            pointer-events: auto;
+            opacity: 0.65;
+            transition: opacity 0.2s;
+        }
+
+        .guide:hover {
+            opacity: 1;
+        }
+
+        .guide-horizontal {
+            width: 100%;
+            height: 2px;
+            left: 0;
+            cursor: row-resize;
+            box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .guide-vertical {
+            width: 2px;
+            height: 100%;
+            top: 0;
+            cursor: col-resize;
+            box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .guide::after {
+            content: attr(data-position) 'px';
+            position: absolute;
+            font-size: 9px;
+            color: white;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 2px 4px;
+            border-radius: 2px;
+            white-space: nowrap;
+            pointer-events: none;
+            font-weight: bold;
+        }
+
+        .guide-horizontal::after {
+            left: 5px;
+            top: -18px;
+        }
+
+        .guide-vertical::after {
+            left: 8px;
+            top: 5px;
+        }
+
     </style>
 </head>
 <body class="theme-dark">
@@ -1499,6 +1605,10 @@
                         ${videoControlsHTML}
                         <div class="artboard-resizer" title="Resize (Double-click to reset)"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10.0002 12.0001L12.0002 10.0001" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M6.00009 16.0001L16.0001 6.00009" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M14.0002 12.0001L12.0002 14.0001" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>`;
                     app.workspace.appendChild(artboardEl);
+                    
+                    // Initialize ruler & guide system for this artboard
+                    setTimeout(() => initArtboardRuler(artboardEl), 100);
+                    
                     artboardEl.addEventListener('mousedown', e => { 
                         if(e.target === artboardEl) {
                            if (state.currentTool === 'pan') { onArtboardHeaderMouseDown(e, artboard.id); }
@@ -3781,96 +3891,93 @@
             }
             
             let ffmpeg = null;
+			const MAX_VIDEO_DURATION = 20; // giây
 
-function setFFmpegProgress(text, percent) {
-    const overlay = document.querySelector('.embed-progress-overlay');
-    if(!overlay) return;
-    overlay.classList.remove('hidden');
-    overlay.querySelector('.embed-progress-label').textContent = text;
-    overlay.querySelector('.embed-progress-fill').style.width = (percent || 0) + '%';
-}
+			function setFFmpegProgress(text, percent) {
+			    const overlay = document.querySelector('.embed-progress-overlay');
+			    if(!overlay) return;
+			    overlay.classList.remove('hidden');
+			    overlay.querySelector('.embed-progress-label').textContent = text;
+			    overlay.querySelector('.embed-progress-fill').style.width = (percent || 0) + '%';
+			}
 
-function hideFFmpegProgress() {
-    const overlay = document.querySelector('.embed-progress-overlay');
-    if(overlay) overlay.classList.add('hidden');
-}
+			function hideFFmpegProgress() {
+			    const overlay = document.querySelector('.embed-progress-overlay');
+			    if(overlay) overlay.classList.add('hidden');
+			}
 
-async function convertVideoToWebM(blob) {
-    // Check COOP/COEP isolation for SharedArrayBuffer
-    if (!window.crossOriginIsolated) {
-        throw new Error('Trang chưa kích hoạt Cross-Origin Isolation. Hãy tải lại trang (F5) một lần rồi thử lại.');
-    }
+			async function convertVideoToWebM(blob) {
+			    // Check COOP/COEP isolation for SharedArrayBuffer
+			    if (!window.crossOriginIsolated) {
+			        throw new Error('Trang chưa kích hoạt Cross-Origin Isolation. Hãy tải lại trang (F5) một lần rồi thử lại.');
+			    }
 
-    setFFmpegProgress("Loading Video Engine...", 5);
+			    setFFmpegProgress("Loading Video Engine...", 5);
 
-    if (!window.FFmpeg || !window.FFmpeg.createFFmpeg) {
-        await new Promise((resolve, reject) => {
-            const script = document.createElement('script');
-            script.src = 'https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js';
-            script.onload = () => {
-                setTimeout(() => {
-                    if (window.FFmpeg && window.FFmpeg.createFFmpeg) resolve();
-                    else reject(new Error('FFmpeg script loaded but createFFmpeg missing'));
-                }, 0);
-            };
-            script.onerror = () => reject(new Error('Failed to load FFmpeg script'));
-            document.head.appendChild(script);
-        });
-    }
+			    if (!window.FFmpeg || !window.FFmpeg.createFFmpeg) {
+			        await new Promise((resolve, reject) => {
+			            const script = document.createElement('script');
+			            script.src = 'https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js';
+			            script.onload = () => {
+			                setTimeout(() => {
+			                    if (window.FFmpeg && window.FFmpeg.createFFmpeg) resolve();
+			                    else reject(new Error('FFmpeg script loaded but createFFmpeg missing'));
+			                }, 0);
+			            };
+			            script.onerror = () => reject(new Error('Failed to load FFmpeg script'));
+			            document.head.appendChild(script);
+			        });
+			    }
 
-    if (!ffmpeg) {
-        const { createFFmpeg } = window.FFmpeg;
-        ffmpeg = createFFmpeg({
-            corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js',
-            log: false
-        });
+			    if (!ffmpeg) {
+			        const { createFFmpeg } = window.FFmpeg;
+			        ffmpeg = createFFmpeg({
+			            corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js',
+			            log: false
+			        });
 
-        ffmpeg.setProgress(({ ratio }) => {
-            const pct = ratio >= 0 ? Math.max(15, Math.min(99, Math.round(ratio * 100))) : 15;
-            setFFmpegProgress(`Compressing Video to 720p... ${pct}%`, pct);
-        });
-    }
+			        ffmpeg.setProgress(({ ratio }) => {
+			            const pct = ratio >= 0 ? Math.max(15, Math.min(99, Math.round(ratio * 100))) : 15;
+			            setFFmpegProgress(`Compressing Video to 240p... ${pct}%`, pct);
+			        });
+			    }
 
-    if (!ffmpeg.isLoaded()) {
-        setFFmpegProgress("Downloading FFmpeg Core...", 10);
-        await ffmpeg.load();
-    }
+			    if (!ffmpeg.isLoaded()) {
+			        setFFmpegProgress("Downloading FFmpeg Core...", 10);
+			        await ffmpeg.load();
+			    }
 
-    const { fetchFile } = window.FFmpeg;
+			    const { fetchFile } = window.FFmpeg;
 
-    const inputName = 'input.mp4';
-    const outputName = 'output.webm';
+			    const inputName = 'input.mp4';
+			    const outputName = 'output.webm';
 
-    ffmpeg.FS('writeFile', inputName, await fetchFile(blob));
-    setFFmpegProgress("Starting compression...", 15);
+			    ffmpeg.FS('writeFile', inputName, await fetchFile(blob));
+			    setFFmpegProgress("Starting compression...", 15);
 
-    // Convert to 720p WebM with average bitrate (no duration limit)
-    await ffmpeg.run(
-        '-i', inputName,
-        '-vf', 'scale=-2:720',                    // 720p height, maintain aspect ratio
-        '-c:v', 'libvpx',                         // VP8 codec
-        '-crf', '20',                             // Quality level (0-50, lower=better, 20=high quality)
-        '-b:v', '1500k',                          // Average bitrate ~1.5Mbps for 720p
-        '-minrate', '800k',                       // Minimum bitrate
-        '-maxrate', '2500k',                      // Maximum bitrate  
-        '-deadline', 'good',                      // Balance speed/quality (realtime/good/best)
-        '-cpu-used', '4',                         // CPU usage (0-16, higher=faster but lower quality)
-        '-c:a', 'libopus',                        // Audio codec
-        '-b:a', '128k',                           // Audio bitrate
-        outputName
-    );
+			    await ffmpeg.run(
+			        '-i', inputName,
+			        '-t', String(MAX_VIDEO_DURATION),
+			        '-vf', 'scale=-2:240',
+			        '-an',
+			        '-c:v', 'libvpx',
+			        '-b:v', '400k',
+			        '-deadline', 'realtime',
+			        '-cpu-used', '8',
+			        outputName
+			    );
 
-    setFFmpegProgress("Finishing...", 99);
+			    setFFmpegProgress("Finishing...", 99);
 
-    const data = ffmpeg.FS('readFile', outputName);
-    const outBlob = new Blob([data.buffer], { type: 'video/webm' });
+			    const data = ffmpeg.FS('readFile', outputName);
+			    const outBlob = new Blob([data.buffer], { type: 'video/webm' });
 
-    ffmpeg.FS('unlink', inputName);
-    ffmpeg.FS('unlink', outputName);
-    hideFFmpegProgress();
+			    ffmpeg.FS('unlink', inputName);
+			    ffmpeg.FS('unlink', outputName);
+			    hideFFmpegProgress();
 
-    return outBlob;
-}
+			    return outBlob;
+			}
 
 			function showEmbedProgress(artboardId, label, progress) {
 			    const artboardEl = document.querySelector(`.artboard[data-id="${artboardId}"]`);
@@ -3902,28 +4009,28 @@ async function convertVideoToWebM(blob) {
 			async function embedVideo(artboardId) {
 			    const artboard = state.artboards.find(b => b.id === artboardId);
 			    if (!artboard || artboard.type !== 'video') return;
-			    if (artboard.embedded) { alert('Video have been embed.'); return; }
+			    if (artboard.embedded) { alert('Video này đã được embed rồi.'); return; }
 
 			    const artboardEl = document.querySelector(`.artboard[data-id="${artboardId}"]`);
 			    const videoEl = artboardEl ? artboardEl.querySelector('video') : null;
 			    if (!videoEl || !videoEl.src || artboard.videoFailedToLoad) {
-			        alert('Can not embed: Video have some trouble or missing link, please relink and try again.');
+			        alert('Không thể embed: video đang lỗi hoặc chưa có nguồn. Hãy Relink Video trước.');
 			        return;
 			    }
 			    const savedTime = videoEl.currentTime;
 
 			    let fileBlob;
 			    try {
-			        showEmbedProgress(artboardId, 'Processing...');
+			        showEmbedProgress(artboardId, 'Đang đọc video...');
 			        const res = await fetch(videoEl.src);
 			        fileBlob = await res.blob();
 			    } catch (err) {
 			        hideEmbedProgress(artboardId);
-			        alert('Video is null, can not embed.'); return;
+			        alert('Không lấy được dữ liệu video để embed.'); return;
 			    }
 
 			    try {
-			        showEmbedProgress(artboardId, 'Converting...');
+			        showEmbedProgress(artboardId, 'Đang chuyển đổi video...');
 			        const outBlob = await convertVideoToWebM(fileBlob);
 			        const dataUrl = await blobToDataURL(outBlob);
 
@@ -3937,12 +4044,255 @@ async function convertVideoToWebM(blob) {
 
 			        markAsChanged();
 			        hideEmbedProgress(artboardId);
+			        alert('Embed video thành công! Nhớ Save HTML File để lưu lại.');
 			    } catch (err) {
 			        console.error(err);
 			        hideEmbedProgress(artboardId);
-			        alert('Embed video fail: ' + err.message);
+			        alert('Embed video thất bại: ' + err.message);
 			    }
 			}
+
+
+
+        // ════════════════════════════════════════════════════════════════
+        // RULER & GUIDE SYSTEM
+        // ════════════════════════════════════════════════════════════════
+
+        const RULER_CONFIG = {
+            width: 30,           // Pixel width of ruler
+            showDistance: 50,    // Show ruler when within 50px of edge
+            unit: 'px',          // Display unit
+            tickInterval: 10,    // Tick every 10px
+            majorTickInterval: 50 // Major tick every 50px
+        };
+
+        let guides = { horizontal: [], vertical: [] }; // Store guides {position, id}
+        let guideIdCounter = 0;
+
+        // Initialize ruler & guides for each artboard
+        function initArtboardRuler(artboardEl) {
+            if (artboardEl.querySelector('.artboard-ruler-top')) return; // Already initialized
+
+            // Create rulers
+            const rulerTop = document.createElement('div');
+            rulerTop.className = 'artboard-ruler-top';
+            rulerTop.innerHTML = '<canvas class="ruler-canvas"></canvas>';
+            rulerTop.draggable = false;
+
+            const rulerLeft = document.createElement('div');
+            rulerLeft.className = 'artboard-ruler-left';
+            rulerLeft.innerHTML = '<canvas class="ruler-canvas"></canvas>';
+            rulerLeft.draggable = false;
+
+            // Create guides container
+            const guidesContainer = document.createElement('div');
+            guidesContainer.className = 'guides-container';
+
+            artboardEl.appendChild(rulerTop);
+            artboardEl.appendChild(rulerLeft);
+            artboardEl.appendChild(guidesContainer);
+
+            // Draw rulers
+            drawRuler(rulerTop, 'horizontal');
+            drawRuler(rulerLeft, 'vertical');
+
+            // Enable dragging from ruler
+            rulerTop.addEventListener('mousedown', (e) => dragGuideFromRuler(e, 'horizontal', artboardEl));
+            rulerLeft.addEventListener('mousedown', (e) => dragGuideFromRuler(e, 'vertical', artboardEl));
+
+            // Show/hide rulers on hover
+            artboardEl.addEventListener('mousemove', (e) => {
+                const rect = artboardEl.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                rulerTop.style.opacity = (y < RULER_CONFIG.showDistance) ? '1' : '0.3';
+                rulerLeft.style.opacity = (x < RULER_CONFIG.showDistance) ? '1' : '0.3';
+            });
+
+            artboardEl.addEventListener('mouseleave', () => {
+                rulerTop.style.opacity = '0.3';
+                rulerLeft.style.opacity = '0.3';
+            });
+        }
+
+        // Draw ruler canvas
+        function drawRuler(rulerEl, direction) {
+            const canvas = rulerEl.querySelector('.ruler-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            const isHorizontal = direction === 'horizontal';
+            const size = isHorizontal ? canvas.parentElement.offsetWidth : canvas.parentElement.offsetHeight;
+            
+            if (isHorizontal) {
+                canvas.width = size;
+                canvas.height = RULER_CONFIG.width;
+            } else {
+                canvas.width = RULER_CONFIG.width;
+                canvas.height = size;
+            }
+
+            // Set colors based on theme
+            const isDark = document.body.classList.contains('theme-dark');
+            ctx.fillStyle = isDark ? '#3a3a3a' : '#f5f5f5';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = isDark ? '#666' : '#ddd';
+            ctx.fillStyle = isDark ? '#ccc' : '#666';
+            ctx.font = '10px Arial';
+
+            // Draw ticks & numbers
+            for (let i = 0; i < size; i += RULER_CONFIG.tickInterval) {
+                const isMajor = (i % RULER_CONFIG.majorTickInterval === 0);
+                const tickLength = isMajor ? 10 : 5;
+
+                if (isHorizontal) {
+                    // Horizontal ruler
+                    ctx.beginPath();
+                    ctx.moveTo(i, RULER_CONFIG.width - tickLength);
+                    ctx.lineTo(i, RULER_CONFIG.width);
+                    ctx.stroke();
+
+                    if (isMajor && i > 0) {
+                        ctx.fillText(i, i - 8, 12);
+                    }
+                } else {
+                    // Vertical ruler
+                    ctx.beginPath();
+                    ctx.moveTo(RULER_CONFIG.width - tickLength, i);
+                    ctx.lineTo(RULER_CONFIG.width, i);
+                    ctx.stroke();
+
+                    if (isMajor && i > 0) {
+                        ctx.save();
+                        ctx.translate(8, i + 3);
+                        ctx.rotate(-Math.PI / 2);
+                        ctx.fillText(i, 0, 0);
+                        ctx.restore();
+                    }
+                }
+            }
+        }
+
+        // Drag guide from ruler
+        function dragGuideFromRuler(e, direction, artboardEl) {
+            if (e.button !== 0) return; // Left mouse button only
+            
+            e.preventDefault();
+            const artboardRect = artboardEl.getBoundingClientRect();
+            const artboardContent = artboardEl.querySelector('.artboard-content');
+            
+            let isGuideActive = false;
+            let guideEl = null;
+
+            const onMouseMove = (moveEvent) => {
+                const x = moveEvent.clientX - artboardRect.left;
+                const y = moveEvent.clientY - artboardRect.top;
+
+                // Only create guide if dragged beyond threshold
+                if (!isGuideActive && ((direction === 'horizontal' && y > RULER_CONFIG.width + 10) || 
+                                       (direction === 'vertical' && x > RULER_CONFIG.width + 10))) {
+                    isGuideActive = true;
+                    guideEl = createGuide(direction, artboardContent);
+                }
+
+                if (isGuideActive && guideEl) {
+                    if (direction === 'horizontal') {
+                        guideEl.style.top = Math.max(0, y - RULER_CONFIG.width) + 'px';
+                        guideEl.dataset.position = Math.round(y - RULER_CONFIG.width);
+                    } else {
+                        guideEl.style.left = Math.max(0, x - RULER_CONFIG.width) + 'px';
+                        guideEl.dataset.position = Math.round(x - RULER_CONFIG.width);
+                    }
+                }
+            };
+
+            const onMouseUp = () => {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+
+                if (isGuideActive && guideEl) {
+                    const position = parseInt(guideEl.dataset.position);
+                    const guideId = guideEl.dataset.guideId;
+                    
+                    // Save guide to state
+                    if (!guides[direction === 'horizontal' ? 'horizontal' : 'vertical']) {
+                        guides[direction === 'horizontal' ? 'horizontal' : 'vertical'] = [];
+                    }
+                    guides[direction === 'horizontal' ? 'horizontal' : 'vertical'].push({ position, id: guideId });
+                    
+                    // Make guide draggable
+                    makeGuideDraggable(guideEl, direction, artboardEl);
+                }
+            };
+
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        }
+
+        // Create guide element
+        function createGuide(direction, artboardContent) {
+            const guideEl = document.createElement('div');
+            const guideId = ++guideIdCounter;
+            
+            guideEl.className = `guide guide-${direction}`;
+            guideEl.dataset.guideId = guideId;
+            guideEl.dataset.direction = direction;
+            guideEl.dataset.position = 0;
+            
+            // Color: random pastel
+            const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE'];
+            guideEl.style.backgroundColor = colors[guideId % colors.length];
+
+            artboardContent.appendChild(guideEl);
+            return guideEl;
+        }
+
+        // Make guide draggable
+        function makeGuideDraggable(guideEl, direction, artboardEl) {
+            guideEl.addEventListener('mousedown', (e) => {
+                if (e.button !== 0) return;
+                e.preventDefault();
+                e.stopPropagation();
+
+                const artboardRect = artboardEl.getBoundingClientRect();
+                const startPos = direction === 'horizontal' ? e.clientY : e.clientX;
+                const currentPos = direction === 'horizontal' ? parseInt(guideEl.style.top) : parseInt(guideEl.style.left);
+
+                const onMouseMove = (moveEvent) => {
+                    const delta = (direction === 'horizontal' ? moveEvent.clientY : moveEvent.clientX) - startPos;
+                    const newPos = Math.max(0, currentPos + delta);
+
+                    if (direction === 'horizontal') {
+                        guideEl.style.top = newPos + 'px';
+                        guideEl.dataset.position = Math.round(newPos);
+                    } else {
+                        guideEl.style.left = newPos + 'px';
+                        guideEl.dataset.position = Math.round(newPos);
+                    }
+                };
+
+                const onMouseUp = () => {
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.removeEventListener('mouseup', onMouseUp);
+                };
+
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            });
+
+            // Right-click to delete guide
+            guideEl.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                const guideId = parseInt(guideEl.dataset.guideId);
+                guideEl.remove();
+                
+                // Remove from guides array
+                const dirKey = direction;
+                if (guides[dirKey]) {
+                    guides[dirKey] = guides[dirKey].filter(g => g.id !== guideId);
+                }
+            });
+        }
 
 
 			function relinkVideo(artboardId) {
