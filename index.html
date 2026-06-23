@@ -3794,15 +3794,19 @@
 			    if (ffmpegInstance) return ffmpegInstance;
 			    showEmbedProgress(artboardId, 'Đang tải FFmpeg (lần đầu)...');
 			    await loadScript('https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js');
-			    await loadScript('https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/util.js');
+			    await loadScript('https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js');
+			
 			    const { FFmpeg } = FFmpegWASM;
+			    const { toBlobURL } = FFmpegUtil;
 			    const ffmpeg = new FFmpeg();
 			    ffmpeg.on('progress', ({ progress }) => {
 			        if (activeEmbedArtboardId) showEmbedProgress(activeEmbedArtboardId, 'Đang chuyển đổi video...', progress);
 			    });
+			
+			    const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
 			    await ffmpeg.load({
-			        coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
-			        wasmURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm',
+			        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+			        wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
 			    });
 			    ffmpegInstance = ffmpeg;
 			    return ffmpeg;
