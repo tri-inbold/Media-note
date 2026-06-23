@@ -1727,10 +1727,40 @@
                     newAnn.color = state.activeColor;
                 }
                 const artboard = state.artboards.find(b => b.id === newAnn.artboardId);
-                if (artboard && artboard.type === 'video') {
-                     const videoEl = document.querySelector(`.artboard[data-id="${artboard.id}"] video`);
-                     if (videoEl && !artboard.videoFailedToLoad) { newAnn.videoTime = videoEl.currentTime; videoEl.pause(); const frameKey = newAnn.videoTime.toFixed(5); if (!artboard.frameBackups) artboard.frameBackups = {}; if (!artboard.frameBackups[frameKey]) { artboard.frameBackups[frameKey] = await captureFrame(videoEl); } }
-                }
+				if (artboard && artboard.type === 'video') {
+				    const artboardEl = document.querySelector(`.artboard[data-id="${artboard.id}"]`);
+				    const videoEl = artboardEl ? artboardEl.querySelector('video') : null;
+				    const timelineEl = artboardEl ? artboardEl.querySelector('.vid-timeline') : null;
+				    const isVideoUsable = videoEl && !artboard.videoFailedToLoad && videoEl.readyState >= 2;
+				    const currentTime = isVideoUsable ? videoEl.currentTime : (timelineEl ? parseFloat(timelineEl.value) : 0);
+				
+				    if (videoEl) {
+				        newAnn.videoTime = currentTime;
+				        if (isVideoUsable) videoEl.pause();
+				
+				        const frameKey = newAnn.videoTime.toFixed(5);
+				        if (!artboard.frameBackups) artboard.frameBackups = {};
+				
+				        if (!artboard.frameBackups[frameKey]) {
+				            if (isVideoUsable) {
+				                try {
+				                    artboard.frameBackups[frameKey] = await captureFrame(videoEl);
+				                } catch (err) {
+				                    console.warn('captureFrame failed, falling back to nearest backup frame', err);
+				                }
+				            }
+				            // Video lỗi/không khả dụng -> dùng tạm backup frame gần nhất thay vì để trống
+				            if (!artboard.frameBackups[frameKey]) {
+				                let bestKey = null, minDiff = Infinity;
+				                for (const key in artboard.frameBackups) {
+				                    const diff = Math.abs(parseFloat(key) - currentTime);
+				                    if (diff < minDiff) { minDiff = diff; bestKey = key; }
+				                }
+				                if (bestKey) artboard.frameBackups[frameKey] = artboard.frameBackups[bestKey];
+				            }
+				        }
+				    }
+				}
                 historyManager.execute({ type: 'ADD_ANNOTATION', annotation: newAnn,
                     do: () => {
                         state.annotations.push(newAnn);
