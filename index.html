@@ -3836,7 +3836,7 @@
 
 			async function convertVideoToWebM(blob) {
 			    if (!window.crossOriginIsolated) {
-			        throw new Error('Trang chưa kích hoạt Cross-Origin Isolation. Hãy tải lại trang (F5) một lần rồi thử lại.');
+			        throw new Error('Cross-Origin Isolation is not enabled on this page. Please refresh the page (F5) once and try again. (or report to Tri)');
 			    }
 
 			    setFFmpegProgress("Loading Video Engine...", 5);
@@ -3890,8 +3890,8 @@
 			        '-b:v', '1500k',
 			        '-minrate', '800k',
 			        '-maxrate', '2500k',
-			        '-deadline', 'good',
-			        '-cpu-used', '4',
+			        '-deadline', 'realtime',
+			        '-cpu-used', '8',
 			        '-c:a', 'libopus',
 			        '-b:a', '128k',
 			        outputName
@@ -3939,28 +3939,28 @@
 			async function embedVideo(artboardId) {
 			    const artboard = state.artboards.find(b => b.id === artboardId);
 			    if (!artboard || artboard.type !== 'video') return;
-			    if (artboard.embedded) { alert('Video này đã được embed rồi.'); return; }
+			    if (artboard.embedded) { alert('This video has already been embedded.'); return; }
 
 			    const artboardEl = document.querySelector(`.artboard[data-id="${artboardId}"]`);
 			    const videoEl = artboardEl ? artboardEl.querySelector('video') : null;
 			    if (!videoEl || !videoEl.src || artboard.videoFailedToLoad) {
-			        alert('Không thể embed: video đang lỗi hoặc chưa có nguồn. Hãy Relink Video trước.');
+			        alert('Unable to embed: the video is broken or the source is missing. Please relink the video first.');
 			        return;
 			    }
 			    const savedTime = videoEl.currentTime;
 
 			    let fileBlob;
 			    try {
-			        showEmbedProgress(artboardId, 'Đang đọc video...');
+			        showEmbedProgress(artboardId, 'Reading...');
 			        const res = await fetch(videoEl.src);
 			        fileBlob = await res.blob();
 			    } catch (err) {
 			        hideEmbedProgress(artboardId);
-			        alert('Không lấy được dữ liệu video để embed.'); return;
+			        alert('Unable to retrieve video data for embedding.'); return;
 			    }
 
 			    try {
-			        showEmbedProgress(artboardId, 'Đang chuyển đổi video...');
+			        showEmbedProgress(artboardId, 'Converting...');
 			        const outBlob = await convertVideoToWebM(fileBlob);
 			        const dataUrl = await blobToDataURL(outBlob);
 
@@ -3974,11 +3974,10 @@
 
 			        markAsChanged();
 			        hideEmbedProgress(artboardId);
-			        alert('Embed video thành công! Nhớ Save HTML File để lưu lại.');
 			    } catch (err) {
 			        console.error(err);
 			        hideEmbedProgress(artboardId);
-			        alert('Embed video thất bại: ' + err.message);
+			        alert('Embed video failed: ' + err.message);
 			    }
 			}
 
@@ -4011,11 +4010,9 @@
 			drawRuler(rulerTop, 'horizontal', artboardContent);
 			drawRuler(rulerLeft, 'vertical', artboardContent);
 
-			// Get artboard ID from element
 			const artboardId = artboardEl.dataset.id;
 			const artboard = state.artboards.find(b => b.id === artboardId);
 
-			// Ruler drag to create guides
 			let rulerDragging = false;
 
 			rulerTop.addEventListener('mousedown', (e) => {
@@ -4032,7 +4029,6 @@
 				dragGuideFromRuler(e, 'vertical', artboardContent, artboardId, artboard, () => { rulerDragging = false; });
 			});
 
-			// Show/hide rulers on hover
 			const parent = artboardEl;
 			parent.addEventListener('mousemove', (e) => {
 				if (rulerDragging) return;
