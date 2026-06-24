@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Media QC v22.8</title>
+    <title>Media QC v22.7</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
@@ -2717,8 +2717,9 @@
 			            if (htmlContent) artboardData.htmlContent = htmlContent;
 			            if (frameBackups) artboardData.frameBackups = frameBackups;
 			
-			            if (src && src.startsWith('data:image')) {
+			            if (src && src.startsWith('data:')) {
 			                artboardData.src = src;
+			                if (board.embedded) artboardData.embedded = true;
 			            } else {
 			                artboardData.src = board.name;
 			            }
