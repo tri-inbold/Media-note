@@ -11,12 +11,11 @@
 	<script src="coi-serviceworker.js"></script>
 
     <style>
-        /* --- COMBINED AND NORMALIZED CSS --- */
         :root { 
-            --bg-color: #2e2e2e; --panel-bg: rgba(40, 40, 40, 0.8); --border-color: rgba(255, 255, 255, 0.2); --text-color: #f0f0f0; --text-color-light: #999; --highlight-color: #00aaff; --input-bg: rgba(0,0,0,0.3); --list-item-bg: rgba(0,0,0,0.2); --list-item-reply-bg: rgba(0,0,0,0.3); --checkbox-border: #555; --icon-btn-color: #999; --icon-btn-hover-color: #fff; --workspace-bg: #202020; --video-slot-bg: #000; --artboard-header-color: rgb(0,0,0,0.5); --button-controler-color: white;
+            --bg-color: #2e2e2e; --panel-bg: rgba(40, 40, 40, 0.8); --border-color: rgba(255, 255, 255, 0.2); --text-color: #f0f0f0; --text-color-light: #999; --highlight-color: #00aaff; --input-bg: rgba(0,0,0,0.3); --list-item-bg: rgba(0,0,0,0.2); --list-item-reply-bg: rgba(0,0,0,0.3); --checkbox-border: #555; --icon-btn-color: #999; --icon-btn-hover-color: #fff; --workspace-bg: #202020; --video-slot-bg: #000; --artboard-header-color: rgb(0,0,0,0.5); --button-controler-color: white; --ruler-bg: #3a3a3a; --ruler-border: #555;
         }
         body.theme-light {
-            --bg-color: #f0f2f5; --panel-bg: #ffffff; --border-color: #dee2e6; --text-color: #212529; --text-color-light: #6c757d; --input-bg: #ffffff; --list-item-bg: #ffffff; --list-item-reply-bg: #f1f3f5; --checkbox-border: #adb5bd; --icon-btn-color: #6c757d; --icon-btn-hover-color: #212529; --workspace-bg: #f9fcff; --video-slot-bg: #ffffff; --artboard-header-color: white; --button-controler-color: black;
+            --bg-color: #f0f2f5; --panel-bg: #ffffff; --border-color: #dee2e6; --text-color: #212529; --text-color-light: #6c757d; --input-bg: #ffffff; --list-item-bg: #ffffff; --list-item-reply-bg: #f1f3f5; --checkbox-border: #adb5bd; --icon-btn-color: #6c757d; --icon-btn-hover-color: #212529; --workspace-bg: #f9fcff; --video-slot-bg: #ffffff; --artboard-header-color: white; --button-controler-color: black; --ruler-bg: #e8f4ff; --ruler-border: #c7dff7;
         }
         body, html { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--workspace-bg); color: var(--text-color); overflow: hidden; height: 100vh; width: 100vw; }
         .hidden { display: none !important; }
@@ -262,53 +261,14 @@
         #annotation-popup .header-tools { display: flex; align-items: center; gap: 2px; }
         #annotation-popup .content { margin: 0; font-size: 0.9em; white-space: pre-wrap; word-break: break-word; min-height: 1em; }
         #annotation-popup textarea { width: 100%; background: var(--input-bg); border: none; border-radius: 4px; color: var(--text-color); font-family: inherit; font-size: 1em; resize: none; overflow-y: hidden; box-sizing: border-box; outline: none; }
-    
-        /* ═══════════════════════════════════════════════════════════ */
-        /* RULER ONLY - Pure Display */
-        /* ═══════════════════════════════════════════════════════════ */
-        .artboard-ruler-top, .artboard-ruler-left {
-            position: absolute;
-            background: #f5f5f5;
-            border: 1px solid #ddd;
-            cursor: crosshair;
-            display: none;              /* Hidden by default */
-            z-index: 10;
-        }
 
-        body.theme-dark .artboard-ruler-top, body.theme-dark .artboard-ruler-left {
-            background: #3a3a3a;
-            border-color: #555;
-        }
-
-        .artboard-ruler-top {
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 20px;
-            border-bottom: 1px solid #ddd;
-        }
-
-        body.theme-dark .artboard-ruler-top {
-            border-bottom-color: #555;
-        }
-
-        .artboard-ruler-left {
-            top: 0;
-            left: 0;
-            width: 20px;
-            height: 100%;
-            border-right: 1px solid #ddd;
-        }
-
-        body.theme-dark .artboard-ruler-left {
-            border-right-color: #555;
-        }
-
-        .ruler-canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-        }
+        .artboard-ruler-top, .artboard-ruler-left { position: absolute; background: var(--ruler-bg); border: 1px solid var(--ruler-border); cursor: crosshair; display: none; z-index: 10; }
+        body.theme-dark .artboard-ruler-top, body.theme-dark .artboard-ruler-left { background: #3a3a3a; border-color: #555; }
+        .artboard-ruler-top { top: 0; left: 0; width: 100%; height: 15px; border-bottom: 1px solid #ddd; }
+        body.theme-dark .artboard-ruler-top { border-bottom-color: #555; }
+        .artboard-ruler-left { top: 0; left: 0; width: 15px; height: 100%; border-right: 1px solid #ddd; }
+        body.theme-dark .artboard-ruler-left { border-right-color: #555; }
+        .ruler-canvas { display: block; width: 100%; height: 100%; }
 
     </style>
 	<script src="coi-serviceworker.js"></script>
@@ -920,7 +880,7 @@
 
                 const hitGuide = getHitGuide(e);
                 if(hitGuide) {
-                    e.preventDefault(); e.stopPropagation();
+                    e.stopPropagation();
                     if (!hitGuide.guide.id) hitGuide.guide.id = crypto.randomUUID();
                     state.interaction.mode = 'draggingGuide';
                     state.interaction.target = hitGuide;
@@ -938,6 +898,12 @@
             }
 			
             function onWindowMouseMove(e) {
+                if (e.buttons === 0 && ['draggingGuide', 'draggingArtboard', 'resizingArtboard', 'panning'].includes(state.interaction.mode)) {
+                    state.interaction.mode = 'none';
+                    state.interaction.target = null;
+                    app.workspaceContainer.classList.remove('panning');
+                    app.body.classList.remove('panning');
+                }
                 if (e.altKey && state.interaction.mode === 'dragging') {
                     app.workspaceContainer.style.cursor = 'copy';
                 }
@@ -1024,18 +990,31 @@
                     const { scope, guide, artboardId } = state.interaction.target;
                     const startData = state.interaction.startData.get('guide');
                     
-                    // Delete guide if dragged back to ruler area (0-10px)
-                    if (guide.position >= 0 && guide.position <= 10) {
-                        if (scope === 'workspace') {
-                            state.guides = state.guides.filter(g => g.id !== guide.id);
-                        } else if (scope === 'artboard') {
-                            const artboard = state.artboards.find(b => b.id === artboardId);
-                            if (artboard) {
-                                artboard.guides = artboard.guides.filter(g => g.id !== guide.id);
-                            }
-                        }
-                        drawGuides();
-                    } else if (startData && startData.position !== guide.position) {
+                    const artboard = state.artboards.find( b => b.id === artboardId );
+
+					const DELETE_ZONE = guide.type === 'horizontal'
+						? 15 / artboard.height
+						: 15 / artboard.width;
+
+					if (guide.position <= DELETE_ZONE) {
+
+						if (scope === 'workspace') {
+
+							state.guides.workspace =
+								state.guides.workspace.filter(
+									g => g.id !== guide.id
+								);
+
+						} else if (scope === 'artboard') {
+
+							state.guides.artboard[artboardId] =
+								(state.guides.artboard[artboardId] || [])
+									.filter(g => g.id !== guide.id);
+
+						}
+
+						drawGuides();
+					} else if (startData && startData.position !== guide.position) {
                         historyManager.execute({
                             type: 'MOVE_GUIDE', guideId: guide.id, scope: scope, artboardId: artboardId,
                             before: startData.position, after: guide.position,
@@ -1242,6 +1221,7 @@
                 const ctx = captureCanvas.getContext('2d');
                 
                 ctx.fillStyle = getComputedStyle(app.workspaceContainer).backgroundColor;
+				ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--ruler-bg');
                 ctx.fillRect(0, 0, rect.width, rect.height);
 
                 for (const artboardEl of document.querySelectorAll('.artboard')) {
@@ -2204,7 +2184,7 @@
                 
                 const hitGuide = getHitGuide(e);
                 if (hitGuide && hitGuide.scope === 'artboard') {
-                    e.preventDefault(); e.stopPropagation();
+                    e.stopPropagation();
                     if (!hitGuide.guide.id) hitGuide.guide.id = crypto.randomUUID();
                     state.interaction.mode = 'draggingGuide';
                     state.interaction.target = hitGuide;
@@ -2684,7 +2664,7 @@
             function promptForUser() { let user = localStorage.getItem('qcToolUser'); if (!user || user.trim() === '') { user = prompt('Please enter your name (max 16 characters):', user || ''); user = user ? user.substring(0, 16) : "Anonymous"; } state.currentUser = user.trim(); localStorage.setItem('qcToolUser', state.currentUser); updateUserDisplay(); }
             function changeUser() { let user = prompt('Enter new name (max 16 characters):', state.currentUser); if (user && user.trim() !== '') { state.currentUser = user.trim().substring(0, 16); localStorage.setItem('qcToolUser', state.currentUser); updateUserDisplay(); } }
             function updateUserDisplay() { document.getElementById('current-user-display').textContent = state.currentUser; }
-            function applyTheme(theme) { app.body.classList.remove('theme-light', 'theme-dark'); if (theme === 'light') app.body.classList.add('theme-light'); else if (theme === 'dark') app.body.classList.add('theme-dark'); else { if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) app.body.classList.add('theme-light'); else app.body.classList.add('theme-dark'); } drawMasterRuler(); }
+            function applyTheme(theme) { app.body.classList.remove('theme-light', 'theme-dark'); if (theme === 'light') app.body.classList.add('theme-light'); else if (theme === 'dark') app.body.classList.add('theme-dark'); else { if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) app.body.classList.add('theme-light'); else app.body.classList.add('theme-dark'); } drawMasterRuler(); document.querySelectorAll('.artboard').forEach(el => { const content = el.querySelector('.artboard-content'); const top = el.querySelector('.artboard-ruler-top'); const left = el.querySelector('.artboard-ruler-left'); if (top) drawRuler(top, 'horizontal', content); if (left) drawRuler(left, 'vertical', content); });}
             function setTheme(theme) { applyTheme(theme); localStorage.setItem('qcToolTheme', theme); document.getElementById('theme-selector').value = theme; }
             function initTheme() { const savedTheme = localStorage.getItem('qcToolTheme') || 'dark'; setTheme(savedTheme); window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => { const currentSetting = localStorage.getItem('qcToolTheme') || 'system'; if (currentSetting === 'system') applyTheme('system'); }); document.getElementById('theme-selector').addEventListener('change', e => setTheme(e.target.value)); }
             function initPanelResize(e) { e.preventDefault(); const startX = e.clientX; const startWidth = app.rightPanel.offsetWidth; const doResize = (e) => { const newWidth = startWidth - (e.clientX - startX); if (newWidth > 250 && newWidth < 800) { app.rightPanel.style.flexBasis = newWidth + 'px'; } }; const stopResize = () => { window.removeEventListener('mousemove', doResize); window.removeEventListener('mouseup', stopResize); }; window.addEventListener('mousemove', doResize); window.addEventListener('mouseup', stopResize); }
@@ -3612,7 +3592,7 @@
                     { divider: true }, { label: 'Copy File Name', action: () => navigator.clipboard.writeText(artboard.name) }
                 );
                 if (artboard.type === 'video') { items.push({ label: 'Fit Video to 720p', action: () => { resizeAllVideosTo720p(); } }); items.push({ label: 'Zoom to 100%', action: () => { resetArtboardScale(artboardId); }}); }
-				if (artboard.type === 'video') { items.push({label: artboard.embedded ? 'Video Already Embedded' : 'Embed Video', disabled: !!artboard.embedded, action: () => embedVideo(artboardId)}); items.push({ label: 'Relink Video', action: () => relinkVideo(artboardId) }); }
+				if (artboard.type === 'video') { items.push({ divider: true }, {label: artboard.embedded ? 'Video Already Embedded' : 'Embed Video', disabled: !!artboard.embedded, action: () => embedVideo(artboardId)}); items.push({ label: 'Relink Video', action: () => relinkVideo(artboardId) }); }
 				if (artboard.type === 'image' && artboard.name.match(/\.(png|webp|gif)$/i)) { items.push({ label: 'Change Background Color', action: () => { document.getElementById('artboard-bg-color-picker').click(); }}); } items.push({ divider: true }); items.push({ label: 'Close Artboard', action: deleteSelectedArtboards });
                 showContextMenu(e, items);
             }
