@@ -264,11 +264,12 @@
         .artboard-ruler-left { top: 0; left: 0; width: 15px; height: 100%; border-right: 1px solid #ddd; }
         body.theme-dark .artboard-ruler-left { border-right-color: #555; }
         .ruler-canvas { display: block; width: 100%; height: 100%; }
+        .srt-caption-track{height:32px;box-sizing:border-box;display:flex;align-items:center;gap:6px;padding:2px 6px;background:#20242b;border-top:1px solid #3c424d;color:#f8fafc;font:12px Arial,sans-serif;position:relative}.srt-caption-text{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;text-align:center}.srt-caption-track button{background:#343a44;color:#fff;border:0;border-radius:4px;cursor:pointer;height:24px;min-width:24px}.srt-options{position:absolute;z-index:100;left:4px;top:30px;padding:8px;background:#20242b;border:1px solid #555;border-radius:5px;display:flex;gap:8px}.srt-options.hidden{display:none}.srt-options label{display:flex;align-items:center;gap:4px}.srt-table-wrap{width:100%;height:100%;overflow:auto;background:#fff;color:#222}.srt-table{width:100%;border-collapse:collapse;font:13px Arial,sans-serif}.srt-table th,.srt-table td{border:1px solid #ddd;padding:6px;text-align:left;white-space:pre-wrap}.srt-table th{position:sticky;top:0;background:#f3f4f6}.srt-table td:last-child{min-width:260px}
     </style>
 </head>
 	
 <body class="theme-dark">
-    <input type="file" id="file-input" accept="video/*,image/*,.gif" style="display: none;" multiple>
+    <input type="file" id="file-input" accept="video/*,image/*,.gif,.srt" style="display: none;" multiple>
     <input type="file" id="image-tool-input" accept="image/*" style="display:none;">
     <a id="frame-download-link" class="hidden"></a>
     
@@ -713,7 +714,13 @@
 			}
             
             async function handleDrop(e) { e.preventDefault(); document.body.classList.remove('dragging'); if (e.dataTransfer.files.length) handleFiles(Array.from(e.dataTransfer.files)); }
-            function handleFiles(files) { if (!files || files.length === 0) return; if (state.artboards.length === 0) { app.dropZone.classList.add('hidden'); app.workspaceContainer.classList.remove('hidden'); app.toolbarContainer.classList.remove('hidden'); app.rightPanel.classList.remove('hidden'); } const imageFiles = files.filter(f => f.type.startsWith('image/') && !f.name.endsWith('.gif')); const videoFiles = files.filter(f => f.type.startsWith('video/')); const gifFiles = files.filter(f => f.name.endsWith('.gif')); imageFiles.forEach(file => { const reader = new FileReader(); reader.onload = e => addArtboard(file.name, e.target.result, 'image', {width: 0, height: 0}); reader.readAsDataURL(file); }); videoFiles.forEach(file => { const url = URL.createObjectURL(file); addArtboard(file.name, url, 'video'); }); gifFiles.forEach(gifToVideo); setTimeout(() => fitAllArtboardsToView(), 500); }
+            function handleFiles(files) { if (!files || files.length === 0) return; if (state.artboards.length === 0) { app.dropZone.classList.add('hidden'); app.workspaceContainer.classList.remove('hidden'); app.toolbarContainer.classList.remove('hidden'); app.rightPanel.classList.remove('hidden'); } const srtFiles = files.filter(f => /\.srt$/i.test(f.name)); const imageFiles = files.filter(f => f.type.startsWith('image/') && !f.name.endsWith('.gif')); const videoFiles = files.filter(f => f.type.startsWith('video/')); const gifFiles = files.filter(f => f.name.endsWith('.gif')); imageFiles.forEach(file => { const reader = new FileReader(); reader.onload = e => addArtboard(file.name, e.target.result, 'image', {width: 0, height: 0}); reader.readAsDataURL(file); }); videoFiles.forEach(file => { const url = URL.createObjectURL(file); addArtboard(file.name, url, 'video'); }); gifFiles.forEach(gifToVideo); srtFiles.forEach(file => handleSrtFile(file)); setTimeout(() => fitAllArtboardsToView(), 500); }
+            function escapeHtml(value) { return String(value == null ? '' : value).replace(/[&<>\"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',\"'\":'&#39;'}[ch])); }
+            function parseSrtTime(value) { const m = String(value).trim().match(/^(\d{1,2}):(\d{2}):(\d{2})[,\.](\d{1,3})$/); return m ? (+m[1]*3600 + +m[2]*60 + +m[3] + +(m[4].padEnd(3,'0'))/1000) : 0; }
+            function parseSrt(text) { return String(text).replace(/^\uFEFF/,'').replace(/\r/g,'').trim().split(/\n\s*\n/).map(block => { const lines=block.split('\n'); const ti=lines.findIndex(line => line.includes('-->')); if(ti<0)return null; const parts=lines[ti].split('-->'); const startText=parts[0].trim(), endText=parts[1].trim().split(/\s+/)[0]; return {start:parseSrtTime(startText),end:parseSrtTime(endText),startText,endText,text:lines.slice(ti+1).join('\n').replace(/<[^>]*>/g,'').trim()}; }).filter(c => c && c.text); }
+            function handleSrtFile(file) { const reader=new FileReader(); reader.onload=()=>{const cues=parseSrt(reader.result); if(!cues.length){alert('No valid SRT captions found in '+file.name);return;} const targetId=state.selectedArtboardIds.find(id=>state.artboards.some(a=>a.id===id&&a.type==='video')) || (state.artboards.find(a=>a.type==='video')||{}).id; const target=state.artboards.find(a=>a.id===targetId); if(target){target.srtTracks=target.srtTracks||[];target.srtTracks.push({id:crypto.randomUUID(),name:file.name,cues,color:'#ffffff',align:'center'});renderWorkspace();}else{addArtboard(file.name,JSON.stringify(cues),'srt-table',{width:720,height:Math.min(600,Math.max(180,cues.length*30+40))});setTimeout(()=>fitAllArtboardsToView(),200);} }; reader.readAsText(file); }
+            function updateSrtCaptions(artboardEl, artboard, time) { (artboard.srtTracks||[]).forEach(track=>{const el=artboardEl.querySelector('[data-track-id="'+track.id+'"]');if(!el)return;const cue=track.cues.find(c=>time>=c.start&&time<c.end);const label=el.querySelector('.srt-caption-text');label.textContent=cue?cue.text:'';label.style.color=track.color||'#ffffff';label.style.textAlign=track.align||'center';}); }
+            function initSrtCaptionControls(artboardEl, artboard, video) { (artboard.srtTracks||[]).forEach(track=>{const el=artboardEl.querySelector('[data-track-id="'+track.id+'"]');if(!el)return;el.querySelector('.srt-settings').addEventListener('click',e=>{e.stopPropagation();el.querySelector('.srt-options').classList.toggle('hidden');});el.querySelector('.srt-remove').addEventListener('click',e=>{e.stopPropagation();artboard.srtTracks=artboard.srtTracks.filter(t=>t.id!==track.id);renderWorkspace();});el.querySelector('.srt-align').value=track.align||'center';el.querySelector('.srt-align').addEventListener('change',e=>{track.align=e.target.value;updateSrtCaptions(artboardEl,artboard,video.currentTime);});el.querySelector('.srt-color').value=track.color||'#ffffff';el.querySelector('.srt-color').addEventListener('input',e=>{track.color=e.target.value;updateSrtCaptions(artboardEl,artboard,video.currentTime);});});updateSrtCaptions(artboardEl,artboard,video.currentTime);}
             async function handlePaste(e) {
                 const activeEl = document.activeElement; if (activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'INPUT') return;
                 const imageItem = Array.from(e.clipboardData.items).find(item => item.type.startsWith('image/'));
@@ -1502,10 +1509,10 @@
                 state.artboards.forEach(artboard => {
                     const artboardEl = document.createElement('div'); artboardEl.className = 'artboard'; artboardEl.dataset.id = artboard.id;
                     artboardEl.classList.toggle('loading', !!artboard.isLoading);
-                    const controlsHeight = artboard.type === 'video' ? 32 : 0;
+                    const controlsHeight = artboard.type === 'video' ? 32 + ((artboard.srtTracks || []).length * 36) : 0;
                     artboardEl.style.cssText = `left: ${artboard.x}px; top: ${artboard.y}px; width: ${artboard.width}px; height: ${artboard.height + 30 + controlsHeight}px;`;
                     artboardEl.classList.toggle('selected', state.selectedArtboardIds.includes(artboard.id));
-                    let contentHTML = ''; let videoControlsHTML = '';
+                    let contentHTML = ''; let videoControlsHTML = ''; let captionTracksHTML = '';
                     if (!artboard.isLoading) {
 						const artboardSrc = artboard.src || artboard.name;
 						
@@ -1516,6 +1523,7 @@
 							case 'video': 
 							    contentHTML = `<video src="${artboardSrc}" playsinline loop></video><img class="frame-backup hidden" alt="Backup Frame"><div class="embed-progress-overlay hidden"><div class="embed-progress-label">Đang xử lý...</div><div class="embed-progress-track"><div class="embed-progress-fill" style="width:0%"></div></div></div>`;
 							    break;
+                            case 'srt-table': { const cues = JSON.parse(artboardSrc || '[]'); contentHTML = `<div class="srt-table-wrap"><table class="srt-table"><thead><tr><th>#</th><th>Start</th><th>End</th><th>Caption</th></tr></thead><tbody>${cues.map((c,i) => `<tr><td>${i+1}</td><td>${escapeHtml(c.startText)}</td><td>${escapeHtml(c.endText)}</td><td>${escapeHtml(c.text)}</td></tr>`).join('')}</tbody></table></div>`; break; }
 						}
                         if(artboard.type === 'video') videoControlsHTML = `<div class="artboard-video-controls"><button class="vid-play-btn" title="Play/Pause">▶</button><button class="vid-mute-btn" title="Mute/Unmute">${MUTE_ICON_SVG}</button><select class="vid-speed" title="Playback speed"><option value="0.25">0.25x</option><option value="0.5">0.5x</option><option value="1" selected>1.0x</option><option value="1.5">1.5x</option><option value="2">2.0x</option><option value="2.5">2.5x</option><option value="3">3.0x</option></select><input type="text" class="time-input vid-time" value="00:00:00"><div class="vid-timeline-wrapper"><div class="vid-timeline-bg"></div><div class="vid-timeline-markers"></div><input type="range" class="vid-timeline" value="0" step="0.01"></div><span class="vid-duration time-input">00:00:00</span></div>`;
                     }
@@ -1525,6 +1533,7 @@
                     artboardEl.innerHTML = `
                         <div class="artboard-header"><div class="artboard-title-container" title="${artboard.name} ${artboard.originalWidth}x${artboard.originalHeight}"><span class="artboard-title">${artboard.name}</span><span class="artboard-info-wrapper">${dimensionsDisplay}</span></div>${headerToolsHTML}</div>
                         <div class="artboard-content">${contentHTML}<canvas class="guide-canvas"></canvas><canvas class="display-canvas"></canvas><canvas class="interaction-canvas"></canvas></div>
+                        ${captionTracksHTML = (artboard.srtTracks || []).map((track, idx) => `<div class="srt-caption-track" data-track-id="${track.id}"><button class="srt-settings" title="Caption settings">⚙</button><span class="srt-caption-text"></span><button class="srt-remove" title="Remove caption track">×</button><div class="srt-options hidden"><label>Align <select class="srt-align"><option value="left">Left</option><option value="center" selected>Center</option><option value="right">Right</option></select></label><label>Color <input class="srt-color" type="color" value="${track.color || '#ffffff'}"></label></div></div>`).join('')}
                         ${videoControlsHTML}
                         <div class="artboard-resizer" title="Resize (Double-click to reset)"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10.0002 12.0001L12.0002 10.0001" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M6.00009 16.0001L16.0001 6.00009" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M14.0002 12.0001L12.0002 14.0001" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>`;
                     app.workspace.appendChild(artboardEl);
@@ -1666,7 +1675,8 @@
                     video.addEventListener('loadedmetadata', updateDuration);
                 }
 
-                video.addEventListener('timeupdate', () => { if (!timeline.matches(':active')) timeline.value = video.currentTime; if (document.activeElement !== timeInput) { timeInput.value = formatTimeHHMMSSFF(video.currentTime, video.duration); } redrawArtboardAnnotations(artboard.id); });
+                video.addEventListener('timeupdate', () => { if (!timeline.matches(':active')) timeline.value = video.currentTime; if (document.activeElement !== timeInput) { timeInput.value = formatTimeHHMMSSFF(video.currentTime, video.duration); } updateSrtCaptions(artboardEl, artboard, video.currentTime); redrawArtboardAnnotations(artboard.id); });
+                initSrtCaptionControls(artboardEl, artboard, video);
                 timeline.addEventListener('input', e => { e.stopPropagation(); video.currentTime = parseFloat(timeline.value); redrawArtboardAnnotations(artboard.id); });
                 initTimeInput(timeInput, () => video.currentTime, (newTime) => {video.currentTime = newTime; redrawArtboardAnnotations(artboard.id);}, () => video.duration);
             }			
