@@ -1674,6 +1674,11 @@
                     artboardEl.addEventListener('dragover', e => e.preventDefault());
                     artboardEl.addEventListener('drop', e => handleVideoRelink(e, artboard.id));
                     video.classList.add('hidden'); 
+                    if (artboard.duration > 0) {
+                        const tl = artboardEl.querySelector('.vid-timeline'); if (tl) tl.max = artboard.duration;
+                        const de = artboardEl.querySelector('.vid-duration'); if (de) de.textContent = formatTimeHHMMSSFF(artboard.duration, artboard.duration);
+                    }
+                    global_updateTimeline();
                     redrawArtboardAnnotations(artboard.id); 
                 };
 
@@ -1731,7 +1736,7 @@
                 video.addEventListener('timeupdate', () => { if (!timeline.matches(':active')) timeline.value = video.currentTime; if (document.activeElement !== timeInput) { timeInput.value = formatTimeHHMMSSFF(video.currentTime, video.duration); } updateSrtCaptions(artboardEl, artboard, video.currentTime); redrawArtboardAnnotations(artboard.id); });
                 initSrtCaptionControls(artboardEl, artboard, video);
                 timeline.addEventListener('input', e => { e.stopPropagation(); video.currentTime = parseFloat(timeline.value); redrawArtboardAnnotations(artboard.id); });
-                initTimeInput(timeInput, () => video.currentTime, (newTime) => {video.currentTime = newTime; redrawArtboardAnnotations(artboard.id);}, () => video.duration);
+                initTimeInput(timeInput, () => video.currentTime, (newTime) => {video.currentTime = newTime; if (artboard.videoFailedToLoad) timeline.value = newTime; redrawArtboardAnnotations(artboard.id);}, () => video.duration);
             }			
             async function captureFrame(videoEl) { const canvas = document.createElement('canvas'); canvas.width = videoEl.videoWidth; canvas.height = videoEl.videoHeight; const ctx = canvas.getContext('2d'); ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height); return canvas.toDataURL('image/webp', 0.5); }
             async function saveVideoFrame(artboardId) {
@@ -2488,8 +2493,21 @@
             function global_toggleMute() { state.isGlobalMuted = !state.isGlobalMuted; const muteIcon = document.getElementById('mute-icon'); const unmuteIcon = document.getElementById('unmute-icon'); muteIcon.classList.toggle('hidden', !state.isGlobalMuted); unmuteIcon.classList.toggle('hidden', state.isGlobalMuted); document.querySelectorAll('#workspace video').forEach(v => { v.muted = state.isGlobalMuted; const btn = v.closest('.artboard').querySelector('.vid-mute-btn'); if(btn) btn.innerHTML = state.isGlobalMuted ? MUTE_ICON_SVG : UNMUTE_ICON_SVG; }); }
             function toggleMuteForSelected() { if(state.selectedArtboardIds.length === 0) return; const videos = state.selectedArtboardIds.map(id => document.querySelector(`.artboard[data-id="${id}"] video`)).filter(Boolean); if(videos.length === 0) return; const isAnyUnmuted = videos.some(v => !v.muted); videos.forEach(v => { v.muted = isAnyUnmuted; const btn = v.closest('.artboard').querySelector('.vid-mute-btn'); if(btn) btn.innerHTML = v.muted ? MUTE_ICON_SVG : UNMUTE_ICON_SVG; }); }
             function global_setPlaybackSpeed(speed) { document.querySelectorAll('#workspace video').forEach(v => v.playbackRate = speed); document.querySelectorAll('.speed-btn').forEach(btn => btn.classList.toggle('active', parseFloat(btn.dataset.speed) === speed)); }
-            function global_seekTo(time) { document.querySelectorAll('#workspace video').forEach(v => { if (isFinite(v.duration)) v.currentTime = Math.min(time, v.duration); }); redrawAllAnnotations(); }
-            function advancedSeek({ frameDelta = 0, target = 'selected', position = null }) {
+			function global_seekTo(time) {
+			                document.querySelectorAll('#workspace video').forEach(v => {
+			                    if (isFinite(v.duration)) { v.currentTime = Math.min(time, v.duration); return; }
+			                    const abEl = v.closest('.artboard');
+			                    const ab = abEl && state.artboards.find(a => String(a.id) === abEl.dataset.id);
+			                    if (ab && ab.videoFailedToLoad) {
+			                        const t = ab.duration > 0 ? Math.min(time, ab.duration) : time;
+			                        const tl = abEl.querySelector('.vid-timeline'); if (tl) tl.value = t;
+			                        const ti = abEl.querySelector('.vid-time'); if (ti && document.activeElement !== ti) ti.value = formatTimeHHMMSSFF(t, ab.duration || 0);
+			                        try { v.currentTime = t; } catch (e) {}
+			                    }
+			                });
+			                redrawAllAnnotations();
+			            }            
+			function advancedSeek({ frameDelta = 0, target = 'selected', position = null }) {
                  let videos; if (target === 'selected' && state.selectedArtboardIds.length > 0) { videos = state.selectedArtboardIds.map(id => document.querySelector(`.artboard[data-id="${id}"] video`)).filter(Boolean); } else { videos = Array.from(document.querySelectorAll('#workspace video')); }
                 if (videos.length === 0) return;
                 videos.forEach(v => { if (position === 'start') { v.currentTime = 0; } else if (position === 'end') { v.currentTime = v.duration; } else { v.currentTime = Math.max(0, Math.min(v.duration, v.currentTime + (frameDelta / FRAME_RATE))); } });
@@ -2682,10 +2700,16 @@
                 } 
                 app.timelinePanel.classList.remove('hidden');
                 videos.forEach(v => { 
-                    if (isFinite(v.duration) && v.duration > maxDuration) { 
-                        maxDuration = v.duration; 
+                    let d = v.duration;
+                    if (!isFinite(d)) {
+                        const abEl = v.closest('.artboard');
+                        const ab = abEl && state.artboards.find(a => String(a.id) === abEl.dataset.id);
+                        d = (ab && ab.videoFailedToLoad && ab.duration > 0) ? ab.duration : 0;
+                    }
+                    if (d > maxDuration) { 
+                        maxDuration = d; 
                     } 
-                }); 
+                });
                 app.timelineSlider.max = maxDuration > 0 ? maxDuration : 100; 
                 if (app.timelineSlider.oninput) {
                     app.timelineSlider.oninput = null;
@@ -2924,6 +2948,7 @@
                 displayCanvas.width = artboard.width; displayCanvas.height = artboard.height;
                 artboardEl.querySelector('.interaction-canvas').width = artboard.width; artboardEl.querySelector('.interaction-canvas').height = artboard.height;
                 ctx.clearRect(0, 0, displayCanvas.width, displayCanvas.height);
+                if (videoEl && artboard.videoFailedToLoad) { updateSrtCaptions(artboardEl, artboard, parseFloat(artboardEl.querySelector('.vid-timeline').value) || 0); }
                 if (videoEl && backupImg && artboard.videoFailedToLoad) {
                     let bestMatchTime = null; let minDiff = 1 / FRAME_RATE;
                     const currentTime = parseFloat(artboardEl.querySelector('.vid-timeline').value);
