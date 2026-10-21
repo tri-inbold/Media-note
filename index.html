@@ -270,6 +270,40 @@
         .srt-caption-track{height:32px;box-sizing:border-box;display:flex;align-items:center;gap:6px;padding:2px 6px;background:var(--artboard-header-color);border-top:1px solid var(--border-color);color:var(--text-color);font:12px Arial,sans-serif;position:relative}.srt-caption-text{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;text-align:center}.srt-caption-track button{background:var(--panel-bg);color:var(--text-color);border:1px solid var(--border-color);border-radius:4px;cursor:pointer;height:24px;min-width:24px}.srt-options{position:absolute;z-index:100;left:4px;top:30px;padding:8px;background:var(--panel-bg);color:var(--text-color);border:1px solid var(--border-color);border-radius:5px;display:flex;gap:8px}.srt-options.hidden{display:none}.srt-options label{display:flex;align-items:center;gap:4px}.srt-font-size{width:54px;background:var(--input-bg);color:var(--text-color);border:1px solid var(--border-color);border-radius:3px;padding:2px}.srt-table-wrap{width:100%;height:100%;overflow:auto;background:#fff;color:#222}.srt-table{width:100%;border-collapse:collapse;font:13px Arial,sans-serif}.srt-table th,.srt-table td{border:1px solid #ddd;padding:6px;text-align:left;white-space:pre-wrap}.srt-table th{position:sticky;top:0;background:#f3f4f6}.srt-table td:last-child{min-width:260px}
 		.srt-font-family{max-width:130px;background:var(--input-bg);color:var(--text-color);border:1px solid var(--border-color);border-radius:3px;padding:2px}
 		.srt-options{flex-wrap:wrap;width:max-content;max-width:280px}
+
+        .artboard[data-type="checklist"] canvas, .artboard[data-type="checklist"] [class*="artboard-ruler"], .artboard[data-type="checklist"] .artboard-info-wrapper { display: none !important; }
+        .artboard.cl-flash { animation: clflash .9s ease-out; }
+        @keyframes clflash { 0% { box-shadow: 0 0 0 3px var(--highlight-color); } 100% { box-shadow: 0 4px 12px rgba(0,0,0,0.2); } }
+        .artboard-video-controls .vid-checklist-btn.active { color: var(--highlight-color); }
+        .cl-panel { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 6; display: flex; flex-direction: column; gap: 8px; padding: 8px; box-sizing: border-box; background: var(--bg-color); color: var(--text-color); font-size: 13px; line-height: 1.4; user-select: text; -webkit-user-select: text; --cl-font: 13px; --cl-py: 8px; --cl-px: 10px; }
+        .cl-panel.cl-drop { outline: 2px dashed var(--highlight-color); outline-offset: -4px; }
+        .cl-bar { display: flex; align-items: center; justify-content: space-between; flex: none; font-size: 12px; color: var(--text-color-light); }
+        .cl-panel.cl-empty .cl-bar { display: none; }
+        .cl-bar-actions { display: flex; gap: 4px; }
+        .cl-btn { background: none; border: 1px solid var(--border-color); color: var(--text-color-light); border-radius: 4px; padding: 1px 8px; font-size: 11px; cursor: pointer; }
+        .cl-btn:hover { color: var(--icon-btn-hover-color); border-color: var(--highlight-color); }
+        .cl-input { box-sizing: border-box; width: 100%; flex: none; height: 36px; resize: none; background: var(--input-bg); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 10px; font: inherit; outline: none; }
+        .cl-input:focus { border-color: var(--highlight-color); }
+        .cl-panel.cl-empty .cl-input { flex: 1; height: auto; }
+        .cl-panel.cl-empty .cl-list { display: none; }
+        .cl-list { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding-right: 2px; }
+        .cl-group { margin-bottom: 10px; }
+        .cl-group-title { display: flex; align-items: center; gap: 6px; margin: 2px 2px 4px; font-size: 11px; color: var(--text-color-light); }
+        .cl-group-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+        .cl-hdr-toggle, .cl-group-del { background: none; border: none; color: var(--text-color-light); cursor: pointer; font-size: 11px; padding: 0 4px; border-radius: 3px; }
+        .cl-hdr-toggle:hover, .cl-group-del:hover { color: var(--icon-btn-hover-color); background: var(--list-item-bg); }
+        .cl-card { position: relative; display: grid; grid-template-columns: 22px minmax(0, 1fr); column-gap: 8px; align-items: start; box-sizing: border-box; margin-bottom: 6px; padding: var(--cl-py) var(--cl-px); font-size: var(--cl-font); background: var(--list-item-bg); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.15); transition: font-size .15s, padding .15s, opacity .15s; }
+        .cl-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.25); }
+        .cl-card.cl-head { background: transparent; box-shadow: none; border-style: dashed; font-weight: 600; color: var(--text-color-light); }
+        .cl-card.checked { font-size: calc(var(--cl-font) * 0.7); padding: calc(var(--cl-py) * 0.7) calc(var(--cl-px) * 0.7); opacity: 0.45; }
+        .cl-card.checked:hover { opacity: 0.75; }
+        .cl-check { width: 1.25em; height: 1.25em; margin: 0; cursor: pointer; accent-color: var(--highlight-color); }
+        .cl-cell { min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; cursor: text; }
+        .cl-table .cl-cell { padding-left: 8px; border-left: 1px solid var(--border-color); }
+        .cl-cell.editing { outline: 1px solid var(--highlight-color); border-radius: 3px; background: var(--input-bg); }
+        .cl-del { position: absolute; top: 2px; right: 4px; background: none; border: none; color: var(--text-color-light); cursor: pointer; font-size: 14px; line-height: 1; padding: 0 3px; border-radius: 3px; opacity: 0; }
+        .cl-card:hover .cl-del { opacity: 1; }
+        .cl-del:hover { color: var(--icon-btn-hover-color); background: var(--bg-color); }
     </style>
 </head>
 	
@@ -774,6 +808,404 @@
 			    });
 			    updateSrtCaptions(artboardEl, artboard, video.currentTime);
 			}
+			            /* ================= CHECK-LIST ================= */
+            function clMaxRows() { return 5000; }
+            function clUid() { return (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'cl' + Date.now().toString(36) + Math.random().toString(36).slice(2); }
+            function clEl(artboard) { return document.querySelector('.artboard[data-id="' + artboard.id + '"]'); }
+            function clGetFor(videoId) { return state.artboards.find(b => b.type === 'checklist' && b.ownerId === videoId); }
+            function clAttachedExtraWidth(video) { return state.artboards.filter(b => b.type === 'checklist' && b.attached && b.ownerId === video.id).reduce((s, b) => s + b.width + 12, 0); }
+
+            // Panel gắn vào video luôn nằm sát bên phải video và cao bằng video
+            function clSyncAttached(video) {
+                state.artboards.filter(b => b.type === 'checklist' && b.attached && b.ownerId === video.id).forEach(cl => {
+                    cl.x = video.x + video.width + 12;
+                    cl.y = video.y;
+                    cl.height = video.height + 32 + ((video.srtTracks || []).length * 36);
+                    cl.originalHeight = cl.height;
+                    const el = clEl(cl);
+                    if (el) { el.style.left = cl.x + 'px'; el.style.top = cl.y + 'px'; el.style.height = (cl.height + 30) + 'px'; }
+                });
+            }
+
+            function openChecklistForVideo(videoId) {
+                const video = state.artboards.find(b => b.id === videoId && b.type === 'video'); if (!video) return;
+                let cl = clGetFor(videoId);
+                const existed = !!cl;
+                if (!cl) {
+                    const w = 340, h = video.height + 32 + ((video.srtTracks || []).length * 36);
+                    cl = { id: clUid(), name: 'Check-list - ' + video.name, type: 'checklist', src: '', x: 0, y: 0, width: w, height: h, originalWidth: w, originalHeight: h, scale: 1, isLoading: false, ownerId: videoId, attached: true, checklist: { groups: [] } };
+                    state.guides.artboard[cl.id] = [];
+                    state.artboards.push(cl);
+                    clSyncAttached(video);
+                    renderWorkspace();
+                    markAsChanged();
+                }
+                state.selectedArtboardIds = [cl.id];
+                updateArtboardSelection();
+                const el = clEl(cl);
+                if (el) {
+                    if (existed) { el.classList.remove('cl-flash'); void el.offsetWidth; el.classList.add('cl-flash'); }
+                    const ta = el.querySelector('.cl-input'); if (ta) setTimeout(() => ta.focus(), 30);
+                }
+            }
+
+            function clContextMenuItems(cl) {
+                const video = state.artboards.find(b => b.id === cl.ownerId && b.type === 'video');
+                const items = [];
+                if (cl.attached) items.push({ label: 'Detach from video', action: () => { cl.attached = false; markAsChanged(); } });
+                else items.push({ label: 'Attach to video', disabled: !video, action: () => { cl.attached = true; if (video) clSyncAttached(video); markAsChanged(); } });
+                items.push({ divider: true }, { label: 'Uncheck all', action: () => clUncheckAll(cl) }, { label: 'Clear all cards', action: () => clClearAll(cl) }, { divider: true }, { label: 'Close Artboard', action: deleteSelectedArtboards });
+                return items;
+            }
+
+            function clFind(artboard, gid, rid) {
+                const g = artboard.checklist.groups.find(x => x.id === gid); if (!g) return null;
+                if (rid == null) return { group: g };
+                const row = g.rows.find(r => r.id === rid);
+                return row ? { group: g, row } : null;
+            }
+            function clCountRows(artboard) { let total = 0, done = 0; artboard.checklist.groups.forEach(g => g.rows.forEach(r => { total++; if (r.checked) done++; })); return { total, done }; }
+            function clCommit(artboard) { clRender(artboard); markAsChanged(); }
+            function clUncheckAll(artboard) { artboard.checklist.groups.forEach(g => g.rows.forEach(r => { r.checked = false; })); clCommit(artboard); }
+            function clClearAll(artboard) {
+                const n = clCountRows(artboard).total; if (!n) return;
+                if (!confirm('Clear all ' + n + ' cards in this check-list?')) return;
+                artboard.checklist.groups = []; clCommit(artboard);
+            }
+            function clToggleHeader(artboard, gid) {
+                const f = clFind(artboard, gid); if (!f) return; const g = f.group;
+                if (g.header) { g.rows.unshift({ id: clUid(), cells: g.header, checked: false }); g.header = null; }
+                else if (g.rows.length > 1) { g.header = g.rows.shift().cells; }
+                clCommit(artboard);
+            }
+
+            /* ---------- thêm dữ liệu ---------- */
+            function clNormRows(rows) {
+                const out = [];
+                rows.forEach(r => {
+                    const cells = r.map(c => String(c == null ? '' : c).replace(/\r/g, '').trim());
+                    while (cells.length > 1 && cells[cells.length - 1] === '') cells.pop();
+                    if (cells.some(c => c !== '')) out.push(cells);
+                });
+                return out;
+            }
+            function clPushText(artboard, name, lines) {
+                lines = lines.map(l => String(l).trim()).filter(Boolean); if (!lines.length) return 0;
+                const truncated = Math.max(0, lines.length - clMaxRows());
+                const rows = lines.slice(0, clMaxRows()).map(l => ({ id: clUid(), cells: [l], checked: false }));
+                const groups = artboard.checklist.groups; const last = groups[groups.length - 1];
+                if (!name && last && last.kind === 'text' && !last.name) rows.forEach(r => last.rows.push(r));
+                else groups.push({ id: clUid(), name: name || '', kind: 'text', header: null, rows });
+                return truncated;
+            }
+            function clPushTable(artboard, name, rows, useHeader) {
+                rows = clNormRows(rows); if (!rows.length) return 0;
+                const maxCols = rows.reduce((m, r) => Math.max(m, r.length), 0);
+                if (maxCols <= 1) return clPushText(artboard, name, rows.map(r => r[0]));
+                let header = null;
+                if (useHeader && rows.length > 1) header = rows.shift();
+                let truncated = 0;
+                if (rows.length > clMaxRows()) { truncated = rows.length - clMaxRows(); rows = rows.slice(0, clMaxRows()); }
+                artboard.checklist.groups.push({ id: clUid(), name: name || '', kind: 'table', header, rows: rows.map(r => ({ id: clUid(), cells: r, checked: false })) });
+                return truncated;
+            }
+            function clAddText(artboard, text) {
+                const src = String(text).replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
+                const lines = src.split('\n');
+                if (lines.some(l => l.indexOf('\t') !== -1)) clPushTable(artboard, '', lines.filter(l => l.trim() !== '').map(l => l.split('\t')), true);
+                else clPushText(artboard, '', lines);
+                clCommit(artboard);
+            }
+
+            /* ---------- đọc file ---------- */
+            function clDecode(buf) {
+                const u = new Uint8Array(buf);
+                if (u[0] === 0xFF && u[1] === 0xFE) return new TextDecoder('utf-16le').decode(u.subarray(2));
+                if (u[0] === 0xFE && u[1] === 0xFF) return new TextDecoder('utf-16be').decode(u.subarray(2));
+                return new TextDecoder('utf-8').decode(u).replace(/^\uFEFF/, '');
+            }
+            function clParseCsv(text, forcedDelim) {
+                text = String(text).replace(/^\uFEFF/, '');
+                let delim = forcedDelim || ',';
+                if (!forcedDelim) {
+                    const firstLine = text.split(/\r?\n/, 1)[0] || '';
+                    const count = ch => { let n = 0, q = false; for (let i = 0; i < firstLine.length; i++) { const c = firstLine[i]; if (c === '"') q = !q; else if (!q && c === ch) n++; } return n; };
+                    let best = count(',');
+                    [';', '\t', '|'].forEach(d => { const n = count(d); if (n > best) { best = n; delim = d; } });
+                }
+                const rows = []; let row = [], cell = '', q = false;
+                for (let i = 0; i < text.length; i++) {
+                    const c = text[i];
+                    if (q) { if (c === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += c; }
+                    else if (c === '"' && cell === '') q = true;
+                    else if (c === delim) { row.push(cell); cell = ''; }
+                    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(cell); cell = ''; rows.push(row); row = []; }
+                    else cell += c;
+                }
+                if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+                return rows;
+            }
+            function clImportSrt(artboard, name, text) {
+                const cues = parseSrt(text); if (!cues.length) throw new Error('no cues');
+                const rows = [['#', 'Start', 'End', 'Caption']].concat(cues.map((c, i) => [String(i + 1), c.startText, c.endText, c.text]));
+                return clPushTable(artboard, name, rows, true);
+            }
+            async function clImportDocx(artboard, file) {
+                if (!window.JSZip) throw new Error('JSZip not loaded');
+                const zip = await JSZip.loadAsync(await file.arrayBuffer());
+                const entry = zip.file('word/document.xml'); if (!entry) throw new Error('not a docx');
+                const xml = new DOMParser().parseFromString(await entry.async('string'), 'application/xml');
+                const body = xml.getElementsByTagName('w:body')[0]; if (!body) throw new Error('no body');
+                const paraText = p => {
+                    let s = ''; const nodes = p.getElementsByTagName('*');
+                    for (let i = 0; i < nodes.length; i++) { const n = nodes[i].nodeName; if (n === 'w:t') s += nodes[i].textContent; else if (n === 'w:tab') s += ' '; else if (n === 'w:br' || n === 'w:cr') s += '\n'; }
+                    return s.trim();
+                };
+                let truncated = 0, pending = [], tableNo = 0;
+                const flush = () => { if (pending.length) { truncated += clPushText(artboard, file.name, pending); pending = []; } };
+                const walk = parent => {
+                    Array.prototype.forEach.call(parent.children, node => {
+                        if (node.nodeName === 'w:p') { const t = paraText(node); if (t) pending.push(t); }
+                        else if (node.nodeName === 'w:tbl') {
+                            flush(); tableNo++;
+                            const rows = Array.prototype.map.call(node.getElementsByTagName('w:tr'), tr =>
+                                Array.prototype.filter.call(tr.children, c => c.nodeName === 'w:tc').map(tc =>
+                                    Array.prototype.map.call(tc.getElementsByTagName('w:p'), paraText).filter(Boolean).join('\n')));
+                            truncated += clPushTable(artboard, file.name + ' - table ' + tableNo, rows, true);
+                        }
+                        else if (node.nodeName === 'w:sdt') { Array.prototype.forEach.call(node.children, c => { if (c.nodeName === 'w:sdtContent') walk(c); }); }
+                    });
+                };
+                walk(body); flush();
+                return truncated;
+            }
+            function clXlsxDateStyles(stylesDoc) {
+                const out = {}; if (!stylesDoc) return out;
+                const custom = {};
+                Array.prototype.forEach.call(stylesDoc.getElementsByTagName('numFmt'), f => { custom[f.getAttribute('numFmtId')] = f.getAttribute('formatCode') || ''; });
+                const cellXfs = stylesDoc.getElementsByTagName('cellXfs')[0]; if (!cellXfs) return out;
+                Array.prototype.forEach.call(cellXfs.getElementsByTagName('xf'), (xf, i) => {
+                    const id = parseInt(xf.getAttribute('numFmtId'), 10);
+                    if ((id >= 14 && id <= 22) || (id >= 27 && id <= 36) || (id >= 45 && id <= 47) || (id >= 50 && id <= 58)) { out[i] = true; return; }
+                    const code = custom[id]; if (!code) return;
+                    const stripped = code.replace(/"[^"]*"/g, '').replace(/\[[^\]]*\]/g, '').replace(/\\./g, '');
+                    if (/[dmyhs]/i.test(stripped)) out[i] = true;
+                });
+                return out;
+            }
+            function clXlsxDate(n) {
+                const d = new Date(Math.round((n - 25569) * 86400) * 1000);
+                const p = x => String(x).padStart(2, '0');
+                const time = p(d.getUTCHours()) + ':' + p(d.getUTCMinutes()) + (d.getUTCSeconds() ? ':' + p(d.getUTCSeconds()) : '');
+                if (n < 1) return time;
+                const date = d.getUTCFullYear() + '-' + p(d.getUTCMonth() + 1) + '-' + p(d.getUTCDate());
+                return (n % 1) ? date + ' ' + time : date;
+            }
+            function clXlsxCellValue(c, sst, dateXf) {
+                const t = c.getAttribute('t');
+                const vEl = c.getElementsByTagName('v')[0]; const v = vEl ? vEl.textContent : '';
+                if (t === 's') return sst[parseInt(v, 10)] || '';
+                if (t === 'inlineStr') { let s = ''; Array.prototype.forEach.call(c.getElementsByTagName('t'), x => { s += x.textContent; }); return s; }
+                if (t === 'b') return v === '1' ? 'TRUE' : 'FALSE';
+                if (t === 'str' || t === 'e') return v;
+                if (v === '') return '';
+                const n = Number(v); if (!isFinite(n)) return v;
+                if (dateXf[parseInt(c.getAttribute('s'), 10)]) return clXlsxDate(n);
+                return String(parseFloat(n.toPrecision(15)));
+            }
+            async function clImportXlsx(artboard, file) {
+                if (!window.JSZip) throw new Error('JSZip not loaded');
+                const zip = await JSZip.loadAsync(await file.arrayBuffer());
+                const parse = async path => { const f = zip.file(path); return f ? new DOMParser().parseFromString(await f.async('string'), 'application/xml') : null; };
+                const wb = await parse('xl/workbook.xml'); if (!wb) throw new Error('not an xlsx');
+                const rels = await parse('xl/_rels/workbook.xml.rels'); const relMap = {};
+                if (rels) Array.prototype.forEach.call(rels.getElementsByTagName('Relationship'), r => { relMap[r.getAttribute('Id')] = r.getAttribute('Target'); });
+                const sstDoc = await parse('xl/sharedStrings.xml'); const sst = [];
+                if (sstDoc) Array.prototype.forEach.call(sstDoc.getElementsByTagName('si'), si => { let s = ''; Array.prototype.forEach.call(si.getElementsByTagName('t'), t => { if (t.parentNode.nodeName !== 'rPh') s += t.textContent; }); sst.push(s); });
+                const dateXf = clXlsxDateStyles(await parse('xl/styles.xml'));
+                const sheets = Array.prototype.slice.call(wb.getElementsByTagName('sheet'));
+                let truncated = 0;
+                for (const sh of sheets) {
+                    const target = relMap[sh.getAttribute('r:id')]; if (!target) continue;
+                    const path = target.charAt(0) === '/' ? target.slice(1) : 'xl/' + target;
+                    if (path.indexOf('worksheets/') === -1) continue;
+                    const doc = await parse(path); if (!doc) continue;
+                    const rows = [];
+                    Array.prototype.forEach.call(doc.getElementsByTagName('row'), rowEl => {
+                        const cells = []; let auto = 0;
+                        Array.prototype.forEach.call(rowEl.getElementsByTagName('c'), c => {
+                            let col = auto; const ref = c.getAttribute('r'); const m = ref && ref.match(/^([A-Z]+)/);
+                            if (m) { col = 0; for (let i = 0; i < m[1].length; i++) col = col * 26 + (m[1].charCodeAt(i) - 64); col -= 1; }
+                            auto = col + 1; cells[col] = clXlsxCellValue(c, sst, dateXf);
+                        });
+                        for (let i = 0; i < cells.length; i++) if (cells[i] == null) cells[i] = '';
+                        rows.push(cells);
+                    });
+                    const name = sheets.length > 1 ? file.name + ' > ' + sh.getAttribute('name') : file.name;
+                    truncated += clPushTable(artboard, name, rows, true);
+                }
+                return truncated;
+            }
+            async function clImportFiles(artboard, files) {
+                const failed = []; let truncated = 0;
+                for (const f of files) {
+                    const ext = (f.name.split('.').pop() || '').toLowerCase();
+                    try {
+                        if (ext === 'docx') truncated += await clImportDocx(artboard, f);
+                        else if (ext === 'xlsx' || ext === 'xlsm') truncated += await clImportXlsx(artboard, f);
+                        else if (ext === 'srt') truncated += clImportSrt(artboard, f.name, clDecode(await f.arrayBuffer()));
+                        else if (ext === 'csv' || ext === 'tsv') truncated += clPushTable(artboard, f.name, clParseCsv(clDecode(await f.arrayBuffer()), ext === 'tsv' ? '\t' : null), true);
+                        else if (ext === 'txt' || ext === 'md' || ext === 'log' || (f.type || '').indexOf('text/') === 0) truncated += clPushText(artboard, f.name, clDecode(await f.arrayBuffer()).replace(/\r/g, '').split('\n'));
+                        else failed.push(f.name + ((ext === 'xls' || ext === 'doc') ? ' (old format, please save as .xlsx / .docx)' : ' (unsupported)'));
+                    } catch (err) { console.error(err); failed.push(f.name + ' (cannot read)'); }
+                }
+                clCommit(artboard);
+                if (truncated) alert('Only the first ' + clMaxRows() + ' rows of each file/sheet were imported (' + truncated + ' rows skipped).');
+                if (failed.length) alert('Could not import:\n' + failed.join('\n'));
+            }
+            function clMakeEl(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+            function clGroupCols(g) { return Math.max(1, (g.header ? g.header.length : 0), g.rows.reduce((m, r) => Math.max(m, r.cells.length), 0)); }
+            function clGroupTemplate(g, cols) {
+                if (g.kind !== 'table') return '22px minmax(0,1fr)';
+                const w = [];
+                for (let i = 0; i < cols; i++) {
+                    let m = g.header ? String((g.header[i] || '')).length : 0;
+                    g.rows.forEach(r => { const l = String(r.cells[i] || '').length; if (l > m) m = l; });
+                    w.push(Math.max(1.5, Math.round(Math.sqrt(m) * 10) / 10));
+                }
+                return '22px ' + w.map(x => 'minmax(0,' + x + 'fr)').join(' ');
+            }
+            function clCardEl(g, row, cols, tpl) {
+                const card = clMakeEl('div', 'cl-card' + (g.kind === 'table' ? ' cl-table' : '') + (row.checked ? ' checked' : ''));
+                card.dataset.gid = g.id; card.dataset.rid = row.id; card.style.gridTemplateColumns = tpl;
+                const cb = clMakeEl('input', 'cl-check'); cb.type = 'checkbox'; cb.checked = !!row.checked; card.appendChild(cb);
+                for (let i = 0; i < cols; i++) { const c = clMakeEl('div', 'cl-cell', row.cells[i] == null ? '' : row.cells[i]); c.dataset.ci = i; card.appendChild(c); }
+                const del = clMakeEl('button', 'cl-del', '×'); del.type = 'button'; del.title = 'Delete card'; card.appendChild(del);
+                return card;
+            }
+            function clGroupEl(g) {
+                const wrap = clMakeEl('div', 'cl-group'); wrap.dataset.gid = g.id;
+                const isTable = g.kind === 'table';
+                if (g.name || isTable) {
+                    const t = clMakeEl('div', 'cl-group-title');
+                    const nm = clMakeEl('span', 'cl-group-name', g.name || 'Table'); nm.title = g.name || ''; t.appendChild(nm);
+                    if (isTable) { const b = clMakeEl('button', 'cl-hdr-toggle', g.header ? 'Header: on' : 'Header: off'); b.type = 'button'; b.title = 'Toggle: first row is a header'; t.appendChild(b); }
+                    const d = clMakeEl('button', 'cl-group-del', '×'); d.type = 'button'; d.title = 'Remove this group'; t.appendChild(d);
+                    wrap.appendChild(t);
+                }
+                const cols = clGroupCols(g), tpl = clGroupTemplate(g, cols);
+                if (g.header) {
+                    const head = clMakeEl('div', 'cl-card cl-table cl-head'); head.style.gridTemplateColumns = tpl;
+                    head.appendChild(clMakeEl('span'));
+                    for (let i = 0; i < cols; i++) head.appendChild(clMakeEl('div', 'cl-cell', g.header[i] == null ? '' : g.header[i]));
+                    wrap.appendChild(head);
+                }
+                g.rows.forEach(r => wrap.appendChild(clCardEl(g, r, cols, tpl)));
+                return wrap;
+            }
+            function clUpdateCount(panel, artboard) {
+                const c = clCountRows(artboard); const el = panel.querySelector('.cl-count'); if (el) el.textContent = c.done + ' / ' + c.total + ' done';
+            }
+            function clAutoGrow(panel) {
+                const ta = panel.querySelector('.cl-input'); if (!ta) return;
+                if (panel.classList.contains('cl-empty')) { ta.style.height = ''; return; }
+                ta.style.height = '36px'; ta.style.height = Math.min(ta.scrollHeight + 2, 110) + 'px';
+            }
+            function clRender(artboard) {
+                const el = clEl(artboard); if (!el) return;
+                const panel = el.querySelector('.cl-panel'); if (!panel) return;
+                const list = panel.querySelector('.cl-list'); const st = list.scrollTop;
+                list.textContent = '';
+                artboard.checklist.groups.forEach(g => list.appendChild(clGroupEl(g)));
+                panel.classList.toggle('cl-empty', artboard.checklist.groups.length === 0);
+                clUpdateCount(panel, artboard); clAutoGrow(panel);
+                list.scrollTop = st;
+            }
+            function clEditCell(artboard, cellEl) {
+                const card = cellEl.closest('.cl-card'); if (!card || !card.dataset.rid) return;
+                const f = clFind(artboard, card.dataset.gid, card.dataset.rid); if (!f) return;
+                const idx = Number(cellEl.dataset.ci); const old = f.row.cells[idx] || '';
+                cellEl.contentEditable = 'true'; cellEl.classList.add('editing'); cellEl.focus();
+                const sel = window.getSelection(); const range = document.createRange(); range.selectNodeContents(cellEl); sel.removeAllRanges(); sel.addRange(range);
+                let done = false;
+                const finish = save => {
+                    if (done) return; done = true;
+                    cellEl.contentEditable = 'false'; cellEl.classList.remove('editing');
+                    const v = cellEl.textContent;
+                    if (save && v !== old) { f.row.cells[idx] = v; markAsChanged(); } else cellEl.textContent = old;
+                };
+                cellEl.addEventListener('blur', () => finish(true), { once: true });
+                cellEl.addEventListener('keydown', ev => {
+                    if (ev.key === 'Enter' && !ev.shiftKey && !ev.isComposing) { ev.preventDefault(); cellEl.blur(); }
+                    else if (ev.key === 'Escape') { ev.preventDefault(); finish(false); cellEl.blur(); }
+                });
+            }
+            function initChecklistPanel(artboardEl, artboard) {
+                const panel = artboardEl.querySelector('.cl-panel'); if (!panel) return;
+                if (!artboard.checklist) artboard.checklist = { groups: [] };
+                panel.innerHTML = '<div class="cl-bar"><span class="cl-count"></span><span class="cl-bar-actions"><button type="button" class="cl-btn cl-uncheck" title="Uncheck all cards">Uncheck all</button><button type="button" class="cl-btn cl-clear" title="Remove all cards">Clear</button></span></div><textarea class="cl-input" rows="1" spellcheck="false" placeholder="Paste text here, or drop .txt .docx .csv .srt .xlsx files.&#10;Each line becomes a card. Type + Enter to add one."></textarea><div class="cl-list"></div>';
+                const input = panel.querySelector('.cl-input'), list = panel.querySelector('.cl-list');
+
+                // tách panel khỏi phím tắt / kéo / zoom của workspace
+                panel.addEventListener('mousedown', e => { hideContextMenu(); if (e.button === 0) e.stopPropagation(); });
+                panel.addEventListener('contextmenu', e => e.stopPropagation());
+                panel.addEventListener('wheel', e => { if (!e.ctrlKey && !e.metaKey) e.stopPropagation(); });
+                panel.addEventListener('keydown', e => { const mod = e.ctrlKey || e.metaKey; if (!mod || ['z', 'y', 'a', 'c', 'v', 'x'].indexOf(e.key.toLowerCase()) !== -1) e.stopPropagation(); });
+
+                // thả file / text
+                ['dragenter', 'dragover'].forEach(t => panel.addEventListener(t, e => { e.preventDefault(); e.stopPropagation(); panel.classList.add('cl-drop'); }));
+                panel.addEventListener('dragleave', e => { if (!e.relatedTarget || !panel.contains(e.relatedTarget)) panel.classList.remove('cl-drop'); });
+                panel.addEventListener('drop', async e => {
+                    e.preventDefault(); e.stopPropagation();
+                    panel.classList.remove('cl-drop'); document.body.classList.remove('dragging');
+                    const files = Array.from((e.dataTransfer && e.dataTransfer.files) || []);
+                    if (files.length) await clImportFiles(artboard, files);
+                    else { const t = e.dataTransfer && e.dataTransfer.getData('text/plain'); if (t) clAddText(artboard, t); }
+                });
+
+                // nhập / paste
+                input.addEventListener('paste', e => {
+                    const cd = e.clipboardData; if (!cd) return;
+                    const t = cd.getData('text/plain');
+                    if (t) { e.preventDefault(); clAddText(artboard, t); }
+                    else if (cd.files && cd.files.length) { e.preventDefault(); clImportFiles(artboard, Array.from(cd.files)); }
+                });
+                input.addEventListener('keydown', e => {
+                    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+                        e.preventDefault(); const v = input.value; input.value = '';
+                        if (v.trim()) clAddText(artboard, v); else clAutoGrow(panel);
+                    }
+                });
+                input.addEventListener('input', () => clAutoGrow(panel));
+
+                panel.querySelector('.cl-uncheck').addEventListener('click', () => clUncheckAll(artboard));
+                panel.querySelector('.cl-clear').addEventListener('click', () => clClearAll(artboard));
+
+                list.addEventListener('change', e => {
+                    if (!e.target.classList.contains('cl-check')) return;
+                    const card = e.target.closest('.cl-card'); const f = clFind(artboard, card.dataset.gid, card.dataset.rid); if (!f) return;
+                    f.row.checked = e.target.checked; card.classList.toggle('checked', f.row.checked);
+                    clUpdateCount(panel, artboard); markAsChanged();
+                });
+                list.addEventListener('click', e => {
+                    const t = e.target;
+                    if (t.classList.contains('cl-del')) {
+                        const card = t.closest('.cl-card'); const f = clFind(artboard, card.dataset.gid, card.dataset.rid); if (!f) return;
+                        f.group.rows = f.group.rows.filter(r => r.id !== f.row.id);
+                        if (!f.group.rows.length) artboard.checklist.groups = artboard.checklist.groups.filter(g => g.id !== f.group.id);
+                        clCommit(artboard);
+                    } else if (t.classList.contains('cl-group-del')) {
+                        const gid = t.closest('.cl-group').dataset.gid; const f = clFind(artboard, gid); if (!f) return;
+                        if (!confirm('Remove this group and its ' + f.group.rows.length + ' cards?')) return;
+                        artboard.checklist.groups = artboard.checklist.groups.filter(g => g.id !== gid); clCommit(artboard);
+                    } else if (t.classList.contains('cl-hdr-toggle')) {
+                        clToggleHeader(artboard, t.closest('.cl-group').dataset.gid);
+                    }
+                });
+                list.addEventListener('dblclick', e => { const cell = e.target.closest('.cl-cell'); if (cell) clEditCell(artboard, cell); });
+
+                clRender(artboard);
+            }
 			async function handlePaste(e) {
                 const activeEl = document.activeElement; if (activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'INPUT') return;
                 const imageItem = Array.from(e.clipboardData.items).find(item => item.type.startsWith('image/'));
@@ -1558,10 +1990,11 @@
             }
 
             function renderWorkspace() {
+                state.artboards.forEach(b => { if (b.type === 'video') clSyncAttached(b); });
                 app.workspace.innerHTML = '';
                 state.artboards.forEach(artboard => {
                     const artboardEl = document.createElement('div'); artboardEl.className = 'artboard'; artboardEl.dataset.id = artboard.id;
-                    artboardEl.classList.toggle('loading', !!artboard.isLoading);
+                    artboardEl.classList.toggle('loading', !!artboard.isLoading); artboardEl.dataset.type = artboard.type;
                     const controlsHeight = artboard.type === 'video' ? 32 + ((artboard.srtTracks || []).length * 36) : 0;
                     artboardEl.style.cssText = `left: ${artboard.x}px; top: ${artboard.y}px; width: ${artboard.width}px; height: ${artboard.height + 30 + controlsHeight}px;`;
                     artboardEl.classList.toggle('selected', state.selectedArtboardIds.includes(artboard.id));
@@ -1576,9 +2009,10 @@
 							case 'video': 
 							    contentHTML = `<video src="${artboardSrc}" playsinline loop></video><img class="frame-backup hidden" alt="Backup Frame"><div class="embed-progress-overlay hidden"><div class="embed-progress-label">Đang xử lý...</div><div class="embed-progress-track"><div class="embed-progress-fill" style="width:0%"></div></div></div>`;
 							    break;
+                            case 'checklist': contentHTML = '<div class="cl-panel"></div>'; break;
                             case 'srt-table': { const cues = JSON.parse(artboardSrc || '[]'); contentHTML = `<div class="srt-table-wrap"><table class="srt-table"><thead><tr><th>#</th><th>Start</th><th>End</th><th>Caption</th></tr></thead><tbody>${cues.map((c,i) => `<tr><td>${i+1}</td><td>${escapeHtml(c.startText)}</td><td>${escapeHtml(c.endText)}</td><td>${escapeHtml(c.text)}</td></tr>`).join('')}</tbody></table></div>`; break; }
 						}
-                        if(artboard.type === 'video') videoControlsHTML = `<div class="artboard-video-controls"><button class="vid-play-btn" title="Play/Pause">▶</button><button class="vid-mute-btn" title="Mute/Unmute">${MUTE_ICON_SVG}</button><select class="vid-speed" title="Playback speed"><option value="0.25">0.25x</option><option value="0.5">0.5x</option><option value="1" selected>1.0x</option><option value="1.5">1.5x</option><option value="2">2.0x</option><option value="2.5">2.5x</option><option value="3">3.0x</option></select><input type="text" class="time-input vid-time" value="00:00:00"><div class="vid-timeline-wrapper"><div class="vid-timeline-bg"></div><div class="vid-timeline-markers"></div><input type="range" class="vid-timeline" value="0" step="0.01"></div><span class="vid-duration time-input">00:00:00</span></div>`;
+                        if(artboard.type === 'video') videoControlsHTML = `<div class="artboard-video-controls"><button class="vid-play-btn" title="Play/Pause">▶</button><button class="vid-mute-btn" title="Mute/Unmute">${MUTE_ICON_SVG}</button><select class="vid-speed" title="Playback speed"><option value="0.25">0.25x</option><option value="0.5">0.5x</option><option value="1" selected>1.0x</option><option value="1.5">1.5x</option><option value="2">2.0x</option><option value="2.5">2.5x</option><option value="3">3.0x</option></select><input type="text" class="time-input vid-time" value="00:00:00"><div class="vid-timeline-wrapper"><div class="vid-timeline-bg"></div><div class="vid-timeline-markers"></div><input type="range" class="vid-timeline" value="0" step="0.01"></div><span class="vid-duration time-input">00:00:00</span><button class="vid-checklist-btn" title="Check-list"><svg viewBox="0 0 24 24"><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1s-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm-2 14l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg></button></div>`;
                     }
                     const dimensionsDisplay = `<span class="artboard-info">(${artboard.originalWidth}x${artboard.originalHeight})</span>`;
                     const headerToolsHTML = `<div class="artboard-header-tools"><button class="header-icon-btn fit-view-btn" title="Fit to View (Ctrl+1)"><svg viewBox="0 0 24 24"><path d="M15 3h6v6l-2-2-4 4-2-2 4-4-2-2zM9 21H3v-6l2 2 4-4 2 2-4 4 2 2z"/></svg></button><button class="artboard-close-btn" title="Close Artboard (Ctrl+W)">&times;</button></div>`;
@@ -1609,6 +2043,7 @@
                     artboardEl.querySelector('.artboard-close-btn').addEventListener('click', () => deleteSelectedArtboards());
                     artboardEl.querySelector('.artboard-resizer').addEventListener('mousedown', e => onArtboardResizeMouseDown(e, artboard.id));
                     artboardEl.querySelector('.artboard-resizer').addEventListener('dblclick', e => { e.stopPropagation(); resetArtboardScale(artboard.id); });
+                    if (artboard.type === 'checklist') initChecklistPanel(artboardEl, artboard);
                     const interactionCanvas = artboardEl.querySelector('.interaction-canvas');
                     interactionCanvas.addEventListener('mousedown', e => onCanvasMouseDown(e, artboard.id));
                     interactionCanvas.addEventListener('dblclick', e => onCanvasDblClick(e, artboard.id));
@@ -1701,6 +2136,8 @@
                 });
 
                 video.muted = state.isGlobalMuted; muteBtn.innerHTML = video.muted ? MUTE_ICON_SVG : UNMUTE_ICON_SVG;
+                const clBtn = artboardEl.querySelector('.vid-checklist-btn');
+                if (clBtn) { clBtn.classList.toggle('active', !!clGetFor(artboard.id)); clBtn.addEventListener('click', e => { e.stopPropagation(); openChecklistForVideo(artboard.id); }); }
                 playBtn.addEventListener('click', e => { e.stopPropagation(); video.paused ? video.play() : video.pause(); });
                 muteBtn.addEventListener('click', e => { e.stopPropagation(); video.muted = !video.muted; muteBtn.innerHTML = video.muted ? MUTE_ICON_SVG : UNMUTE_ICON_SVG; });
 				video.playbackRate = parseFloat(speedSelect.value);
@@ -2772,6 +3209,7 @@
 			            if (htmlContent) artboardData.htmlContent = htmlContent;
 			            if (frameBackups) artboardData.frameBackups = frameBackups;
 						if (board.srtTracks && board.srtTracks.length) artboardData.srtTracks = board.srtTracks;
+						if (type === 'checklist') { artboardData.checklist = board.checklist || { groups: [] }; artboardData.ownerId = board.ownerId; artboardData.attached = !!board.attached; }
 			
 			            if (src && src.startsWith('data:')) {
 			                artboardData.src = src;
@@ -3118,12 +3556,25 @@
                 state.interaction.startPos = getWorkspaceMousePos(e); 
                 state.interaction.startData.clear();
                 state.selectedArtboardIds.forEach(id => { const board = state.artboards.find(b => b.id === id); if (board) { state.interaction.startData.set(id, { x: board.x, y: board.y }); } });
+                state.selectedArtboardIds.forEach(id => { state.artboards.filter(b => b.type === 'checklist' && b.attached && b.ownerId === id && !state.interaction.startData.has(b.id)).forEach(b => state.interaction.startData.set(b.id, { x: b.x, y: b.y })); });
                 document.querySelectorAll('.artboard.selected').forEach(el => el.classList.add('dragging'));
             }
 			
-            function onArtboardDrag(e) { if (state.interaction.mode !== 'draggingArtboard') return; const currentPos = getWorkspaceMousePos(e); const dx = currentPos.x - state.interaction.startPos.x; const dy = currentPos.y - state.interaction.startPos.y; state.selectedArtboardIds.forEach(id => { const board = state.artboards.find(b => b.id === id); const startPos = state.interaction.startData.get(id); if (board && startPos) { board.x = startPos.x + dx; board.y = startPos.y + dy; const el = document.querySelector(`.artboard[data-id="${id}"]`); if (el) { el.style.left = `${board.x}px`; el.style.top = `${board.y}px`; } } }); drawGuides(); }
-            function onArtboardResizeMouseDown(e, artboardId) { e.stopPropagation(); const artboard = state.artboards.find(b => b.id === artboardId); if(!artboard) return; state.interaction = { mode: 'resizingArtboard', target: { artboardId }, startPos: { x: e.clientX, y: e.clientY }, startWidth: artboard.width, startHeight: artboard.height }; document.querySelector(`.artboard[data-id="${artboardId}"]`).classList.add('dragging'); }
-            function onArtboardResize(e) { if (state.interaction.mode !== 'resizingArtboard') return; const { artboardId } = state.interaction.target; const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return; const dx = e.clientX - state.interaction.startPos.x; const newWidth = state.interaction.startWidth + (dx / state.view.scale); const aspectRatio = artboard.originalWidth / artboard.originalHeight; artboard.width = Math.max(50, newWidth); artboard.height = artboard.width / aspectRatio; artboard.scale = artboard.width / artboard.originalWidth; redrawArtboard(artboardId); markAsChanged(); }
+            function onArtboardDrag(e) {
+                if (state.interaction.mode !== 'draggingArtboard') return;
+                const currentPos = getWorkspaceMousePos(e);
+                const dx = currentPos.x - state.interaction.startPos.x;
+                const dy = currentPos.y - state.interaction.startPos.y;
+                const dragged = state.artboards.find(b => b.id === state.interaction.target.artboardId);
+                if (dragged && dragged.type === 'checklist' && dragged.attached && !state.interaction.startData.has(dragged.ownerId) && Math.hypot(dx, dy) > 6) { dragged.attached = false; markAsChanged(); }
+                Array.from(state.interaction.startData.keys()).forEach(id => {
+                    const board = state.artboards.find(b => b.id === id); const startPos = state.interaction.startData.get(id);
+                    if (board && startPos) { board.x = startPos.x + dx; board.y = startPos.y + dy; const el = document.querySelector(`.artboard[data-id="${id}"]`); if (el) { el.style.left = `${board.x}px`; el.style.top = `${board.y}px`; } }
+                });
+                drawGuides();
+            }
+			function onArtboardResizeMouseDown(e, artboardId) { e.stopPropagation(); const artboard = state.artboards.find(b => b.id === artboardId); if(!artboard) return; state.interaction = { mode: 'resizingArtboard', target: { artboardId }, startPos: { x: e.clientX, y: e.clientY }, startWidth: artboard.width, startHeight: artboard.height }; document.querySelector(`.artboard[data-id="${artboardId}"]`).classList.add('dragging'); }
+            function onArtboardResize(e) { if (state.interaction.mode !== 'resizingArtboard') return; const { artboardId } = state.interaction.target; const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return; const dx = e.clientX - state.interaction.startPos.x; const newWidth = state.interaction.startWidth + (dx / state.view.scale); if (artboard.type === 'checklist') { artboard.width = Math.max(240, newWidth); if (!artboard.attached) artboard.height = Math.max(160, state.interaction.startHeight + ((e.clientY - state.interaction.startPos.y) / state.view.scale)); redrawArtboard(artboardId); markAsChanged(); return; } const aspectRatio = artboard.originalWidth / artboard.originalHeight; artboard.width = Math.max(50, newWidth); artboard.height = artboard.width / aspectRatio; artboard.scale = artboard.width / artboard.originalWidth; redrawArtboard(artboardId); markAsChanged(); }
             function resetArtboardScale(artboardId) { const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return; artboard.scale = 1; artboard.width = artboard.originalWidth; artboard.height = artboard.originalHeight; redrawArtboard(artboardId); markAsChanged(); }
             const getWorkspaceMousePos = (e) => { const rect = app.workspaceContainer.getBoundingClientRect(); return { x: (e.clientX - rect.left - state.view.offsetX) / state.view.scale, y: (e.clientY - rect.top - state.view.offsetY) / state.view.scale }; };
             const getMousePosOnArtboard = (e, artboard) => { const artboardEl = app.workspace.querySelector(`.artboard[data-id="${artboard.id}"]`); if (!artboardEl) return {x:0, y:0}; const contentEl = artboardEl.querySelector('.artboard-content'); const rect = contentEl.getBoundingClientRect(); return { x: (e.clientX - rect.left) / rect.width, y: (e.clientY - rect.top) / rect.height }; };
@@ -3163,7 +3614,7 @@
             const getHitHandle = (pos, ann) => { const artboard = state.artboards.find(b => b.id === ann.artboardId); if (!artboard) return null; const handleSizePx = 16; const handleRadiusX = (handleSizePx / artboard.width) / 2; const handleRadiusY = (handleSizePx / artboard.height) / 2; return getHandlesFor(ann).find(h => pos.x > h.x - handleRadiusX && pos.x < h.x + handleRadiusX && pos.y > h.y - handleRadiusY && pos.y < h.y + handleRadiusY) || null; }
             function drawShape(ctx, ann, artboard, isSelected, isPreview = false) { ctx.save(); const { type, data, color } = ann; ctx.strokeStyle = color || state.activeColor; ctx.lineWidth = isSelected ? 4 : 2; if(isPreview) { ctx.setLineDash([6, 3]); ctx.lineWidth = 3; } const denorm = (p) => ({ x: p.x * artboard.width, y: p.y * artboard.height }); ctx.beginPath(); switch (type) { case 'comment': { const pos = denorm(data); const size = 24; ctx.fillStyle = color || state.activeColor; const path = new Path2D("M3,12v9h9c5,0,9-4,9-9h0c0-5-4-9-9-9h0C7,3,3,7,3,12Z"); ctx.save(); ctx.translate(pos.x, pos.y); ctx.scale(size / 24, size / 24); ctx.translate(-2, -22); ctx.fill(path); ctx.restore(); if (isSelected) { ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'; ctx.beginPath(); ctx.arc(pos.x, pos.y, 12, 0, 2 * Math.PI); ctx.fill(); } break; } case 'rect': { const p1_abs = denorm(data.p1); const p2_abs = denorm(data.p2); ctx.rect(p1_abs.x, p1_abs.y, p2_abs.x - p1_abs.x, p2_abs.y - p1_abs.y); break; } case 'circle': { const p1_abs = denorm(data.p1); const p2_abs = denorm(data.p2); ctx.ellipse(p1_abs.x + (p2_abs.x-p1_abs.x)/2, p1_abs.y + (p2_abs.y-p1_abs.y)/2, Math.abs((p2_abs.x-p1_abs.x)/2), Math.abs((p2_abs.y-p1_abs.y)/2), 0, 0, 2 * Math.PI); break; } case 'line': { const p1_abs = denorm(data.p1); const p2_abs = denorm(data.p2); ctx.moveTo(p1_abs.x, p1_abs.y); ctx.lineTo(p2_abs.x, p2_abs.y); break; } case 'arrow': { const p1_abs = denorm(data.p1); const p2_abs = denorm(data.p2); const h = 15, dx = p2_abs.x - p1_abs.x, dy = p2_abs.y - p1_abs.y, a = Math.atan2(dy, dx); ctx.moveTo(p1_abs.x, p1_abs.y); ctx.lineTo(p2_abs.x, p2_abs.y); ctx.lineTo(p2_abs.x - h * Math.cos(a - Math.PI / 6), p2_abs.y - h * Math.sin(a - Math.PI / 6)); ctx.moveTo(p2_abs.x, p2_abs.y); ctx.lineTo(p2_abs.x - h * Math.cos(a + Math.PI / 6), p2_abs.y - h * Math.sin(a + Math.PI / 6)); break; } case 'image': { const p1_abs = denorm(data.p1); const p2_abs = denorm(data.p2); let img = imageAnnotationCache.get(ann.id); if (!img) { img = new Image(); img.src = data.imageData; imageAnnotationCache.set(ann.id, img); } if (img.complete && img.naturalWidth > 0) { ctx.drawImage(img, p1_abs.x, p1_abs.y, p2_abs.x - p1_abs.x, p2_abs.y - p1_abs.y); } else { img.onload = () => redrawArtboardAnnotations(ann.artboardId); } ctx.rect(p1_abs.x, p1_abs.y, p2_abs.x - p1_abs.x, p2_abs.y - p1_abs.y); break; } case 'reply': break; } if (type !== 'comment' && type !== 'reply') ctx.stroke(); ctx.restore(); }
             function drawHandles(ctx, ann, artboard) { if (ann.type === 'reply') return; ctx.save(); const handles = getHandlesFor(ann); ctx.fillStyle = 'white'; ctx.strokeStyle = '#333'; ctx.lineWidth = 1; const handleSize = 10; handles.forEach(h => { const x_abs = h.x * artboard.width; const y_abs = h.y * artboard.height; ctx.fillRect(x_abs - handleSize/2, y_abs - handleSize/2, handleSize, handleSize); ctx.strokeRect(x_abs - handleSize/2, y_abs - handleSize/2, handleSize, handleSize); }); ctx.restore(); }
-            function redrawArtboard(artboardId){ const artboard = state.artboards.find(b => b.id === artboardId); if(!artboard) return; const artboardEl = app.workspace.querySelector(`.artboard[data-id="${artboardId}"]`); if(!artboardEl) return; const controlsHeight = artboard.type === 'video' ? 32 : 0; artboardEl.style.width = `${artboard.width}px`; artboardEl.style.height = `${artboard.height + 30 + controlsHeight}px`; const dimensionsDisplay = `<span class="artboard-info">(${artboard.originalWidth}x${artboard.originalHeight})</span>`; const infoWrapper = artboardEl.querySelector('.artboard-info-wrapper'); infoWrapper.innerHTML = `${dimensionsDisplay}`; redrawAllAnnotations(); drawGuides(); }
+            function redrawArtboard(artboardId){ const artboard = state.artboards.find(b => b.id === artboardId); if(!artboard) return; const artboardEl = app.workspace.querySelector(`.artboard[data-id="${artboardId}"]`); if(!artboardEl) return; const controlsHeight = artboard.type === 'video' ? 32 : 0; artboardEl.style.width = `${artboard.width}px`; artboardEl.style.height = `${artboard.height + 30 + controlsHeight}px`; const dimensionsDisplay = `<span class="artboard-info">(${artboard.originalWidth}x${artboard.originalHeight})</span>`; const infoWrapper = artboardEl.querySelector('.artboard-info-wrapper'); infoWrapper.innerHTML = `${dimensionsDisplay}`; redrawAllAnnotations(); drawGuides(); if (artboard.type === 'video') clSyncAttached(artboard); }
             function resizeAllVideosTo720p() { state.artboards.forEach(artboard => { if (artboard.type === 'video' && artboard.originalHeight > 0) { const targetHeight = 720; const aspectRatio = artboard.originalWidth / artboard.originalHeight; artboard.height = targetHeight; artboard.width = targetHeight * aspectRatio; artboard.scale = artboard.height / artboard.originalHeight; redrawArtboard(artboard.id); } }); markAsChanged(); }
             function rearrangeArtboards() {
                 if (state.artboards.length === 0) return;
@@ -3172,9 +3623,10 @@
                     let nextX = margin; let nextY = startY; let rowMaxHeight = 0;
                     group.sort((a,b) => a.name.localeCompare(b.name)).forEach(board => {
                         const controlsHeight = board.type === 'video' ? 32 : 0; const boardHeight = board.height + 30 + controlsHeight;
-                        if (nextX + board.width > state.layout.maxRowWidth && nextX > margin) { nextY += rowMaxHeight + margin; nextX = margin; rowMaxHeight = 0; }
-                        board.x = nextX; board.y = nextY; nextX += board.width + margin; rowMaxHeight = Math.max(rowMaxHeight, boardHeight);
-                        const boardEl = document.querySelector(`.artboard[data-id="${board.id}"]`); if (boardEl) { boardEl.style.left = `${board.x}px`; boardEl.style.top = `${board.y}px`; }
+                        const extraW = board.type === 'video' ? clAttachedExtraWidth(board) : 0;
+                        if (nextX + board.width + extraW > state.layout.maxRowWidth && nextX > margin) { nextY += rowMaxHeight + margin; nextX = margin; rowMaxHeight = 0; }
+                        board.x = nextX; board.y = nextY; nextX += board.width + extraW + margin; rowMaxHeight = Math.max(rowMaxHeight, boardHeight);
+                        const boardEl = document.querySelector(`.artboard[data-id="${board.id}"]`); if (boardEl) { boardEl.style.left = `${board.x}px`; boardEl.style.top = `${board.y}px`; } if (board.type === 'video') clSyncAttached(board);
                     });
                     return nextY + rowMaxHeight;
                 };
@@ -3659,8 +4111,9 @@
                 if (!state.selectedArtboardIds.includes(artboardId)) { selectArtboard(artboardId, false); }
                 const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return;
                 const pos = getMousePosOnArtboard(e, artboard);
+                if (artboard.type === 'checklist') { showContextMenu(e, clContextMenuItems(artboard)); return; }
                 let items = [{ label: 'Add Comment', action: () => { addAnnotation({ type: 'comment', artboardId, data: pos, color: state.activeColor, text: '' }, true); } }];
-                if (artboard.type === 'video') { items.push({ label: 'Save Frame', action: () => saveVideoFrame(artboardId) });	}
+                if (artboard.type === 'video') { items.push({ label: 'Save Frame', action: () => saveVideoFrame(artboardId) }); items.push({ label: 'Check-list', action: () => openChecklistForVideo(artboardId) });	}
                 items.push(
 					{ divider: true },
                     { label: 'Add Horizontal Guide', action: () => { if(!state.guides.artboard[artboardId]) state.guides.artboard[artboardId] = []; state.guides.artboard[artboardId].push({type: 'horizontal', position: pos.y, id: crypto.randomUUID()}); drawGuides(); markAsChanged(); } },
