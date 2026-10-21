@@ -10,6 +10,9 @@
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
 	<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 	<script src="coi-serviceworker.js"></script>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Open+Sans&family=Noto+Sans&family=Be+Vietnam+Pro&family=Montserrat&family=Lora&display=swap" rel="stylesheet">
 
     <style>
         :root { --bg-color: #2e2e2e; --panel-bg: rgba(40, 40, 40, 0.8); --border-color: rgba(255, 255, 255, 0.2); --text-color: #f0f0f0; --text-color-light: #999; --highlight-color: #00aaff; --input-bg: rgba(0,0,0,0.3); --list-item-bg: rgba(0,0,0,0.2); --list-item-reply-bg: rgba(0,0,0,0.3); --checkbox-border: #555; --icon-btn-color: #999; --icon-btn-hover-color: #fff; --workspace-bg: #202020; --video-slot-bg: #000; --artboard-header-color: rgb(0,0,0,0.5); --button-controler-color: white; --ruler-bg: #3a3a3a; --ruler-border: #555; }
@@ -265,6 +268,8 @@
         body.theme-dark .artboard-ruler-left { border-right-color: #555; }
         .ruler-canvas { display: block; width: 100%; height: 100%; }
         .srt-caption-track{height:32px;box-sizing:border-box;display:flex;align-items:center;gap:6px;padding:2px 6px;background:var(--artboard-header-color);border-top:1px solid var(--border-color);color:var(--text-color);font:12px Arial,sans-serif;position:relative}.srt-caption-text{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;text-align:center}.srt-caption-track button{background:var(--panel-bg);color:var(--text-color);border:1px solid var(--border-color);border-radius:4px;cursor:pointer;height:24px;min-width:24px}.srt-options{position:absolute;z-index:100;left:4px;top:30px;padding:8px;background:var(--panel-bg);color:var(--text-color);border:1px solid var(--border-color);border-radius:5px;display:flex;gap:8px}.srt-options.hidden{display:none}.srt-options label{display:flex;align-items:center;gap:4px}.srt-font-size{width:54px;background:var(--input-bg);color:var(--text-color);border:1px solid var(--border-color);border-radius:3px;padding:2px}.srt-table-wrap{width:100%;height:100%;overflow:auto;background:#fff;color:#222}.srt-table{width:100%;border-collapse:collapse;font:13px Arial,sans-serif}.srt-table th,.srt-table td{border:1px solid #ddd;padding:6px;text-align:left;white-space:pre-wrap}.srt-table th{position:sticky;top:0;background:#f3f4f6}.srt-table td:last-child{min-width:260px}
+		.srt-font-family{max-width:130px;background:var(--input-bg);color:var(--text-color);border:1px solid var(--border-color);border-radius:3px;padding:2px}
+		.srt-options{flex-wrap:wrap;width:max-content;max-width:280px}
     </style>
 </head>
 	
@@ -670,6 +675,7 @@
                 if (confirm('Are you sure you want to clean the cache? This will remove saved user and theme preferences.')) {
                     localStorage.removeItem('qcToolUser');
                     localStorage.removeItem('qcToolTheme');
+					localStorage.removeItem('qcToolSrtSettings');
                     alert('Cache cleaned. The page will now reload.');
                     location.reload();
                 }
@@ -718,10 +724,57 @@
             function escapeHtml(value) { return String(value == null ? '' : value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;').replace(/'/g,'&#39;'); }
             function parseSrtTime(value) { const m = String(value).trim().match(/^(\d{1,2}):(\d{2}):(\d{2})[,\.](\d{1,3})$/); return m ? (+m[1]*3600 + +m[2]*60 + +m[3] + +(m[4].padEnd(3,'0'))/1000) : 0; }
             function parseSrt(text) { return String(text).replace(/^\uFEFF/,'').replace(/\r/g,'').trim().split(/\n\s*\n/).map(block => { const lines=block.split('\n'); const ti=lines.findIndex(line => line.includes('-->')); if(ti<0)return null; const parts=lines[ti].split('-->'); const startText=parts[0].trim(), endText=parts[1].trim().split(/\s+/)[0]; return {start:parseSrtTime(startText),end:parseSrtTime(endText),startText,endText,text:lines.slice(ti+1).join('\n').replace(/<[^>]*>/g,'').trim()}; }).filter(c => c && c.text); }
-            function handleSrtFile(file) { const reader=new FileReader(); reader.onload=()=>{const cues=parseSrt(reader.result); if(!cues.length){alert('No valid SRT captions found in '+file.name);return;} const targetId=state.selectedArtboardIds.find(id=>state.artboards.some(a=>a.id===id&&a.type==='video')) || (state.artboards.find(a=>a.type==='video')||{}).id; const target=state.artboards.find(a=>a.id===targetId); if(target){target.srtTracks=target.srtTracks||[];target.srtTracks.push({id:crypto.randomUUID(),name:file.name,cues,color:'#ffffff',align:'center'});renderWorkspace();}else{addArtboard(file.name,JSON.stringify(cues),'srt-table',{width:720,height:Math.min(600,Math.max(180,cues.length*30+40))});setTimeout(()=>fitAllArtboardsToView(),200);} }; reader.readAsText(file); }
-            function updateSrtCaptions(artboardEl, artboard, time) { (artboard.srtTracks||[]).forEach(track=>{const el=artboardEl.querySelector('[data-track-id="'+track.id+'"]');if(!el)return;const cue=track.cues.find(c=>time>=c.start&&time<c.end);const label=el.querySelector('.srt-caption-text');label.textContent=cue?cue.text:'';label.style.color=track.color||'#ffffff';label.style.textAlign=track.align||'center';label.style.fontSize=(track.fontSize||12)+'px';}); }
-            function initSrtCaptionControls(artboardEl, artboard, video) { (artboard.srtTracks||[]).forEach(track=>{const el=artboardEl.querySelector('[data-track-id="'+track.id+'"]');if(!el)return;el.querySelector('.srt-settings').addEventListener('click',e=>{e.stopPropagation();el.querySelector('.srt-options').classList.toggle('hidden');});el.querySelector('.srt-remove').addEventListener('click',e=>{e.stopPropagation();artboard.srtTracks=artboard.srtTracks.filter(t=>t.id!==track.id);renderWorkspace();});el.querySelector('.srt-align').value=track.align||'center';el.querySelector('.srt-align').addEventListener('change',e=>{track.align=e.target.value;updateSrtCaptions(artboardEl,artboard,video.currentTime);});el.querySelector('.srt-color').value=track.color||'#ffffff';el.querySelector('.srt-color').addEventListener('input',e=>{track.color=e.target.value;updateSrtCaptions(artboardEl,artboard,video.currentTime);});const fontSizeInput=el.querySelector('.srt-font-size');fontSizeInput.value=track.fontSize||12;fontSizeInput.addEventListener('change',e=>{track.fontSize=Math.max(8,Math.min(72,Number(e.target.value)||12));fontSizeInput.value=track.fontSize;updateSrtCaptions(artboardEl,artboard,video.currentTime);});});updateSrtCaptions(artboardEl,artboard,video.currentTime);}
-            async function handlePaste(e) {
+            function handleSrtFile(file) { const reader=new FileReader(); reader.onload=()=>{const cues=parseSrt(reader.result); if(!cues.length){alert('No valid SRT captions found in '+file.name);return;} const targetId=state.selectedArtboardIds.find(id=>state.artboards.some(a=>a.id===id&&a.type==='video')) || (state.artboards.find(a=>a.type==='video')||{}).id; const target=state.artboards.find(a=>a.id===targetId); if(target){target.srtTracks=target.srtTracks||[];target.srtTracks.push({id:crypto.randomUUID(),name:file.name,cues,...getSrtDefaults(),align:'center'});renderWorkspace();markSrtChanged();}}else{addArtboard(file.name,JSON.stringify(cues),'srt-table',{width:720,height:Math.min(600,Math.max(180,cues.length*30+40))});setTimeout(()=>fitAllArtboardsToView(),200);} }; reader.readAsText(file); }
+			function srtFonts() { return ['Roboto','Open Sans','Noto Sans','Be Vietnam Pro','Montserrat','Lora','Arial','Verdana','Tahoma','Times New Roman','Georgia','Courier New']; }
+			function loadSrtSettings() { try { return JSON.parse(localStorage.getItem('qcToolSrtSettings')) || {}; } catch (e) { return {}; } }
+			function saveSrtSetting(key, value) { const s = loadSrtSettings(); s[key] = value; try { localStorage.setItem('qcToolSrtSettings', JSON.stringify(s)); } catch (e) {} }
+			function getSrtDefaults() { const s = loadSrtSettings(); return { color: s.color || null, fontSize: s.fontSize || 24, fontFamily: s.fontFamily || 'Roboto' }; }
+			function cssColorToHex(c) { const m = String(c).match(/\d+(\.\d+)?/g); if (!m || m.length < 3) return '#ffffff'; return '#' + m.slice(0, 3).map(n => Math.round(+n).toString(16).padStart(2, '0')).join(''); }
+			function srtFontOptionsHTML(selected) { return srtFonts().map(f => `<option value="${f}" ${f === selected ? 'selected' : ''}>${f}</option>`).join(''); }
+			function markSrtChanged() { state.hasUnsavedChanges = true; updateSaveButtonState(); triggerAutoSave(); }
+			
+			function updateSrtCaptions(artboardEl, artboard, time) {
+			    (artboard.srtTracks || []).forEach(track => {
+			        const el = artboardEl.querySelector('[data-track-id="' + track.id + '"]'); if (!el) return;
+			        const cue = track.cues.find(c => time >= c.start && time < c.end);
+			        const label = el.querySelector('.srt-caption-text');
+			        label.textContent = cue ? cue.text : '';
+			        label.style.color = track.color || '';   // rỗng = theo theme (var(--text-color), giống tên file)
+			        label.style.textAlign = track.align || 'center';
+			        label.style.fontSize = (track.fontSize || 24) + 'px';
+			        label.style.fontFamily = '"' + (track.fontFamily || 'Roboto') + '", Arial, sans-serif';
+			        if (!track.color) { const ci = el.querySelector('.srt-color'); if (ci) ci.value = cssColorToHex(getComputedStyle(label).color); }
+			    });
+			}
+			
+			function initSrtCaptionControls(artboardEl, artboard, video) {
+			    (artboard.srtTracks || []).forEach(track => {
+			        const el = artboardEl.querySelector('[data-track-id="' + track.id + '"]'); if (!el) return;
+			        const refresh = () => updateSrtCaptions(artboardEl, artboard, video.currentTime);
+			
+			        el.querySelector('.srt-settings').addEventListener('click', e => { e.stopPropagation(); el.querySelector('.srt-options').classList.toggle('hidden'); });
+			        el.querySelector('.srt-remove').addEventListener('click', e => { e.stopPropagation(); artboard.srtTracks = artboard.srtTracks.filter(t => t.id !== track.id); renderWorkspace(); markSrtChanged(); });
+			
+			        const alignSel = el.querySelector('.srt-align');
+			        alignSel.value = track.align || 'center';
+			        alignSel.addEventListener('change', e => { track.align = e.target.value; refresh(); markSrtChanged(); });
+			
+			        const colorInput = el.querySelector('.srt-color');
+			        if (track.color) colorInput.value = track.color;
+			        colorInput.addEventListener('input', e => { track.color = e.target.value; saveSrtSetting('color', track.color); refresh(); markSrtChanged(); });
+			        colorInput.addEventListener('dblclick', () => { track.color = null; saveSrtSetting('color', null); refresh(); markSrtChanged(); }); // reset về màu theme
+			
+			        const fontSizeInput = el.querySelector('.srt-font-size');
+			        fontSizeInput.value = track.fontSize || 24;
+			        fontSizeInput.addEventListener('change', e => { track.fontSize = Math.max(8, Math.min(72, Number(e.target.value) || 24)); fontSizeInput.value = track.fontSize; saveSrtSetting('fontSize', track.fontSize); refresh(); markSrtChanged(); });
+			
+			        const fontSel = el.querySelector('.srt-font-family');
+			        fontSel.value = track.fontFamily || 'Roboto';
+			        fontSel.addEventListener('change', e => { track.fontFamily = e.target.value; saveSrtSetting('fontFamily', track.fontFamily); refresh(); markSrtChanged(); });
+			    });
+			    updateSrtCaptions(artboardEl, artboard, video.currentTime);
+			}
+			async function handlePaste(e) {
                 const activeEl = document.activeElement; if (activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'INPUT') return;
                 const imageItem = Array.from(e.clipboardData.items).find(item => item.type.startsWith('image/'));
                 if (imageItem) {
@@ -1533,7 +1586,7 @@
                     artboardEl.innerHTML = `
                         <div class="artboard-header"><div class="artboard-title-container" title="${artboard.name} ${artboard.originalWidth}x${artboard.originalHeight}"><span class="artboard-title">${artboard.name}</span><span class="artboard-info-wrapper">${dimensionsDisplay}</span></div>${headerToolsHTML}</div>
                         <div class="artboard-content">${contentHTML}<canvas class="guide-canvas"></canvas><canvas class="display-canvas"></canvas><canvas class="interaction-canvas"></canvas></div>
-                        ${captionTracksHTML = (artboard.srtTracks || []).map((track, idx) => `<div class="srt-caption-track" data-track-id="${track.id}"><button class="srt-settings" title="Caption settings">⚙</button><span class="srt-caption-text"></span><button class="srt-remove" title="Remove caption track">×</button><div class="srt-options hidden"><label>Align <select class="srt-align"><option value="left">Left</option><option value="center" selected>Center</option><option value="right">Right</option></select></label><label>Color <input class="srt-color" type="color" value="${track.color || 'var(--text-color)'}"></label><label>Size <input class="srt-font-size" type="number" min="8" max="72" step="1" value="${track.fontSize || 24}"> px</label></div></div>`).join('')}
+                        ${captionTracksHTML = (artboard.srtTracks || []).map((track, idx) => `<div class="srt-caption-track" data-track-id="${track.id}"><button class="srt-settings" title="Caption settings">⚙</button><span class="srt-caption-text"></span><button class="srt-remove" title="Remove caption track">×</button><div class="srt-options hidden"><label>Align <select class="srt-align"><option value="left">Left</option><option value="center" selected>Center</option><option value="right">Right</option></select></label><label>Color <input class="srt-color" type="color" title="Double-click để trả về màu theo theme" value="${track.color || '#ffffff'}"></label><label>Size <input class="srt-font-size" type="number" min="8" max="72" step="1" value="${track.fontSize || 24}"> px</label><label>Font <select class="srt-font-family">${srtFontOptionsHTML(track.fontFamily || 'Roboto')}</select></label></div></div>`).join('')}
                         ${videoControlsHTML}
                         <div class="artboard-resizer" title="Resize (Double-click to reset)"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10.0002 12.0001L12.0002 10.0001" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M6.00009 16.0001L16.0001 6.00009" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M14.0002 12.0001L12.0002 14.0001" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>`;
                     app.workspace.appendChild(artboardEl);
@@ -2694,6 +2747,7 @@
 			
 			            if (htmlContent) artboardData.htmlContent = htmlContent;
 			            if (frameBackups) artboardData.frameBackups = frameBackups;
+						if (board.srtTracks && board.srtTracks.length) artboardData.srtTracks = board.srtTracks;
 			
 			            if (src && src.startsWith('data:')) {
 			                artboardData.src = src;
