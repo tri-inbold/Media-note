@@ -275,7 +275,10 @@
         .artboard.cl-flash { animation: clflash .9s ease-out; }
         @keyframes clflash { 0% { box-shadow: 0 0 0 3px var(--highlight-color); } 100% { box-shadow: 0 4px 12px rgba(0,0,0,0.2); } }
         .artboard-video-controls .vid-checklist-btn.active { color: var(--highlight-color); }
-        .cl-panel { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 6; display: flex; flex-direction: column; gap: 8px; padding: 8px; box-sizing: border-box; background: var(--bg-color); color: var(--text-color); font-size: 13px; line-height: 1.4; user-select: text; -webkit-user-select: text; --cl-font: 13px; --cl-py: 8px; --cl-px: 10px; }
+        .cl-panel { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 6; display: flex; flex-direction: column; gap: 8px; padding: 8px; box-sizing: border-box; background: var(--bg-color); color: var(--text-color); font-size: 13px; line-height: 1.4; user-select: none; -webkit-user-select: none; --cl-font: 13px; --cl-py: 8px; --cl-px: 10px; }
+        .cl-input, .cl-cell.editing { user-select: text; -webkit-user-select: text; }
+        .artboard.cl-hidden { display: none !important; }
+        .artboard-video-controls .vid-checklist-btn.has-hidden { color: #ff9800; }
         .cl-panel.cl-drop { outline: 2px dashed var(--highlight-color); outline-offset: -4px; }
         .cl-bar { display: flex; align-items: center; justify-content: space-between; flex: none; font-size: 12px; color: var(--text-color-light); }
         .cl-panel.cl-empty .cl-bar { display: none; }
@@ -808,14 +811,13 @@
 			    });
 			    updateSrtCaptions(artboardEl, artboard, video.currentTime);
 			}
-			            /* ================= CHECK-LIST ================= */
+			function vkCanReuse(old, artboard) { return !!old && !old.error && old.getAttribute('src') === (artboard.src || artboard.name); }
             function clMaxRows() { return 5000; }
             function clUid() { return (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'cl' + Date.now().toString(36) + Math.random().toString(36).slice(2); }
             function clEl(artboard) { return document.querySelector('.artboard[data-id="' + artboard.id + '"]'); }
             function clGetFor(videoId) { return state.artboards.find(b => b.type === 'checklist' && b.ownerId === videoId); }
-            function clAttachedExtraWidth(video) { return state.artboards.filter(b => b.type === 'checklist' && b.attached && b.ownerId === video.id).reduce((s, b) => s + b.width + 12, 0); }
+            function clAttachedExtraWidth(video) { return state.artboards.filter(b => b.type === 'checklist' && b.attached && !b.hidden && b.ownerId === video.id).reduce((s, b) => s + b.width + 12, 0); }
 
-            // Panel gắn vào video luôn nằm sát bên phải video và cao bằng video
             function clSyncAttached(video) {
                 state.artboards.filter(b => b.type === 'checklist' && b.attached && b.ownerId === video.id).forEach(cl => {
                     cl.x = video.x + video.width + 12;
@@ -827,26 +829,41 @@
                 });
             }
 
+            function clApplyBtn(btn, videoId) {
+                const cl = clGetFor(videoId);
+                btn.classList.toggle('active', !!cl && !cl.hidden);
+                btn.classList.toggle('has-hidden', !!cl && !!cl.hidden && clCountRows(cl).total > 0);
+            }
+            function clUpdateButtons() {
+                document.querySelectorAll('.artboard[data-type="video"]').forEach(a => { const b = a.querySelector('.vid-checklist-btn'); if (b) clApplyBtn(b, a.dataset.id); });
+            }
+
+            // Bấm lần 1: tạo/hiện panel. Bấm lần nữa: ẩn (dữ liệu vẫn giữ). Bấm tiếp: hiện lại.
             function openChecklistForVideo(videoId) {
                 const video = state.artboards.find(b => b.id === videoId && b.type === 'video'); if (!video) return;
                 let cl = clGetFor(videoId);
-                const existed = !!cl;
                 if (!cl) {
                     const w = 340, h = video.height + 32 + ((video.srtTracks || []).length * 36);
-                    cl = { id: clUid(), name: 'Check-list - ' + video.name, type: 'checklist', src: '', x: 0, y: 0, width: w, height: h, originalWidth: w, originalHeight: h, scale: 1, isLoading: false, ownerId: videoId, attached: true, checklist: { groups: [] } };
+                    cl = { id: clUid(), name: 'Check-list - ' + video.name, type: 'checklist', src: '', x: 0, y: 0, width: w, height: h, originalWidth: w, originalHeight: h, scale: 1, isLoading: false, ownerId: videoId, attached: true, hidden: false, checklist: { groups: [] } };
                     state.guides.artboard[cl.id] = [];
                     state.artboards.push(cl);
                     clSyncAttached(video);
                     renderWorkspace();
-                    markAsChanged();
+                } else {
+                    cl.hidden = !cl.hidden;
+                    if (!cl.hidden) clSyncAttached(video);
+                    const el0 = clEl(cl); if (el0) el0.classList.toggle('cl-hidden', cl.hidden);
                 }
-                state.selectedArtboardIds = [cl.id];
-                updateArtboardSelection();
-                const el = clEl(cl);
-                if (el) {
-                    if (existed) { el.classList.remove('cl-flash'); void el.offsetWidth; el.classList.add('cl-flash'); }
-                    const ta = el.querySelector('.cl-input'); if (ta) setTimeout(() => ta.focus(), 30);
+                markAsChanged();
+                if (cl.hidden) {
+                    state.selectedArtboardIds = state.selectedArtboardIds.filter(id => id !== cl.id);
+                    updateArtboardSelection();
+                } else {
+                    state.selectedArtboardIds = [cl.id];
+                    updateArtboardSelection();
+                    const el = clEl(cl); const ta = el && el.querySelector('.cl-input'); if (ta) setTimeout(() => ta.focus(), 30);
                 }
+                clUpdateButtons();
             }
 
             function clContextMenuItems(cl) {
@@ -865,7 +882,7 @@
                 return row ? { group: g, row } : null;
             }
             function clCountRows(artboard) { let total = 0, done = 0; artboard.checklist.groups.forEach(g => g.rows.forEach(r => { total++; if (r.checked) done++; })); return { total, done }; }
-            function clCommit(artboard) { clRender(artboard); markAsChanged(); }
+            function clCommit(artboard) { clRender(artboard); markAsChanged(); clUpdateButtons(); }
             function clUncheckAll(artboard) { artboard.checklist.groups.forEach(g => g.rows.forEach(r => { r.checked = false; })); clCommit(artboard); }
             function clClearAll(artboard) {
                 const n = clCountRows(artboard).total; if (!n) return;
@@ -1991,10 +2008,12 @@
 
             function renderWorkspace() {
                 state.artboards.forEach(b => { if (b.type === 'video') clSyncAttached(b); });
+                const keepVideos = {}, keepPlaying = {};
+                app.workspace.querySelectorAll('.artboard[data-type="video"]').forEach(a => { const v = a.querySelector('video'); if (v && !v.error) { keepVideos[a.dataset.id] = v; keepPlaying[a.dataset.id] = !v.paused; } });
                 app.workspace.innerHTML = '';
                 state.artboards.forEach(artboard => {
                     const artboardEl = document.createElement('div'); artboardEl.className = 'artboard'; artboardEl.dataset.id = artboard.id;
-                    artboardEl.classList.toggle('loading', !!artboard.isLoading); artboardEl.dataset.type = artboard.type;
+                    artboardEl.classList.toggle('loading', !!artboard.isLoading); artboardEl.dataset.type = artboard.type; artboardEl.classList.toggle('cl-hidden', !!artboard.hidden);
                     const controlsHeight = artboard.type === 'video' ? 32 + ((artboard.srtTracks || []).length * 36) : 0;
                     artboardEl.style.cssText = `left: ${artboard.x}px; top: ${artboard.y}px; width: ${artboard.width}px; height: ${artboard.height + 30 + controlsHeight}px;`;
                     artboardEl.classList.toggle('selected', state.selectedArtboardIds.includes(artboard.id));
@@ -2007,7 +2026,7 @@
 								contentHTML = `<img src="${artboardSrc}" alt="${artboard.name}">`;
 								break;
 							case 'video': 
-							    contentHTML = `<video src="${artboardSrc}" playsinline loop></video><img class="frame-backup hidden" alt="Backup Frame"><div class="embed-progress-overlay hidden"><div class="embed-progress-label">Đang xử lý...</div><div class="embed-progress-track"><div class="embed-progress-fill" style="width:0%"></div></div></div>`;
+							    contentHTML = `<video ${vkCanReuse(keepVideos[artboard.id], artboard) ? '' : 'src="' + artboardSrc + '"'} playsinline loop></video><img class="frame-backup hidden" alt="Backup Frame"><div class="embed-progress-overlay hidden"><div class="embed-progress-label">Đang xử lý...</div><div class="embed-progress-track"><div class="embed-progress-fill" style="width:0%"></div></div></div>`;
 							    break;
                             case 'checklist': contentHTML = '<div class="cl-panel"></div>'; break;
                             case 'srt-table': { const cues = JSON.parse(artboardSrc || '[]'); contentHTML = `<div class="srt-table-wrap"><table class="srt-table"><thead><tr><th>#</th><th>Start</th><th>End</th><th>Caption</th></tr></thead><tbody>${cues.map((c,i) => `<tr><td>${i+1}</td><td>${escapeHtml(c.startText)}</td><td>${escapeHtml(c.endText)}</td><td>${escapeHtml(c.text)}</td></tr>`).join('')}</tbody></table></div>`; break; }
@@ -2023,7 +2042,10 @@
                         ${captionTracksHTML = (artboard.srtTracks || []).map((track, idx) => `<div class="srt-caption-track" data-track-id="${track.id}"><button class="srt-settings" title="Caption settings">⚙</button><span class="srt-caption-text"></span><button class="srt-remove" title="Remove caption track">×</button><div class="srt-options hidden"><label>Align <select class="srt-align"><option value="left">Left</option><option value="center" selected>Center</option><option value="right">Right</option></select></label><label>Color <input class="srt-color" type="color" title="Double-click để trả về màu theo theme" value="${track.color || '#ffffff'}"></label><label>Size <input class="srt-font-size" type="number" min="8" max="72" step="1" value="${track.fontSize || 24}"> px</label><label>Font <select class="srt-font-family">${srtFontOptionsHTML(track.fontFamily || 'Roboto')}</select></label></div></div>`).join('')}
                         ${videoControlsHTML}
                         <div class="artboard-resizer" title="Resize (Double-click to reset)"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10.0002 12.0001L12.0002 10.0001" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M6.00009 16.0001L16.0001 6.00009" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M14.0002 12.0001L12.0002 14.0001" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>`;
+                    const keptVideo = vkCanReuse(keepVideos[artboard.id], artboard) ? keepVideos[artboard.id] : null;
+                    if (keptVideo) { const fresh = artboardEl.querySelector('video'); if (fresh) fresh.replaceWith(keptVideo); }
                     app.workspace.appendChild(artboardEl);
+                    if (keptVideo && keepPlaying[artboard.id]) { const pr = keptVideo.play(); if (pr && pr.catch) pr.catch(() => {}); }
                     setTimeout(() => initArtboardRuler(artboardEl), 100);
                     artboardEl.addEventListener('mousedown', e => { 
                         if(e.target === artboardEl) {
@@ -2103,6 +2125,7 @@
                 if(!video) return;
                 artboard.videoFailedToLoad = false;
                 
+                if (video._vkAbort) video._vkAbort.abort(); video._vkAbort = new AbortController(); const vkSig = video._vkAbort.signal;
                 video.onerror = () => { 
                     artboard.videoFailedToLoad = true; 
                     artboardEl.classList.add('video-missing');
@@ -2137,15 +2160,15 @@
 
                 video.muted = state.isGlobalMuted; muteBtn.innerHTML = video.muted ? MUTE_ICON_SVG : UNMUTE_ICON_SVG;
                 const clBtn = artboardEl.querySelector('.vid-checklist-btn');
-                if (clBtn) { clBtn.classList.toggle('active', !!clGetFor(artboard.id)); clBtn.addEventListener('click', e => { e.stopPropagation(); openChecklistForVideo(artboard.id); }); }
+                if (clBtn) { clApplyBtn(clBtn, artboard.id); clBtn.addEventListener('click', e => { e.stopPropagation(); openChecklistForVideo(artboard.id); }); }
                 playBtn.addEventListener('click', e => { e.stopPropagation(); video.paused ? video.play() : video.pause(); });
                 muteBtn.addEventListener('click', e => { e.stopPropagation(); video.muted = !video.muted; muteBtn.innerHTML = video.muted ? MUTE_ICON_SVG : UNMUTE_ICON_SVG; });
-				video.playbackRate = parseFloat(speedSelect.value);
+				speedSelect.value = String(video.playbackRate || 1); if (speedSelect.value !== String(video.playbackRate || 1)) { speedSelect.value = '1'; video.playbackRate = 1; }
 				speedSelect.addEventListener('mousedown', e => e.stopPropagation());
 				speedSelect.addEventListener('click', e => e.stopPropagation());
 				speedSelect.addEventListener('change', e => { e.stopPropagation(); video.playbackRate = parseFloat(e.target.value); });
-                video.addEventListener('play', () => { playBtn.textContent = '❚❚'; global_updatePlayButtonState(); });
-                video.addEventListener('pause', () => { playBtn.textContent = '▶'; global_updatePlayButtonState(); });
+                video.addEventListener('play', () => { playBtn.textContent = '❚❚'; global_updatePlayButtonState(); }, { signal: vkSig });
+                video.addEventListener('pause', () => { playBtn.textContent = '▶'; global_updatePlayButtonState(); }, { signal: vkSig });
                 
                 const updateDuration = () => {
 					if (!isFinite(video.duration)) return;
@@ -2167,10 +2190,12 @@
                 if (video.readyState >= 1) {
                     updateDuration();
                 } else {
-                    video.addEventListener('loadedmetadata', updateDuration);
+                    video.addEventListener('loadedmetadata', updateDuration, { signal: vkSig });
                 }
 
-                video.addEventListener('timeupdate', () => { if (!timeline.matches(':active')) timeline.value = video.currentTime; if (document.activeElement !== timeInput) { timeInput.value = formatTimeHHMMSSFF(video.currentTime, video.duration); } updateSrtCaptions(artboardEl, artboard, video.currentTime); redrawArtboardAnnotations(artboard.id); });
+                video.addEventListener('timeupdate', () => { if (!timeline.matches(':active')) timeline.value = video.currentTime; if (document.activeElement !== timeInput) { timeInput.value = formatTimeHHMMSSFF(video.currentTime, video.duration); } updateSrtCaptions(artboardEl, artboard, video.currentTime); redrawArtboardAnnotations(artboard.id); }, { signal: vkSig });
+                if (video.readyState >= 1) video.dispatchEvent(new Event('timeupdate'));
+                playBtn.textContent = video.paused ? '▶' : '❚❚';
                 initSrtCaptionControls(artboardEl, artboard, video);
                 timeline.addEventListener('input', e => { e.stopPropagation(); video.currentTime = parseFloat(timeline.value); redrawArtboardAnnotations(artboard.id); });
                 initTimeInput(timeInput, () => video.currentTime, (newTime) => {video.currentTime = newTime; if (artboard.videoFailedToLoad) timeline.value = newTime; redrawArtboardAnnotations(artboard.id);}, () => video.duration);
@@ -3209,7 +3234,7 @@
 			            if (htmlContent) artboardData.htmlContent = htmlContent;
 			            if (frameBackups) artboardData.frameBackups = frameBackups;
 						if (board.srtTracks && board.srtTracks.length) artboardData.srtTracks = board.srtTracks;
-						if (type === 'checklist') { artboardData.checklist = board.checklist || { groups: [] }; artboardData.ownerId = board.ownerId; artboardData.attached = !!board.attached; }
+						if (type === 'checklist') { artboardData.checklist = board.checklist || { groups: [] }; artboardData.ownerId = board.ownerId; artboardData.attached = !!board.attached; artboardData.hidden = !!board.hidden; }
 			
 			            if (src && src.startsWith('data:')) {
 			                artboardData.src = src;
@@ -3519,7 +3544,7 @@
 			    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity; 
 			    state.artboards.forEach(b => { 
 			        const artboardEl = document.querySelector(`.artboard[data-id="${b.id}"]`); 
-			        const height = artboardEl ? artboardEl.offsetHeight : (b.height + 30 + (b.type==='video' ? 32:0)); 
+			        if (b.hidden) return; const height = artboardEl ? artboardEl.offsetHeight : (b.height + 30 + (b.type==='video' ? 32:0)); 
 			        minX = Math.min(minX, b.x); 
 			        minY = Math.min(minY, b.y); 
 			        maxX = Math.max(maxX, b.x + b.width); 
@@ -3556,6 +3581,7 @@
                 state.interaction.startPos = getWorkspaceMousePos(e); 
                 state.interaction.startData.clear();
                 state.selectedArtboardIds.forEach(id => { const board = state.artboards.find(b => b.id === id); if (board) { state.interaction.startData.set(id, { x: board.x, y: board.y }); } });
+				e.preventDefault(); { const sel = window.getSelection && window.getSelection(); if (sel) sel.removeAllRanges(); }
                 state.selectedArtboardIds.forEach(id => { state.artboards.filter(b => b.type === 'checklist' && b.attached && b.ownerId === id && !state.interaction.startData.has(b.id)).forEach(b => state.interaction.startData.set(b.id, { x: b.x, y: b.y })); });
                 document.querySelectorAll('.artboard.selected').forEach(el => el.classList.add('dragging'));
             }
