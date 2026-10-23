@@ -271,15 +271,17 @@
 		.srt-font-family{max-width:130px;background:var(--input-bg);color:var(--text-color);border:1px solid var(--border-color);border-radius:3px;padding:2px}
 		.srt-options{flex-wrap:wrap;width:max-content;max-width:280px}
 
+                /* ===== CHECK-LIST ===== */
         .artboard[data-type="checklist"] canvas, .artboard[data-type="checklist"] [class*="artboard-ruler"], .artboard[data-type="checklist"] .artboard-info-wrapper { display: none !important; }
-        .artboard.cl-flash { animation: clflash .9s ease-out; }
-        @keyframes clflash { 0% { box-shadow: 0 0 0 3px var(--highlight-color); } 100% { box-shadow: 0 4px 12px rgba(0,0,0,0.2); } }
-        .artboard-video-controls .vid-checklist-btn.active { color: var(--highlight-color); }
-        .cl-panel { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 6; display: flex; flex-direction: column; gap: 8px; padding: 8px; box-sizing: border-box; background: var(--bg-color); color: var(--text-color); font-size: 13px; line-height: 1.4; user-select: none; -webkit-user-select: none; --cl-font: 13px; --cl-py: 8px; --cl-px: 10px; }
-        .cl-input, .cl-cell.editing { user-select: text; -webkit-user-select: text; }
+        .artboard[data-type="checklist"] .artboard-resizer { z-index: 9; color: var(--text-color-light); }
         .artboard.cl-hidden { display: none !important; }
+        .artboard-video-controls .vid-checklist-btn.active { color: var(--highlight-color); }
         .artboard-video-controls .vid-checklist-btn.has-hidden { color: #ff9800; }
+        .cl-panel { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 6; display: flex; flex-direction: column; gap: 8px; padding: 8px; box-sizing: border-box; background: var(--bg-color); color: var(--text-color); font-size: 13px; line-height: 1.4; user-select: none; -webkit-user-select: none; --cl-font: 13px; --cl-py: 8px; --cl-px: 10px; }
+        .cl-input, .cl-cell, .cl-cell.editing, .cl-line, .cl-tbl th, .cl-tbl td { user-select: text; -webkit-user-select: text; }
         .cl-panel.cl-drop { outline: 2px dashed var(--highlight-color); outline-offset: -4px; }
+        .cl-edge { position: absolute; top: 0; right: 0; bottom: 22px; width: 6px; cursor: ew-resize; z-index: 8; }
+        .cl-edge:hover { background: var(--highlight-color); opacity: 0.4; }
         .cl-bar { display: flex; align-items: center; justify-content: space-between; flex: none; font-size: 12px; color: var(--text-color-light); }
         .cl-panel.cl-empty .cl-bar { display: none; }
         .cl-bar-actions { display: flex; gap: 4px; }
@@ -287,6 +289,7 @@
         .cl-btn:hover { color: var(--icon-btn-hover-color); border-color: var(--highlight-color); }
         .cl-input { box-sizing: border-box; width: 100%; flex: none; height: 36px; resize: none; background: var(--input-bg); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 10px; font: inherit; outline: none; }
         .cl-input:focus { border-color: var(--highlight-color); }
+        .cl-panel:not(.cl-empty) .cl-input { height: 18px; padding: 1px 10px; line-height: 16px; border-radius: 6px; }
         .cl-panel.cl-empty .cl-input { flex: 1; height: auto; }
         .cl-panel.cl-empty .cl-list { display: none; }
         .cl-list { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding-right: 2px; }
@@ -307,6 +310,14 @@
         .cl-del { position: absolute; top: 2px; right: 4px; background: none; border: none; color: var(--text-color-light); cursor: pointer; font-size: 14px; line-height: 1; padding: 0 3px; border-radius: 3px; opacity: 0; }
         .cl-card:hover .cl-del { opacity: 1; }
         .cl-del:hover { color: var(--icon-btn-hover-color); background: var(--bg-color); }
+        .cl-line { margin: 0 0 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
+        .cl-line.checked, .cl-tbl tr.checked td { opacity: 0.45; }
+        .cl-tbl { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+        .cl-tbl th, .cl-tbl td { border: 1px solid var(--border-color); padding: 4px 8px; text-align: left; vertical-align: top; white-space: pre-wrap; overflow-wrap: anywhere; }
+        .cl-tbl th { background: var(--list-item-bg); font-weight: 600; }
+        .cl-c { color: hsl(var(--h) var(--s) var(--ll)); }
+        body.theme-dark .cl-c { color: hsl(var(--h) var(--s) var(--ld)); }
+        .cl-light { font-weight: 300; opacity: 0.8; }
     </style>
 </head>
 	
@@ -811,24 +822,26 @@
 			    });
 			    updateSrtCaptions(artboardEl, artboard, video.currentTime);
 			}
-			function vkCanReuse(old, artboard) { return !!old && !old.error && old.getAttribute('src') === (artboard.src || artboard.name); }
+            /* ================= CHECK-LIST ================= */
             function clMaxRows() { return 5000; }
+            function vkCanReuse(old, artboard) { return !!old && !old.error && old.getAttribute('src') === (artboard.src || artboard.name); }
             function clUid() { return (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'cl' + Date.now().toString(36) + Math.random().toString(36).slice(2); }
             function clEl(artboard) { return document.querySelector('.artboard[data-id="' + artboard.id + '"]'); }
             function clGetFor(videoId) { return state.artboards.find(b => b.type === 'checklist' && b.ownerId === videoId); }
             function clAttachedExtraWidth(video) { return state.artboards.filter(b => b.type === 'checklist' && b.attached && !b.hidden && b.ownerId === video.id).reduce((s, b) => s + b.width + 12, 0); }
 
+            // Panel gắn vào video luôn nằm sát bên phải video (chiều cao theo video, trừ khi người dùng đã tự kéo chiều cao)
             function clSyncAttached(video) {
                 state.artboards.filter(b => b.type === 'checklist' && b.attached && b.ownerId === video.id).forEach(cl => {
                     cl.x = video.x + video.width + 12;
                     cl.y = video.y;
-                    cl.height = video.height + 32 + ((video.srtTracks || []).length * 36);
-                    cl.originalHeight = cl.height;
+                    if (!cl.customHeight) { cl.height = video.height + 32 + ((video.srtTracks || []).length * 36); cl.originalHeight = cl.height; }
                     const el = clEl(cl);
                     if (el) { el.style.left = cl.x + 'px'; el.style.top = cl.y + 'px'; el.style.height = (cl.height + 30) + 'px'; }
                 });
             }
 
+            // Màu nút: sáng = panel đang hiện, cam = panel đang ẩn nhưng có card
             function clApplyBtn(btn, videoId) {
                 const cl = clGetFor(videoId);
                 btn.classList.toggle('active', !!cl && !cl.hidden);
@@ -844,7 +857,7 @@
                 let cl = clGetFor(videoId);
                 if (!cl) {
                     const w = 340, h = video.height + 32 + ((video.srtTracks || []).length * 36);
-                    cl = { id: clUid(), name: 'Check-list - ' + video.name, type: 'checklist', src: '', x: 0, y: 0, width: w, height: h, originalWidth: w, originalHeight: h, scale: 1, isLoading: false, ownerId: videoId, attached: true, hidden: false, checklist: { groups: [] } };
+                    cl = { id: clUid(), name: 'Check-list - ' + video.name, type: 'checklist', src: '', x: 0, y: 0, width: w, height: h, originalWidth: w, originalHeight: h, scale: 1, isLoading: false, ownerId: videoId, attached: true, hidden: false, checklist: { groups: [], view: 'card' } };
                     state.guides.artboard[cl.id] = [];
                     state.artboards.push(cl);
                     clSyncAttached(video);
@@ -866,11 +879,22 @@
                 clUpdateButtons();
             }
 
+            // Menu chuột phải của video: "Add .srt"
+            function pickSrtForVideo(videoId) {
+                const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.srt';
+                inp.addEventListener('change', () => {
+                    const f = inp.files && inp.files[0]; if (!f) return;
+                    state.selectedArtboardIds = [videoId]; updateArtboardSelection();
+                    handleSrtFile(f);
+                });
+                inp.click();
+            }
+
             function clContextMenuItems(cl) {
                 const video = state.artboards.find(b => b.id === cl.ownerId && b.type === 'video');
                 const items = [];
                 if (cl.attached) items.push({ label: 'Detach from video', action: () => { cl.attached = false; markAsChanged(); } });
-                else items.push({ label: 'Attach to video', disabled: !video, action: () => { cl.attached = true; if (video) clSyncAttached(video); markAsChanged(); } });
+                else items.push({ label: 'Attach to video', disabled: !video, action: () => { cl.attached = true; cl.customHeight = false; if (video) clSyncAttached(video); markAsChanged(); } });
                 items.push({ divider: true }, { label: 'Uncheck all', action: () => clUncheckAll(cl) }, { label: 'Clear all cards', action: () => clClearAll(cl) }, { divider: true }, { label: 'Close Artboard', action: deleteSelectedArtboards });
                 return items;
             }
@@ -891,25 +915,169 @@
             }
             function clToggleHeader(artboard, gid) {
                 const f = clFind(artboard, gid); if (!f) return; const g = f.group;
-                if (g.header) { g.rows.unshift({ id: clUid(), cells: g.header, checked: false }); g.header = null; }
-                else if (g.rows.length > 1) { g.header = g.rows.shift().cells; }
+                if (g.header) {
+                    const row = { id: clUid(), cells: g.header, checked: false }; if (g.headerRich) row.rich = g.headerRich;
+                    g.rows.unshift(row); g.header = null; g.headerRich = null;
+                } else if (g.rows.length > 1) {
+                    const r = g.rows.shift(); g.header = r.cells; g.headerRich = r.rich || null;
+                }
                 clCommit(artboard);
             }
 
+            /* ---------- định dạng chữ (bold / italic / light / underline / strike / màu) ---------- */
+            function clEsc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+            function clHasRich(h) { return !!h && /<(b|i|u|s|span)[\s>]/.test(h); }
+            function clParseColor(v) {
+                v = String(v || '').trim().toLowerCase(); if (!v) return null;
+                const names = { red: '#ff0000', blue: '#0000ff', green: '#008000', yellow: '#ffff00', orange: '#ffa500', purple: '#800080', pink: '#ffc0cb', brown: '#a52a2a', cyan: '#00ffff', aqua: '#00ffff', magenta: '#ff00ff', fuchsia: '#ff00ff', navy: '#000080', teal: '#008080', maroon: '#800000', olive: '#808000', lime: '#00ff00', gold: '#ffd700', crimson: '#dc143c', coral: '#ff7f50', violet: '#ee82ee', indigo: '#4b0082', darkred: '#8b0000', darkblue: '#00008b', darkgreen: '#006400' };
+                if (names[v]) return names[v];
+                let m = v.match(/^#([0-9a-f]{3})$/); if (m) return '#' + m[1].split('').map(x => x + x).join('');
+                m = v.match(/^#([0-9a-f]{6})$/); if (m) return '#' + m[1];
+                m = v.match(/^rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/);
+                if (m) return '#' + [m[1], m[2], m[3]].map(x => Math.max(0, Math.min(255, +x)).toString(16).padStart(2, '0')).join('');
+                return null;
+            }
+            // Màu thật được đổi thành 2 độ sáng (theme sáng / theme tối) để luôn đọc được; màu xám/đen/trắng = màu mặc định của theme
+            function clColorStyle(hex) {
+                const r = parseInt(hex.slice(1, 3), 16) / 255, g = parseInt(hex.slice(3, 5), 16) / 255, b = parseInt(hex.slice(5, 7), 16) / 255;
+                const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2; let h = 0, s = 0;
+                if (mx !== mn) { const d = mx - mn; s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn); h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h *= 60; }
+                if (s < 0.15) return '';
+                return '--h:' + Math.round(h) + ';--s:' + Math.round(s * 100) + '%;--ll:' + Math.round(Math.min(l, 0.4) * 100) + '%;--ld:' + Math.round(Math.max(l, 0.68) * 100) + '%';
+            }
+            function clMergeFmt(a, b) { return Object.assign({}, a, b); }
+            function clWrapFmt(s, f) {
+                if (!s || !f) return s;
+                if (f.c) { const st = clColorStyle(f.c); if (st) s = '<span class="cl-c" data-c="' + f.c + '" style="' + st + '">' + s + '</span>'; }
+                if (f.l && !f.b) s = '<span class="cl-light">' + s + '</span>';
+                if (f.s) s = '<s>' + s + '</s>';
+                if (f.u) s = '<u>' + s + '</u>';
+                if (f.i) s = '<i>' + s + '</i>';
+                if (f.b) s = '<b>' + s + '</b>';
+                return s;
+            }
+            function clRichFromText(t, fmt) { return String(t).split('\n').map(x => clWrapFmt(clEsc(x), fmt)).join('<br>'); }
+            function clFmtOfEl(el) {
+                const f = {}; const tag = el.nodeName.toLowerCase();
+                if (tag === 'b' || tag === 'strong' || /^h[1-6]$/.test(tag) || tag === 'th') f.b = true;
+                if (tag === 'i' || tag === 'em' || tag === 'cite') f.i = true;
+                if (tag === 'u' || tag === 'ins') f.u = true;
+                if (tag === 's' || tag === 'strike' || tag === 'del') f.s = true;
+                if (el.classList && el.classList.contains('cl-light')) f.l = true;
+                if (el.getAttribute) {
+                    if (tag === 'font' && el.getAttribute('color')) f.c = clParseColor(el.getAttribute('color'));
+                    if (el.getAttribute('data-c')) f.c = clParseColor(el.getAttribute('data-c'));
+                }
+                const st = (el.getAttribute && el.getAttribute('style')) || ''; let m;
+                if ((m = st.match(/(?:^|;)\s*font-weight\s*:\s*([^;]+)/i))) {
+                    const w = m[1].trim().toLowerCase(), n = parseInt(w, 10);
+                    if (w === 'bold' || w === 'bolder' || n >= 600) f.b = true;
+                    else if (w === 'lighter' || (n && n <= 300)) { f.l = true; f.b = false; }
+                    else if (w === 'normal' || n) f.b = false;
+                }
+                if ((m = st.match(/(?:^|;)\s*font-style\s*:\s*([^;]+)/i))) { const v = m[1].trim().toLowerCase(); if (/italic|oblique/.test(v)) f.i = true; else if (v === 'normal') f.i = false; }
+                if ((m = st.match(/(?:^|;)\s*text-decoration(?:-line)?\s*:\s*([^;]+)/i))) { const v = m[1].toLowerCase(); if (v.indexOf('underline') !== -1) f.u = true; if (v.indexOf('line-through') !== -1) f.s = true; }
+                if ((m = st.match(/(?:^|;)\s*color\s*:\s*([^;]+)/i))) f.c = clParseColor(m[1]);
+                return f;
+            }
+            // Làm sạch HTML: chỉ giữ b/i/u/s/br + span màu + span light (không cho script, style, font...)
+            function clSanitize(html) {
+                if (!html) return '';
+                const tpl = document.createElement('template'); tpl.innerHTML = String(html);
+                const skip = /^(script|style|head|title|meta|link|noscript|template|svg|img|iframe|object|canvas|video|audio)$/;
+                const walk = node => {
+                    if (node.nodeType === 3) return clEsc(node.nodeValue);
+                    if (node.nodeType !== 1) return '';
+                    const tag = node.nodeName.toLowerCase();
+                    if (skip.test(tag)) return '';
+                    if (tag === 'br') return '<br>';
+                    const inner = Array.prototype.map.call(node.childNodes, walk).join('');
+                    if (/^(div|p|li|h[1-6]|tr)$/.test(tag)) return '\u0001' + clWrapFmt(inner, clFmtOfEl(node)) + '\u0001';
+                    return clWrapFmt(inner, clFmtOfEl(node));
+                };
+                let out = Array.prototype.map.call(tpl.content.childNodes, walk).join('');
+                out = out.replace(/\u0001+/g, '\u0001').replace(/^\u0001|\u0001$/g, '').replace(/\u0001/g, '<br>');
+                return out.replace(/(<br>)+$/, '');
+            }
+            function clHtmlToText(html) {
+                const tpl = document.createElement('template'); tpl.innerHTML = String(html || '').replace(/<br\s*\/?>/gi, '\n');
+                return tpl.content.textContent || '';
+            }
+            // HTML dán vào (Word, web, Google Docs...) → các khối: dòng văn bản hoặc bảng, có giữ định dạng
+            function clHtmlBlocks(html) {
+                const doc = new DOMParser().parseFromString(html, 'text/html');
+                const BLOCK = /^(address|article|aside|blockquote|dd|div|dl|dt|fieldset|figure|footer|form|h[1-6]|header|hr|li|main|nav|ol|p|pre|section|ul)$/;
+                const SKIP = /^(script|style|head|title|meta|link|noscript|template|svg|img|iframe|object|canvas|video|audio)$/;
+                function collector(onTable) {
+                    let parts = []; const lines = [];
+                    const flush = () => {
+                        while (parts.length && parts[0].s.trim() === '') parts.shift();
+                        while (parts.length && parts[parts.length - 1].s.trim() === '') parts.pop();
+                        if (parts.length) {
+                            parts[0].s = parts[0].s.replace(/^\s+/, ''); parts[parts.length - 1].s = parts[parts.length - 1].s.replace(/\s+$/, '');
+                            lines.push({ t: parts.map(p => p.s).join(''), h: parts.map(p => clWrapFmt(clEsc(p.s), p.fmt)).join('') });
+                        }
+                        parts = [];
+                    };
+                    const walk = (node, fmt) => {
+                        if (node.nodeType === 3) { const s = node.nodeValue.replace(/[\s\u00a0]+/g, ' '); if (s) parts.push({ s, fmt }); return; }
+                        if (node.nodeType !== 1) return;
+                        const tag = node.nodeName.toLowerCase();
+                        if (SKIP.test(tag)) return;
+                        if (tag === 'br') { flush(); return; }
+                        if (tag === 'table') { flush(); if (onTable) onTable(node); return; }
+                        const f2 = clMergeFmt(fmt, clFmtOfEl(node)); const blk = BLOCK.test(tag);
+                        if (blk) flush();
+                        Array.prototype.forEach.call(node.childNodes, c => walk(c, f2));
+                        if (blk) flush();
+                    };
+                    return { walk, flush, lines };
+                }
+                const blocks = [];
+                const tableRows = tbl => Array.prototype.map.call(tbl.querySelectorAll('tr'), tr =>
+                    Array.prototype.filter.call(tr.children, c => /^(td|th)$/i.test(c.nodeName)).map(td => {
+                        const col = collector(); col.walk(td, {}); col.flush();
+                        return { t: col.lines.map(l => l.t).join('\n'), h: col.lines.map(l => l.h).join('<br>') };
+                    }));
+                const top = collector(tbl => { top.flush(); if (top.lines.length) blocks.push({ type: 'lines', lines: top.lines.splice(0) }); blocks.push({ type: 'table', rows: tableRows(tbl) }); });
+                top.walk(doc.body || doc.documentElement, {}); top.flush();
+                if (top.lines.length) blocks.push({ type: 'lines', lines: top.lines.splice(0) });
+                return blocks;
+            }
+            function clAddHtml(artboard, html) {
+                let blocks; try { blocks = clHtmlBlocks(html); } catch (e) { return false; }
+                const fmtd = blocks.some(b => b.type === 'lines' ? b.lines.some(l => clHasRich(l.h)) : b.rows.some(r => r.some(c => clHasRich(c.h))));
+                if (!fmtd) return false;
+                blocks.forEach(b => {
+                    if (b.type === 'lines') clPushText(artboard, '', b.lines);
+                    else clPushTable(artboard, '', b.rows, true);
+                });
+                clCommit(artboard); return true;
+            }
+
             /* ---------- thêm dữ liệu ---------- */
+            function clCell(c) {
+                if (c && typeof c === 'object') { const t = String(c.t == null ? '' : c.t).replace(/\r/g, '').trim(); return { t, h: t && c.h ? c.h : null }; }
+                return { t: String(c == null ? '' : c).replace(/\r/g, '').trim(), h: null };
+            }
             function clNormRows(rows) {
                 const out = [];
                 rows.forEach(r => {
-                    const cells = r.map(c => String(c == null ? '' : c).replace(/\r/g, '').trim());
-                    while (cells.length > 1 && cells[cells.length - 1] === '') cells.pop();
-                    if (cells.some(c => c !== '')) out.push(cells);
+                    const cells = r.map(clCell);
+                    while (cells.length > 1 && cells[cells.length - 1].t === '') cells.pop();
+                    if (cells.some(c => c.t !== '')) out.push(cells);
                 });
                 return out;
             }
+            function clMakeRow(cells) {
+                const row = { id: clUid(), cells: cells.map(c => c.t), checked: false };
+                if (cells.some(c => clHasRich(c.h))) row.rich = cells.map(c => clHasRich(c.h) ? c.h : null);
+                return row;
+            }
             function clPushText(artboard, name, lines) {
-                lines = lines.map(l => String(l).trim()).filter(Boolean); if (!lines.length) return 0;
-                const truncated = Math.max(0, lines.length - clMaxRows());
-                const rows = lines.slice(0, clMaxRows()).map(l => ({ id: clUid(), cells: [l], checked: false }));
+                const cells = lines.map(clCell).filter(c => c.t !== ''); if (!cells.length) return 0;
+                const truncated = Math.max(0, cells.length - clMaxRows());
+                const rows = cells.slice(0, clMaxRows()).map(c => clMakeRow([c]));
                 const groups = artboard.checklist.groups; const last = groups[groups.length - 1];
                 if (!name && last && last.kind === 'text' && !last.name) rows.forEach(r => last.rows.push(r));
                 else groups.push({ id: clUid(), name: name || '', kind: 'text', header: null, rows });
@@ -919,11 +1087,11 @@
                 rows = clNormRows(rows); if (!rows.length) return 0;
                 const maxCols = rows.reduce((m, r) => Math.max(m, r.length), 0);
                 if (maxCols <= 1) return clPushText(artboard, name, rows.map(r => r[0]));
-                let header = null;
-                if (useHeader && rows.length > 1) header = rows.shift();
+                let header = null, headerRich = null;
+                if (useHeader && rows.length > 1) { const hr = rows.shift(); header = hr.map(c => c.t); if (hr.some(c => clHasRich(c.h))) headerRich = hr.map(c => clHasRich(c.h) ? c.h : null); }
                 let truncated = 0;
                 if (rows.length > clMaxRows()) { truncated = rows.length - clMaxRows(); rows = rows.slice(0, clMaxRows()); }
-                artboard.checklist.groups.push({ id: clUid(), name: name || '', kind: 'table', header, rows: rows.map(r => ({ id: clUid(), cells: r, checked: false })) });
+                artboard.checklist.groups.push({ id: clUid(), name: name || '', kind: 'table', header, headerRich, rows: rows.map(clMakeRow) });
                 return truncated;
             }
             function clAddText(artboard, text) {
@@ -967,27 +1135,44 @@
                 const rows = [['#', 'Start', 'End', 'Caption']].concat(cues.map((c, i) => [String(i + 1), c.startText, c.endText, c.text]));
                 return clPushTable(artboard, name, rows, true);
             }
+            function clDocxFmt(rPr) {
+                const f = {}; if (!rPr) return f;
+                const get = name => Array.prototype.find.call(rPr.children, c => c.nodeName === name);
+                const on = el => { if (!el) return false; const v = (el.getAttribute('w:val') || '').toLowerCase(); return v !== '0' && v !== 'false' && v !== 'off' && v !== 'none'; };
+                f.b = on(get('w:b')); f.i = on(get('w:i')); f.u = on(get('w:u')); f.s = on(get('w:strike')) || on(get('w:dstrike'));
+                const col = get('w:color'); if (col) { const v = col.getAttribute('w:val'); if (v && /^[0-9a-f]{6}$/i.test(v)) f.c = '#' + v.toLowerCase(); }
+                const rf = get('w:rFonts'); if (rf && /light/i.test((rf.getAttribute('w:ascii') || '') + (rf.getAttribute('w:hAnsi') || ''))) f.l = true;
+                return f;
+            }
             async function clImportDocx(artboard, file) {
                 if (!window.JSZip) throw new Error('JSZip not loaded');
                 const zip = await JSZip.loadAsync(await file.arrayBuffer());
                 const entry = zip.file('word/document.xml'); if (!entry) throw new Error('not a docx');
                 const xml = new DOMParser().parseFromString(await entry.async('string'), 'application/xml');
                 const body = xml.getElementsByTagName('w:body')[0]; if (!body) throw new Error('no body');
-                const paraText = p => {
-                    let s = ''; const nodes = p.getElementsByTagName('*');
-                    for (let i = 0; i < nodes.length; i++) { const n = nodes[i].nodeName; if (n === 'w:t') s += nodes[i].textContent; else if (n === 'w:tab') s += ' '; else if (n === 'w:br' || n === 'w:cr') s += '\n'; }
-                    return s.trim();
+                const paraRich = p => {
+                    let t = '', h = '';
+                    Array.prototype.forEach.call(p.getElementsByTagName('w:r'), r => {
+                        const rPr = Array.prototype.find.call(r.children, c => c.nodeName === 'w:rPr');
+                        let seg = '';
+                        Array.prototype.forEach.call(r.children, c => { const n = c.nodeName; if (n === 'w:t') seg += c.textContent; else if (n === 'w:tab') seg += ' '; else if (n === 'w:br' || n === 'w:cr') seg += '\n'; });
+                        if (!seg) return;
+                        t += seg; h += clRichFromText(seg, clDocxFmt(rPr));
+                    });
+                    return { t: t.trim(), h };
                 };
                 let truncated = 0, pending = [], tableNo = 0;
                 const flush = () => { if (pending.length) { truncated += clPushText(artboard, file.name, pending); pending = []; } };
                 const walk = parent => {
                     Array.prototype.forEach.call(parent.children, node => {
-                        if (node.nodeName === 'w:p') { const t = paraText(node); if (t) pending.push(t); }
+                        if (node.nodeName === 'w:p') { const p = paraRich(node); if (p.t) pending.push(p); }
                         else if (node.nodeName === 'w:tbl') {
                             flush(); tableNo++;
                             const rows = Array.prototype.map.call(node.getElementsByTagName('w:tr'), tr =>
-                                Array.prototype.filter.call(tr.children, c => c.nodeName === 'w:tc').map(tc =>
-                                    Array.prototype.map.call(tc.getElementsByTagName('w:p'), paraText).filter(Boolean).join('\n')));
+                                Array.prototype.filter.call(tr.children, c => c.nodeName === 'w:tc').map(tc => {
+                                    const ps = Array.prototype.map.call(tc.getElementsByTagName('w:p'), paraRich).filter(p => p.t);
+                                    return { t: ps.map(p => p.t).join('\n'), h: ps.map(p => p.h).join('<br>') };
+                                }));
                             truncated += clPushTable(artboard, file.name + ' - table ' + tableNo, rows, true);
                         }
                         else if (node.nodeName === 'w:sdt') { Array.prototype.forEach.call(node.children, c => { if (c.nodeName === 'w:sdtContent') walk(c); }); }
@@ -1010,6 +1195,38 @@
                 });
                 return out;
             }
+            // Định dạng chữ của ô (font trong styles.xml) hoặc của 1 đoạn chữ trong ô (rPr)
+            function clXlsxFontFmt(el) {
+                const f = {}; if (!el) return f;
+                const get = name => Array.prototype.find.call(el.children, c => c.nodeName === name);
+                const on = e => { if (!e) return false; const v = (e.getAttribute('val') || '').toLowerCase(); return v !== '0' && v !== 'false' && v !== 'none'; };
+                if (on(get('b'))) f.b = true; if (on(get('i'))) f.i = true; if (on(get('u'))) f.u = true; if (on(get('strike'))) f.s = true;
+                const col = get('color'); if (col) { const rgb = col.getAttribute('rgb'); if (rgb && /^[0-9a-f]{8}$/i.test(rgb)) f.c = '#' + rgb.slice(2).toLowerCase(); }
+                return f;
+            }
+            function clXlsxXfFmts(stylesDoc) {
+                const out = {}; if (!stylesDoc) return out;
+                const fontsEl = stylesDoc.getElementsByTagName('fonts')[0]; const cellXfs = stylesDoc.getElementsByTagName('cellXfs')[0];
+                if (!fontsEl || !cellXfs) return out;
+                const fonts = Array.prototype.map.call(fontsEl.children, clXlsxFontFmt);
+                Array.prototype.forEach.call(cellXfs.getElementsByTagName('xf'), (xf, i) => {
+                    const f = fonts[parseInt(xf.getAttribute('fontId'), 10)];
+                    if (f && (f.b || f.i || f.u || f.s || f.c)) out[i] = f;
+                });
+                return out;
+            }
+            // <si> hoặc <is>: chuỗi thường hoặc nhiều đoạn <r> có định dạng riêng
+            function clXlsxRichString(el) {
+                let s = '', h = '', hasRuns = false;
+                Array.prototype.forEach.call(el.children, ch => {
+                    if (ch.nodeName === 't') { s += ch.textContent; h += clEsc(ch.textContent); }
+                    else if (ch.nodeName === 'r') {
+                        hasRuns = true; const tEl = Array.prototype.find.call(ch.children, x => x.nodeName === 't'); const txt = tEl ? tEl.textContent : '';
+                        const rPr = Array.prototype.find.call(ch.children, x => x.nodeName === 'rPr'); s += txt; h += clRichFromText(txt, clXlsxFontFmt(rPr));
+                    }
+                });
+                return { t: s, h: hasRuns && clHasRich(h) ? h : null };
+            }
             function clXlsxDate(n) {
                 const d = new Date(Math.round((n - 25569) * 86400) * 1000);
                 const p = x => String(x).padStart(2, '0');
@@ -1018,17 +1235,20 @@
                 const date = d.getUTCFullYear() + '-' + p(d.getUTCMonth() + 1) + '-' + p(d.getUTCDate());
                 return (n % 1) ? date + ' ' + time : date;
             }
-            function clXlsxCellValue(c, sst, dateXf) {
+            // Trả về { t: text, h: html có định dạng | null }
+            function clXlsxCellValue(c, sst, dateXf, xfFmt) {
                 const t = c.getAttribute('t');
                 const vEl = c.getElementsByTagName('v')[0]; const v = vEl ? vEl.textContent : '';
-                if (t === 's') return sst[parseInt(v, 10)] || '';
-                if (t === 'inlineStr') { let s = ''; Array.prototype.forEach.call(c.getElementsByTagName('t'), x => { s += x.textContent; }); return s; }
-                if (t === 'b') return v === '1' ? 'TRUE' : 'FALSE';
-                if (t === 'str' || t === 'e') return v;
-                if (v === '') return '';
-                const n = Number(v); if (!isFinite(n)) return v;
-                if (dateXf[parseInt(c.getAttribute('s'), 10)]) return clXlsxDate(n);
-                return String(parseFloat(n.toPrecision(15)));
+                const cellFmt = xfFmt[parseInt(c.getAttribute('s'), 10)];
+                const withFmt = text => ({ t: text, h: (cellFmt && text) ? clRichFromText(text, cellFmt) : null });
+                if (t === 's') { const e = sst[parseInt(v, 10)]; if (!e) return { t: '', h: null }; return e.h ? e : withFmt(e.t); }
+                if (t === 'inlineStr') { const isEl = Array.prototype.find.call(c.children, x => x.nodeName === 'is'); if (!isEl) return { t: '', h: null }; const e = clXlsxRichString(isEl); return e.h ? e : withFmt(e.t); }
+                if (t === 'b') return withFmt(v === '1' ? 'TRUE' : 'FALSE');
+                if (t === 'str' || t === 'e') return withFmt(v);
+                if (v === '') return { t: '', h: null };
+                const n = Number(v); if (!isFinite(n)) return withFmt(v);
+                if (dateXf[parseInt(c.getAttribute('s'), 10)]) return withFmt(clXlsxDate(n));
+                return withFmt(String(parseFloat(n.toPrecision(15))));
             }
             async function clImportXlsx(artboard, file) {
                 if (!window.JSZip) throw new Error('JSZip not loaded');
@@ -1038,8 +1258,9 @@
                 const rels = await parse('xl/_rels/workbook.xml.rels'); const relMap = {};
                 if (rels) Array.prototype.forEach.call(rels.getElementsByTagName('Relationship'), r => { relMap[r.getAttribute('Id')] = r.getAttribute('Target'); });
                 const sstDoc = await parse('xl/sharedStrings.xml'); const sst = [];
-                if (sstDoc) Array.prototype.forEach.call(sstDoc.getElementsByTagName('si'), si => { let s = ''; Array.prototype.forEach.call(si.getElementsByTagName('t'), t => { if (t.parentNode.nodeName !== 'rPh') s += t.textContent; }); sst.push(s); });
-                const dateXf = clXlsxDateStyles(await parse('xl/styles.xml'));
+                if (sstDoc) Array.prototype.forEach.call(sstDoc.getElementsByTagName('si'), si => { sst.push(clXlsxRichString(si)); });
+                const stylesDoc = await parse('xl/styles.xml');
+                const dateXf = clXlsxDateStyles(stylesDoc), xfFmt = clXlsxXfFmts(stylesDoc);
                 const sheets = Array.prototype.slice.call(wb.getElementsByTagName('sheet'));
                 let truncated = 0;
                 for (const sh of sheets) {
@@ -1053,7 +1274,7 @@
                         Array.prototype.forEach.call(rowEl.getElementsByTagName('c'), c => {
                             let col = auto; const ref = c.getAttribute('r'); const m = ref && ref.match(/^([A-Z]+)/);
                             if (m) { col = 0; for (let i = 0; i < m[1].length; i++) col = col * 26 + (m[1].charCodeAt(i) - 64); col -= 1; }
-                            auto = col + 1; cells[col] = clXlsxCellValue(c, sst, dateXf);
+                            auto = col + 1; cells[col] = clXlsxCellValue(c, sst, dateXf, xfFmt);
                         });
                         for (let i = 0; i < cells.length; i++) if (cells[i] == null) cells[i] = '';
                         rows.push(cells);
@@ -1080,7 +1301,10 @@
                 if (truncated) alert('Only the first ' + clMaxRows() + ' rows of each file/sheet were imported (' + truncated + ' rows skipped).');
                 if (failed.length) alert('Could not import:\n' + failed.join('\n'));
             }
+
+            /* ---------- hiển thị ---------- */
             function clMakeEl(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+            function clSetCell(el, text, rich) { if (clHasRich(rich)) el.innerHTML = clSanitize(rich); else el.textContent = text == null ? '' : text; }
             function clGroupCols(g) { return Math.max(1, (g.header ? g.header.length : 0), g.rows.reduce((m, r) => Math.max(m, r.cells.length), 0)); }
             function clGroupTemplate(g, cols) {
                 if (g.kind !== 'table') return '22px minmax(0,1fr)';
@@ -1096,25 +1320,39 @@
                 const card = clMakeEl('div', 'cl-card' + (g.kind === 'table' ? ' cl-table' : '') + (row.checked ? ' checked' : ''));
                 card.dataset.gid = g.id; card.dataset.rid = row.id; card.style.gridTemplateColumns = tpl;
                 const cb = clMakeEl('input', 'cl-check'); cb.type = 'checkbox'; cb.checked = !!row.checked; card.appendChild(cb);
-                for (let i = 0; i < cols; i++) { const c = clMakeEl('div', 'cl-cell', row.cells[i] == null ? '' : row.cells[i]); c.dataset.ci = i; card.appendChild(c); }
+                for (let i = 0; i < cols; i++) { const c = clMakeEl('div', 'cl-cell'); clSetCell(c, row.cells[i], row.rich && row.rich[i]); c.dataset.ci = i; card.appendChild(c); }
                 const del = clMakeEl('button', 'cl-del', '×'); del.type = 'button'; del.title = 'Delete card'; card.appendChild(del);
                 return card;
             }
-            function clGroupEl(g) {
+            function clGroupTitleEl(g) {
+                const t = clMakeEl('div', 'cl-group-title');
+                const nm = clMakeEl('span', 'cl-group-name', g.name || 'Table'); nm.title = g.name || ''; t.appendChild(nm);
+                if (g.kind === 'table') { const b = clMakeEl('button', 'cl-hdr-toggle', g.header ? 'Header: on' : 'Header: off'); b.type = 'button'; b.title = 'Toggle: first row is a header'; t.appendChild(b); }
+                const d = clMakeEl('button', 'cl-group-del', '×'); d.type = 'button'; d.title = 'Remove this group'; t.appendChild(d);
+                return t;
+            }
+            function clGroupEl(g, view) {
                 const wrap = clMakeEl('div', 'cl-group'); wrap.dataset.gid = g.id;
                 const isTable = g.kind === 'table';
-                if (g.name || isTable) {
-                    const t = clMakeEl('div', 'cl-group-title');
-                    const nm = clMakeEl('span', 'cl-group-name', g.name || 'Table'); nm.title = g.name || ''; t.appendChild(nm);
-                    if (isTable) { const b = clMakeEl('button', 'cl-hdr-toggle', g.header ? 'Header: on' : 'Header: off'); b.type = 'button'; b.title = 'Toggle: first row is a header'; t.appendChild(b); }
-                    const d = clMakeEl('button', 'cl-group-del', '×'); d.type = 'button'; d.title = 'Remove this group'; t.appendChild(d);
-                    wrap.appendChild(t);
+                if (g.name || isTable) wrap.appendChild(clGroupTitleEl(g));
+                const cols = clGroupCols(g);
+                if (view === 'text') {
+                    if (isTable) {
+                        const tbl = clMakeEl('table', 'cl-tbl');
+                        if (g.header) { const tr = clMakeEl('tr'); for (let i = 0; i < cols; i++) { const th = clMakeEl('th'); clSetCell(th, g.header[i], g.headerRich && g.headerRich[i]); tr.appendChild(th); } const th0 = clMakeEl('thead'); th0.appendChild(tr); tbl.appendChild(th0); }
+                        const tb = clMakeEl('tbody');
+                        g.rows.forEach(r => { const tr = clMakeEl('tr', r.checked ? 'checked' : ''); for (let i = 0; i < cols; i++) { const td = clMakeEl('td'); clSetCell(td, r.cells[i], r.rich && r.rich[i]); tr.appendChild(td); } tb.appendChild(tr); });
+                        tbl.appendChild(tb); wrap.appendChild(tbl);
+                    } else {
+                        g.rows.forEach(r => { const ln = clMakeEl('div', 'cl-line' + (r.checked ? ' checked' : '')); clSetCell(ln, r.cells[0], r.rich && r.rich[0]); wrap.appendChild(ln); });
+                    }
+                    return wrap;
                 }
-                const cols = clGroupCols(g), tpl = clGroupTemplate(g, cols);
+                const tpl = clGroupTemplate(g, cols);
                 if (g.header) {
                     const head = clMakeEl('div', 'cl-card cl-table cl-head'); head.style.gridTemplateColumns = tpl;
                     head.appendChild(clMakeEl('span'));
-                    for (let i = 0; i < cols; i++) head.appendChild(clMakeEl('div', 'cl-cell', g.header[i] == null ? '' : g.header[i]));
+                    for (let i = 0; i < cols; i++) { const c = clMakeEl('div', 'cl-cell'); clSetCell(c, g.header[i], g.headerRich && g.headerRich[i]); head.appendChild(c); }
                     wrap.appendChild(head);
                 }
                 g.rows.forEach(r => wrap.appendChild(clCardEl(g, r, cols, tpl)));
@@ -1126,30 +1364,40 @@
             function clAutoGrow(panel) {
                 const ta = panel.querySelector('.cl-input'); if (!ta) return;
                 if (panel.classList.contains('cl-empty')) { ta.style.height = ''; return; }
-                ta.style.height = '36px'; ta.style.height = Math.min(ta.scrollHeight + 2, 110) + 'px';
+                ta.style.height = '18px'; ta.style.height = Math.max(18, Math.min(ta.scrollHeight, 55)) + 'px';
             }
             function clRender(artboard) {
                 const el = clEl(artboard); if (!el) return;
                 const panel = el.querySelector('.cl-panel'); if (!panel) return;
                 const list = panel.querySelector('.cl-list'); const st = list.scrollTop;
+                const view = artboard.checklist.view === 'text' ? 'text' : 'card';
                 list.textContent = '';
-                artboard.checklist.groups.forEach(g => list.appendChild(clGroupEl(g)));
+                list.classList.toggle('cl-text-view', view === 'text');
+                artboard.checklist.groups.forEach(g => list.appendChild(clGroupEl(g, view)));
                 panel.classList.toggle('cl-empty', artboard.checklist.groups.length === 0);
+                const vb = panel.querySelector('.cl-view'); if (vb) vb.textContent = 'Preview: ' + (view === 'text' ? 'Text' : 'Card');
                 clUpdateCount(panel, artboard); clAutoGrow(panel);
                 list.scrollTop = st;
             }
             function clEditCell(artboard, cellEl) {
                 const card = cellEl.closest('.cl-card'); if (!card || !card.dataset.rid) return;
                 const f = clFind(artboard, card.dataset.gid, card.dataset.rid); if (!f) return;
-                const idx = Number(cellEl.dataset.ci); const old = f.row.cells[idx] || '';
+                const idx = Number(cellEl.dataset.ci);
+                const oldText = f.row.cells[idx] || '', oldRich = (f.row.rich && f.row.rich[idx]) || null;
                 cellEl.contentEditable = 'true'; cellEl.classList.add('editing'); cellEl.focus();
                 const sel = window.getSelection(); const range = document.createRange(); range.selectNodeContents(cellEl); sel.removeAllRanges(); sel.addRange(range);
                 let done = false;
                 const finish = save => {
                     if (done) return; done = true;
                     cellEl.contentEditable = 'false'; cellEl.classList.remove('editing');
-                    const v = cellEl.textContent;
-                    if (save && v !== old) { f.row.cells[idx] = v; markAsChanged(); } else cellEl.textContent = old;
+                    if (!save) { clSetCell(cellEl, oldText, oldRich); return; }
+                    const html = clSanitize(cellEl.innerHTML); const text = clHtmlToText(html).trim(); const rich = clHasRich(html) ? html : null;
+                    if (text !== oldText || rich !== oldRich) {
+                        f.row.cells[idx] = text;
+                        if (rich || f.row.rich) { f.row.rich = f.row.rich || []; f.row.rich[idx] = rich; if (!f.row.rich.some(Boolean)) delete f.row.rich; }
+                        markAsChanged();
+                    }
+                    clSetCell(cellEl, text, rich);
                 };
                 cellEl.addEventListener('blur', () => finish(true), { once: true });
                 cellEl.addEventListener('keydown', ev => {
@@ -1159,15 +1407,27 @@
             }
             function initChecklistPanel(artboardEl, artboard) {
                 const panel = artboardEl.querySelector('.cl-panel'); if (!panel) return;
-                if (!artboard.checklist) artboard.checklist = { groups: [] };
-                panel.innerHTML = '<div class="cl-bar"><span class="cl-count"></span><span class="cl-bar-actions"><button type="button" class="cl-btn cl-uncheck" title="Uncheck all cards">Uncheck all</button><button type="button" class="cl-btn cl-clear" title="Remove all cards">Clear</button></span></div><textarea class="cl-input" rows="1" spellcheck="false" placeholder="Paste text here, or drop .txt .docx .csv .srt .xlsx files.&#10;Each line becomes a card. Type + Enter to add one."></textarea><div class="cl-list"></div>';
+                if (!artboard.checklist) artboard.checklist = { groups: [], view: 'card' };
+                panel.innerHTML = '<div class="cl-bar"><span class="cl-count"></span><span class="cl-bar-actions"><button type="button" class="cl-btn cl-view" title="Switch between card view and text / table view">Preview: Card</button><button type="button" class="cl-btn cl-uncheck" title="Uncheck all cards">Uncheck all</button><button type="button" class="cl-btn cl-clear" title="Remove all cards">Clear</button></span></div><textarea class="cl-input" rows="1" spellcheck="false" placeholder="Paste text here, or drop .txt .docx .csv .srt .xlsx files.&#10;Each line becomes a card. Type + Enter to add one."></textarea><div class="cl-list"></div><div class="cl-edge" title="Drag to resize width"></div>';
                 const input = panel.querySelector('.cl-input'), list = panel.querySelector('.cl-list');
+                let lastCheckRid = null, shiftOnClick = false;
 
                 // tách panel khỏi phím tắt / kéo / zoom của workspace
-                panel.addEventListener('mousedown', e => { hideContextMenu(); if (e.button === 0) e.stopPropagation(); });
+                panel.addEventListener('mousedown', e => {
+                    hideContextMenu();
+                    if (e.shiftKey && e.target.classList && e.target.classList.contains('cl-check')) e.preventDefault();
+                    if (e.button === 0) e.stopPropagation();
+                });
                 panel.addEventListener('contextmenu', e => e.stopPropagation());
                 panel.addEventListener('wheel', e => { if (!e.ctrlKey && !e.metaKey) e.stopPropagation(); });
-                panel.addEventListener('keydown', e => { const mod = e.ctrlKey || e.metaKey; if (!mod || ['z', 'y', 'a', 'c', 'v', 'x'].indexOf(e.key.toLowerCase()) !== -1) e.stopPropagation(); });
+                panel.addEventListener('keydown', e => { const mod = e.ctrlKey || e.metaKey; if (!mod || ['z', 'y', 'a', 'c', 'v', 'x', 'b', 'i', 'u'].indexOf(e.key.toLowerCase()) !== -1) e.stopPropagation(); });
+
+                // kéo cạnh phải để đổi chiều rộng
+                panel.querySelector('.cl-edge').addEventListener('mousedown', e => {
+                    if (e.button !== 0) return;
+                    e.preventDefault(); onArtboardResizeMouseDown(e, artboard.id);
+                    if (state.interaction && state.interaction.target) state.interaction.target.edge = true;
+                });
 
                 // thả file / text
                 ['dragenter', 'dragover'].forEach(t => panel.addEventListener(t, e => { e.preventDefault(); e.stopPropagation(); panel.classList.add('cl-drop'); }));
@@ -1177,13 +1437,18 @@
                     panel.classList.remove('cl-drop'); document.body.classList.remove('dragging');
                     const files = Array.from((e.dataTransfer && e.dataTransfer.files) || []);
                     if (files.length) await clImportFiles(artboard, files);
-                    else { const t = e.dataTransfer && e.dataTransfer.getData('text/plain'); if (t) clAddText(artboard, t); }
+                    else {
+                        const h = e.dataTransfer && e.dataTransfer.getData('text/html');
+                        if (h && clAddHtml(artboard, h)) return;
+                        const t = e.dataTransfer && e.dataTransfer.getData('text/plain'); if (t) clAddText(artboard, t);
+                    }
                 });
 
-                // nhập / paste
+                // nhập / paste (giữ định dạng nếu có)
                 input.addEventListener('paste', e => {
                     const cd = e.clipboardData; if (!cd) return;
-                    const t = cd.getData('text/plain');
+                    const h = cd.getData('text/html'), t = cd.getData('text/plain');
+                    if (h && clAddHtml(artboard, h)) { e.preventDefault(); return; }
                     if (t) { e.preventDefault(); clAddText(artboard, t); }
                     else if (cd.files && cd.files.length) { e.preventDefault(); clImportFiles(artboard, Array.from(cd.files)); }
                 });
@@ -1195,17 +1460,31 @@
                 });
                 input.addEventListener('input', () => clAutoGrow(panel));
 
+                panel.querySelector('.cl-view').addEventListener('click', () => { artboard.checklist.view = artboard.checklist.view === 'text' ? 'card' : 'text'; clRender(artboard); markAsChanged(); });
                 panel.querySelector('.cl-uncheck').addEventListener('click', () => clUncheckAll(artboard));
                 panel.querySelector('.cl-clear').addEventListener('click', () => clClearAll(artboard));
 
+                // checkbox: giữ Shift để chọn/bỏ chọn cả dải liên tục
                 list.addEventListener('change', e => {
                     if (!e.target.classList.contains('cl-check')) return;
                     const card = e.target.closest('.cl-card'); const f = clFind(artboard, card.dataset.gid, card.dataset.rid); if (!f) return;
-                    f.row.checked = e.target.checked; card.classList.toggle('checked', f.row.checked);
+                    const checked = e.target.checked;
+                    if (shiftOnClick && lastCheckRid && lastCheckRid !== card.dataset.rid) {
+                        const cards = Array.from(list.querySelectorAll('.cl-card:not(.cl-head)'));
+                        const a = cards.findIndex(c => c.dataset.rid === lastCheckRid), b = cards.indexOf(card);
+                        if (a !== -1 && b !== -1) {
+                            for (let i = Math.min(a, b); i <= Math.max(a, b); i++) {
+                                const c = cards[i]; const ff = clFind(artboard, c.dataset.gid, c.dataset.rid);
+                                if (ff) { ff.row.checked = checked; c.classList.toggle('checked', checked); c.querySelector('.cl-check').checked = checked; }
+                            }
+                        } else { f.row.checked = checked; card.classList.toggle('checked', checked); }
+                    } else { f.row.checked = checked; card.classList.toggle('checked', checked); }
+                    lastCheckRid = card.dataset.rid; shiftOnClick = false;
                     clUpdateCount(panel, artboard); markAsChanged();
                 });
                 list.addEventListener('click', e => {
                     const t = e.target;
+                    if (t.classList.contains('cl-check')) { shiftOnClick = e.shiftKey; return; }
                     if (t.classList.contains('cl-del')) {
                         const card = t.closest('.cl-card'); const f = clFind(artboard, card.dataset.gid, card.dataset.rid); if (!f) return;
                         f.group.rows = f.group.rows.filter(r => r.id !== f.row.id);
@@ -1431,7 +1710,7 @@
                 else if (['draggingArtboard', 'resizingArtboard'].includes(state.interaction.mode)) {
                     document.querySelectorAll('.artboard.dragging').forEach(el => el.classList.remove('dragging'));
                     const beforeState = []; const afterState = [];
-                    state.selectedArtboardIds.forEach(id => { const board = state.artboards.find(b => b.id === id); const start = state.interaction.startData.get(id); if(board && start) { beforeState.push({id, x: start.x, y: start.y }); afterState.push({id, x: board.x, y: board.y }); } });
+                    state.selectedArtboardIds.forEach(id => { const board = state.artboards.find(b => b.id === id); const start = state.interaction.startData && state.interaction.startData.get(id); if(board && start) { beforeState.push({id, x: start.x, y: start.y }); afterState.push({id, x: board.x, y: board.y }); } });
                      if (JSON.stringify(beforeState) !== JSON.stringify(afterState)) {
                         const doAction = (action) => {
                             const videoTimes = new Map();
@@ -3234,7 +3513,7 @@
 			            if (htmlContent) artboardData.htmlContent = htmlContent;
 			            if (frameBackups) artboardData.frameBackups = frameBackups;
 						if (board.srtTracks && board.srtTracks.length) artboardData.srtTracks = board.srtTracks;
-						if (type === 'checklist') { artboardData.checklist = board.checklist || { groups: [] }; artboardData.ownerId = board.ownerId; artboardData.attached = !!board.attached; artboardData.hidden = !!board.hidden; }
+						if (type === 'checklist') { artboardData.checklist = board.checklist || { groups: [] }; artboardData.ownerId = board.ownerId; artboardData.attached = !!board.attached; artboardData.hidden = !!board.hidden; artboardData.customHeight = !!board.customHeight; }
 			
 			            if (src && src.startsWith('data:')) {
 			                artboardData.src = src;
@@ -3600,7 +3879,7 @@
                 drawGuides();
             }
 			function onArtboardResizeMouseDown(e, artboardId) { e.stopPropagation(); const artboard = state.artboards.find(b => b.id === artboardId); if(!artboard) return; state.interaction = { mode: 'resizingArtboard', target: { artboardId }, startPos: { x: e.clientX, y: e.clientY }, startWidth: artboard.width, startHeight: artboard.height }; document.querySelector(`.artboard[data-id="${artboardId}"]`).classList.add('dragging'); }
-            function onArtboardResize(e) { if (state.interaction.mode !== 'resizingArtboard') return; const { artboardId } = state.interaction.target; const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return; const dx = e.clientX - state.interaction.startPos.x; const newWidth = state.interaction.startWidth + (dx / state.view.scale); if (artboard.type === 'checklist') { artboard.width = Math.max(240, newWidth); if (!artboard.attached) artboard.height = Math.max(160, state.interaction.startHeight + ((e.clientY - state.interaction.startPos.y) / state.view.scale)); redrawArtboard(artboardId); markAsChanged(); return; } const aspectRatio = artboard.originalWidth / artboard.originalHeight; artboard.width = Math.max(50, newWidth); artboard.height = artboard.width / aspectRatio; artboard.scale = artboard.width / artboard.originalWidth; redrawArtboard(artboardId); markAsChanged(); }
+            function onArtboardResize(e) { if (state.interaction.mode !== 'resizingArtboard') return; const { artboardId } = state.interaction.target; const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return; const dx = e.clientX - state.interaction.startPos.x; const newWidth = state.interaction.startWidth + (dx / state.view.scale); if (artboard.type === 'checklist') { artboard.width = Math.max(240, newWidth); if (!state.interaction.target.edge) { artboard.height = Math.max(160, state.interaction.startHeight + ((e.clientY - state.interaction.startPos.y) / state.view.scale)); artboard.customHeight = true; } redrawArtboard(artboardId); markAsChanged(); return; } const aspectRatio = artboard.originalWidth / artboard.originalHeight; artboard.width = Math.max(50, newWidth); artboard.height = artboard.width / aspectRatio; artboard.scale = artboard.width / artboard.originalWidth; redrawArtboard(artboardId); markAsChanged(); }
             function resetArtboardScale(artboardId) { const artboard = state.artboards.find(b => b.id === artboardId); if (!artboard) return; artboard.scale = 1; artboard.width = artboard.originalWidth; artboard.height = artboard.originalHeight; redrawArtboard(artboardId); markAsChanged(); }
             const getWorkspaceMousePos = (e) => { const rect = app.workspaceContainer.getBoundingClientRect(); return { x: (e.clientX - rect.left - state.view.offsetX) / state.view.scale, y: (e.clientY - rect.top - state.view.offsetY) / state.view.scale }; };
             const getMousePosOnArtboard = (e, artboard) => { const artboardEl = app.workspace.querySelector(`.artboard[data-id="${artboard.id}"]`); if (!artboardEl) return {x:0, y:0}; const contentEl = artboardEl.querySelector('.artboard-content'); const rect = contentEl.getBoundingClientRect(); return { x: (e.clientX - rect.left) / rect.width, y: (e.clientY - rect.top) / rect.height }; };
@@ -4139,7 +4418,7 @@
                 const pos = getMousePosOnArtboard(e, artboard);
                 if (artboard.type === 'checklist') { showContextMenu(e, clContextMenuItems(artboard)); return; }
                 let items = [{ label: 'Add Comment', action: () => { addAnnotation({ type: 'comment', artboardId, data: pos, color: state.activeColor, text: '' }, true); } }];
-                if (artboard.type === 'video') { items.push({ label: 'Save Frame', action: () => saveVideoFrame(artboardId) }); items.push({ label: 'Check-list', action: () => openChecklistForVideo(artboardId) });	}
+                if (artboard.type === 'video') { items.push({ label: 'Save Frame', action: () => saveVideoFrame(artboardId) }); items.push({ label: 'Check-list', action: () => openChecklistForVideo(artboardId) }); items.push({ label: 'Add .srt', action: () => pickSrtForVideo(artboardId) });	}
                 items.push(
 					{ divider: true },
                     { label: 'Add Horizontal Guide', action: () => { if(!state.guides.artboard[artboardId]) state.guides.artboard[artboardId] = []; state.guides.artboard[artboardId].push({type: 'horizontal', position: pos.y, id: crypto.randomUUID()}); drawGuides(); markAsChanged(); } },
