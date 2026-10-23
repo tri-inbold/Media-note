@@ -1375,7 +1375,7 @@
                 list.classList.toggle('cl-text-view', view === 'text');
                 artboard.checklist.groups.forEach(g => list.appendChild(clGroupEl(g, view)));
                 panel.classList.toggle('cl-empty', artboard.checklist.groups.length === 0);
-                const vb = panel.querySelector('.cl-view'); if (vb) vb.textContent = 'Preview: ' + (view === 'text' ? 'Text' : 'Card');
+                const vb = panel.querySelector('.cl-view'); if (vb) vb.textContent = 'Mode: ' + (view === 'text' ? 'Text' : 'Card');
                 clUpdateCount(panel, artboard); clAutoGrow(panel);
                 list.scrollTop = st;
             }
@@ -1408,7 +1408,7 @@
             function initChecklistPanel(artboardEl, artboard) {
                 const panel = artboardEl.querySelector('.cl-panel'); if (!panel) return;
                 if (!artboard.checklist) artboard.checklist = { groups: [], view: 'card' };
-                panel.innerHTML = '<div class="cl-bar"><span class="cl-count"></span><span class="cl-bar-actions"><button type="button" class="cl-btn cl-view" title="Switch between card view and text / table view">Preview: Card</button><button type="button" class="cl-btn cl-uncheck" title="Uncheck all cards">Uncheck all</button><button type="button" class="cl-btn cl-clear" title="Remove all cards">Clear</button></span></div><textarea class="cl-input" rows="1" spellcheck="false" placeholder="Paste text here, or drop .txt .docx .csv .srt .xlsx files.&#10;Each line becomes a card. Type + Enter to add one."></textarea><div class="cl-list"></div><div class="cl-edge" title="Drag to resize width"></div>';
+                panel.innerHTML = '<div class="cl-bar"><span class="cl-count"></span><span class="cl-bar-actions"><button type="button" class="cl-btn cl-view" title="Switch between card view and text / table view">Preview: Card</button><button type="button" class="cl-btn cl-uncheck" title="Uncheck all cards">Uncheck all</button><button type="button" class="cl-btn cl-clear" title="Remove all cards">Clear</button></span></div><textarea class="cl-input" rows="1" spellcheck="false" placeholder="Paste text or drop file .txt .docx .csv .srt .xlsx &#10;Type + Enter to add one card."></textarea><div class="cl-list"></div><div class="cl-edge" title="Drag to resize width"></div>';
                 const input = panel.querySelector('.cl-input'), list = panel.querySelector('.cl-list');
                 let lastCheckRid = null, shiftOnClick = false;
 
